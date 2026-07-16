@@ -202,20 +202,27 @@ if holdings.empty:
 prices = get_prices(tuple(holdings["symbol"]))
 view, totals = pf.build_view(holdings, prices, st.session_state.cash)
 
+st.divider()
+st.subheader("📊 Overview")
+
 unpriced = view.loc[~view["has_price"], "symbol"].tolist()
+m1, m2, m3, m4 = st.columns(4)
+m1.metric("Total value (incl. cash)", f"${totals['market_value']:,.2f}", border=True)
+m2.metric("Invested", f"${totals['invested']:,.2f}", border=True)
+m3.metric("Cash", f"${totals['cash']:,.2f}", border=True)
+pnl_pct = (totals["pnl"] / totals["cost"] * 100) if totals["cost"] > 0 else 0.0
+m4.metric(
+    "Unrealized P/L", f"${totals['pnl']:,.2f}", delta=f"{pnl_pct:+.2f}%", border=True
+)
+
 if unpriced:
     st.warning(
         "No live price for: " + ", ".join(unpriced) + " — showing cost basis instead."
     )
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Total value (incl. cash)", f"${totals['market_value']:,.2f}")
-m2.metric("Invested", f"${totals['invested']:,.2f}")
-m3.metric("Cash", f"${totals['cash']:,.2f}")
-pnl_pct = (totals["pnl"] / totals["cost"] * 100) if totals["cost"] > 0 else 0.0
-m4.metric("Unrealized P/L", f"${totals['pnl']:,.2f}", delta=f"{pnl_pct:+.2f}%")
-
 # --------------------------------------------------------- table + allocation
+
+st.divider()
 
 left, right = st.columns([3, 2])
 
@@ -225,8 +232,15 @@ with left:
         ["symbol", "name", "shares", "buy_price", "current_price",
          "market_value", "pnl", "pnl_pct", "weight_pct"]
     ].sort_values("market_value", ascending=False)
+
+    def _pnl_color(v):
+        if pd.isna(v) or v == 0:
+            return ""
+        return "color: #1a7f37" if v > 0 else "color: #d1242f"
+
+    styled = display.style.map(_pnl_color, subset=["pnl", "pnl_pct"])
     st.dataframe(
-        display,
+        styled,
         hide_index=True,
         width="stretch",
         column_config={

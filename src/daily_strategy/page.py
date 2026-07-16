@@ -1,4 +1,5 @@
-"""Daily Strategy + Performance pages — Developer 2 owns everything here."""
+"""Daily Strategy page — Developer 2 owns everything here.
+(The Performance page is presented by Developer 1: src/portfolio_health/page.py)"""
 
 import pandas as pd
 import streamlit as st
@@ -83,26 +84,3 @@ def render() -> None:
     )
 
 
-def render_performance() -> None:
-    st.set_page_config(page_title="AURORA — Performance", page_icon="🏁", layout="wide")
-    st.title("🏁 Performance & Benchmark")
-    st.caption("Engine 2 — backtest comparison (Developer 2)")
-
-    holdings, history = _load()
-    if holdings is None:
-        return
-
-    curves = engine.backtest(history, holdings)
-    if curves.empty:
-        st.warning("Nothing to backtest yet.")
-        return
-
-    final = curves.iloc[-1]
-    c1, c2 = st.columns(2)
-    c1.metric("Buy & hold (growth of $1)", f"${final['buy_hold']:.3f}")
-    c2.metric("Equal weight (growth of $1)", f"${final['equal_weight']:.3f}")
-    st.dataframe(curves.tail(10).round(4), width="stretch")
-    st.caption(
-        "TODO Developer 2: cumulative-return chart, the regime-aware strategy "
-        "run, Sharpe/Sortino/turnover table per Architecture.md page 6."
-    )

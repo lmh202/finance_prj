@@ -5,10 +5,12 @@ It is intentionally simple — your job is to refine it (see README.md).
 The public signature must stay exactly as declared in src/interfaces.py.
 """
 
+from typing import List
+
 import numpy as np
 import pandas as pd
 
-from src.interfaces import BENCHMARK, HealthReport
+from src.interfaces import BENCHMARK, HealthReport, ProposedTrade
 
 TRADING_DAYS = 252
 
@@ -98,3 +100,35 @@ def compute_health(
         weaknesses=weaknesses,
         correlation=rets.corr(),
     )
+
+
+def what_if_health(
+    holdings: pd.DataFrame,
+    history: pd.DataFrame,
+    trades: List[ProposedTrade],
+    benchmark: str = BENCHMARK,
+) -> HealthReport:
+    """Health of the portfolio as if the proposed weight changes were applied.
+
+    BASELINE: shifts market value between positions per each trade's
+    weight_change_pct and recomputes. Refine (cash handling, buying
+    assets not yet held) as needed.
+    """
+    symbols = [s for s in holdings["symbol"] if s in history.columns]
+    if not symbols or not trades:
+        return compute_health(holdings, history, benchmark)
+
+    last = history[symbols].ffill().iloc[-1]
+    adjusted = holdings.set_index("symbol").copy()
+    adjusted["shares"] = adjusted["shares"].astype(float)
+    values = last * adjusted.loc[symbols, "shares"]
+    total = float(values.sum())
+
+    for t in trades:
+        if t.symbol not in last.index or last[t.symbol] <= 0:
+            continue
+        delta_value = t.weight_change_pct / 100.0 * total
+        new_value = max(0.0, float(values[t.symbol]) + delta_value)
+        adjusted.loc[t.symbol, "shares"] = new_value / float(last[t.symbol])
+
+    return compute_health(adjusted.reset_index(), history, benchmark)

@@ -56,3 +56,42 @@ def render() -> None:
     if report.correlation is not None:
         st.subheader("Asset correlation")
         st.dataframe(report.correlation.round(2), width="stretch")
+
+
+def render_performance() -> None:
+    """Performance & Benchmark page — owned by Developer 1.
+
+    Presents Developer 2's backtest output (a contract function) alongside
+    the portfolio metrics this engine computes.
+    """
+    from src.daily_strategy import engine as strategy
+
+    st.set_page_config(page_title="AURORA — Performance", page_icon="🏁", layout="wide")
+    st.title("🏁 Performance & Benchmark")
+    st.caption("Presentation: Developer 1 · Backtest engine: Developer 2")
+
+    holdings = pf.load_portfolio()
+    if holdings.empty:
+        st.info("Your portfolio is empty — build it on the Home page first.")
+        return
+    history = _history(tuple(sorted(set(holdings["symbol"]))) + (BENCHMARK,))
+    if history.empty:
+        st.error("Could not load price history — check your connection and retry.")
+        return
+
+    curves = strategy.backtest(history, holdings)
+    if curves.empty:
+        st.warning("Nothing to backtest yet.")
+        return
+
+    final = curves.iloc[-1]
+    cols = st.columns(len(curves.columns))
+    for col, name in zip(cols, curves.columns):
+        col.metric(f"{name} (growth of $1)", f"${final[name]:.3f}")
+    st.dataframe(curves.tail(10).round(4), width="stretch")
+    st.caption(
+        "TODO Developer 1: cumulative-return chart, rolling metrics, and the "
+        "metric table (return, Sharpe, Sortino, max DD, vol, turnover). "
+        "TODO Developer 2: add the ML strategy runs (price-only vs price+news) "
+        "to backtest() so the ablation shows up here."
+    )

@@ -10,6 +10,7 @@ from src import portfolio as pf
 from src.daily_strategy import engine as strategy
 from src.interfaces import BENCHMARK, NewsEvent
 from src.news_intelligence import engine as news
+from src.portfolio_health import engine as health
 from src.recommendation import engine
 
 # Exercises the reaction-risk UI until Developer 3 ships real events.
@@ -73,6 +74,13 @@ def render() -> None:
             ),
             hide_index=True,
             width="stretch",
+        )
+        base = health.compute_health(holdings, history)
+        after = health.what_if_health(holdings, history, daily.trades)
+        st.metric(
+            "Portfolio health if applied",
+            f"{after.score:.0f}/100",
+            delta=f"{after.score - base.score:+.1f} vs current {base.score:.0f}",
         )
 
     # ---------------------------------------------------------- event reaction

@@ -5,7 +5,7 @@ cross-sectional percentiles. Refine thresholds, add RSI/correlation,
 and build a real backtest. Signatures are frozen in src/interfaces.py.
 """
 
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -63,9 +63,19 @@ def classify_regime(history: pd.DataFrame, benchmark: str = BENCHMARK) -> Regime
     )
 
 
-def score_assets(history: pd.DataFrame, holdings: pd.DataFrame) -> List[AssetSignal]:
+def score_assets(
+    history: pd.DataFrame,
+    holdings: pd.DataFrame,
+    sentiment: Optional[pd.DataFrame] = None,
+) -> List[AssetSignal]:
     """Rank each held asset 0-100 per the §5 formula:
-    30% momentum + 25% trend + 20% Sharpe − 15% volatility − 10% drawdown."""
+    30% momentum + 25% trend + 20% Sharpe − 15% volatility − 10% drawdown.
+
+    `sentiment` is the OPTIONAL news feature channel (long-format frame from
+    news_intelligence.sentiment_features). This baseline ignores it — the ML
+    upgrade uses it as extra features, and the model must be evaluated with
+    and without it (ablation). Missing days mean neutral (has_news=0).
+    """
     symbols = [s for s in holdings["symbol"] if s in history.columns]
     rows = []
     for sym in symbols:

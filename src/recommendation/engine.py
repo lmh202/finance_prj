@@ -44,7 +44,12 @@ def reaction_risk(
             or (event.sentiment > 0 and regime.regime == "bearish")
         ) else 0.3,
         "market_volatility": 0.8 if regime.regime == "high_volatility" else 0.4,
-        # TODO: compare event timestamp vs. recent price move of affected assets
+        # TODO (the double-counting reconciliation, Developer 4's key task):
+        # once Developer 2's scores are sentiment-tilted, news already
+        # reflected there must RAISE this factor — compare the event's
+        # sentiment/timestamp against the affected assets' current signals
+        # and recent price moves, so the system never reacts twice to the
+        # same story.
         "priced_in": 0.5,
         "concentration": min(1.0, exposure * 2),
         "ambiguity": 0.5 if abs(event.sentiment) < 0.3 else 0.2,

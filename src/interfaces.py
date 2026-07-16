@@ -25,19 +25,38 @@ REQUIRED FUNCTIONS PER ENGINE
 =============================
 Developer 1 — src/portfolio_health/engine.py
     compute_health(holdings, history, benchmark=BENCHMARK) -> HealthReport
+    what_if_health(holdings, history, trades, benchmark=BENCHMARK) -> HealthReport
+        trades: List[ProposedTrade] — the portfolio's health as if the
+        proposed weight changes were applied (consumed by Developer 4's
+        recommendation pages: "Health 68 -> 73 if you accept this").
+    Also owns the Performance & Benchmark page (render_performance in
+    page.py), presenting Developer 2's backtest + ablation results.
 
 Developer 2 — src/daily_strategy/engine.py
     classify_regime(history, benchmark=BENCHMARK) -> RegimeState
-    score_assets(history, holdings) -> List[AssetSignal]
+    score_assets(history, holdings, sentiment=None) -> List[AssetSignal]
+        sentiment: OPTIONAL long-format DataFrame produced by Developer 3's
+        sentiment_features(). The ML model treats news as an optional
+        feature channel (no news on a day == neutral + has_news=0) and must
+        be evaluated both with and without it (the ablation).
     backtest(history, holdings, cash=0.0) -> pd.DataFrame
-        columns: 'buy_hold', 'equal_weight' (growth of $1, later + strategy runs)
+        columns: 'buy_hold', 'equal_weight', + strategy runs (rule-based,
+        ML price-only, ML price+news). Rendered by Developer 1's page.
 
 Developer 3 — src/news_intelligence/engine.py
-    fetch_headlines(feeds=None, limit=50) -> List[NewsEvent]
-    essential_news(holding_symbols, max_events=5) -> List[NewsEvent]
+    fetch_headlines(feeds=None, limit=50) -> List[NewsEvent]          # live RSS + LLM
+    essential_news(holding_symbols, max_events=5) -> List[NewsEvent]  # live, <=5/day
+    sentiment_features(symbols, start=None, end=None) -> pd.DataFrame # historical
+        Long format, one row per symbol-day that has news, columns:
+        date, symbol, sentiment (-1..1), news_count (int), has_news (0/1).
+        NO LOOK-AHEAD: rows dated t may only use news published before
+        day t's market open. Historical corpus scored with a LOCAL model
+        (FinBERT/VADER); the LLM API is reserved for the live feed.
 
 Developer 4 — src/recommendation/engine.py
     reaction_risk(event, weights, regime) -> ReactionRisk
+        Owns the double-counting reconciliation: news already reflected in
+        Developer 2's sentiment-tilted scores raises the 'priced_in' factor.
     recommend_daily(regime, signals, weights) -> Recommendation
     recommend_event(event, risk) -> Recommendation
     apply_constraints(trades, weights) -> List[ProposedTrade]

@@ -13,6 +13,8 @@ src/interfaces.py.
 
 from typing import List, Optional
 
+import pandas as pd
+
 from src.interfaces import NewsEvent
 
 # Candidate RSS feeds — extend/replace as you evaluate quality.
@@ -41,3 +43,28 @@ def essential_news(holding_symbols: List[str], max_events: int = 5) -> List[News
     keep the best few. Never return more than `max_events`.
     """
     return []
+
+
+def sentiment_features(
+    symbols: List[str],
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+) -> pd.DataFrame:
+    """HISTORICAL news features for Developer 2's ML (optional input channel).
+
+    Long format, one row per symbol-day that has news:
+        date (datetime), symbol (str), sentiment (-1..1 importance-weighted),
+        news_count (int), has_news (always 1 here; Dev 2 fills 0 elsewhere)
+
+    Rules (see src/interfaces.py):
+    - NO LOOK-AHEAD: a row dated t may only use news published before day
+      t's market open.
+    - Score the historical corpus (e.g. FNSPID / Kaggle financial news)
+      with a LOCAL model (FinBERT or VADER) — the LLM API is for the live
+      feed only; batch-scoring millions of headlines through it wastes money.
+    - Cache the finished feature table to data/processed/ so it is built once.
+
+    NOT IMPLEMENTED YET — returns an empty, correctly-shaped frame so
+    Developer 2 can already code the merge + ablation against it.
+    """
+    return pd.DataFrame(columns=["date", "symbol", "sentiment", "news_count", "has_news"])
