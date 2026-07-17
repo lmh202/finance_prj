@@ -20,3 +20,7 @@ data/news_raw.json
 .vscode/
 .idea/
 Thumbs.db
+
+# frontendjs
+frontendjs/node_modules/
+frontendjs/.next/

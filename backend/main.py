@@ -9,10 +9,18 @@ streamlit anywhere under backend/, no `src` imports anywhere under frontend/.
 """
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from routers import health, market, news, portfolio, recommendation, strategy
+from routers import analysis, health, market, news, portfolio, recommendation, strategy
 
 app = FastAPI(title="AURORA API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/ping", tags=["meta"])
@@ -20,6 +28,7 @@ def ping() -> dict:
     return {"status": "ok"}
 
 
+app.include_router(analysis.router)
 app.include_router(market.router)
 app.include_router(portfolio.router)
 app.include_router(health.router)
