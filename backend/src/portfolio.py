@@ -15,7 +15,8 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+from src.config import DATA_DIR
+
 PORTFOLIO_CSV = DATA_DIR / "portfolio.csv"
 SETTINGS_JSON = DATA_DIR / "settings.json"
 SAMPLE_PORTFOLIO_CSV = DATA_DIR / "sample_portfolio.csv"

@@ -1,0 +1,10 @@
+# AURORA backend — FastAPI service + engine library
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pandas>=2.0
+yfinance>=0.2.50       # market data (shared kernel)
+requests>=2.31         # NASDAQ symbol directory download
+scikit-learn>=1.3      # Dev 2 — ML strategy
+feedparser>=6.0        # Dev 3 — RSS collector
+anthropic>=0.40        # Dev 3 — LLM news classification (live feed)
+vaderSentiment>=3.3    # Dev 3 — historical sentiment scoring

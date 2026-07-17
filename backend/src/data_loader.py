@@ -10,13 +10,13 @@ Two responsibilities:
 
 import io
 import time
-from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 import pandas as pd
 import requests
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+from src.config import DATA_DIR
+
 TICKER_CACHE = DATA_DIR / "tickers.csv"
 CACHE_MAX_AGE_DAYS = 7
 

@@ -38,11 +38,13 @@ from typing import Dict, List, Optional
 
 import feedparser
 
+# backend/ dir — puts the `src` package on sys.path when run as a script
 ROOT = Path(__file__).resolve().parent.parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-DATA_DIR = ROOT / "data"
+from src.config import DATA_DIR  # noqa: E402
+
 STORE = DATA_DIR / "news_raw.json"
 
 # ------------------------------------------------------------------ feed config
