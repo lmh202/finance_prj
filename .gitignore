@@ -8,6 +8,10 @@ venv/
 data/tickers.csv
 data/portfolio.csv
 data/settings.json
+data/news_raw.json
+
+# Secrets
+.streamlit/secrets.toml
 
 # Jupyter
 .ipynb_checkpoints/

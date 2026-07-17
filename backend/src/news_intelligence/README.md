@@ -5,6 +5,10 @@
 essential events per day mapped to holdings; (B) the **historical** pipeline:
 a news-sentiment feature table for Developer 2's ML ablation.
 
+> **Split note:** your files are this engine (+ `collector.py`),
+> `backend/routers/news.py`, and `frontend/views/news_intelligence.py`.
+> No streamlit in backend/, no `src` imports in frontend/.
+
 ## Your contract (frozen — see `src/interfaces.py`)
 
 ```python
@@ -42,7 +46,15 @@ events), and Developer 2 (`sentiment_features` as the optional ML input).
 
 ## Files you own (edit ONLY inside this folder)
 
-- `engine.py` — all three contract functions (currently stubs returning empty).
+- `collector.py` — **stage 1, WORKING**: generalized RSS collector. Yahoo
+  per-ticker feeds are generated from the portfolio; add any other RSS source
+  as one config entry in `GENERAL_FEEDS`. Normalizes everything into
+  `data/news_raw.json` (stable schema, human-readable, idempotent dedupe,
+  tag union; load with `pd.read_json("data/news_raw.json")`).
+  Run `python src/news_intelligence/collector.py` regularly — RSS has no
+  archive, so the training corpus only grows while collection keeps running.
+- `engine.py` — the three contract functions (stubs; build them ON TOP of the
+  collector's store: classify raw records → NewsEvent, aggregate → features).
 - `page.py` — the Essential News page (card rendering already sketched).
 
 ## Definition of done
