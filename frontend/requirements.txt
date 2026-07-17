@@ -1,0 +1,5 @@
+# AURORA frontend — Streamlit UI (talks to the backend over HTTP only)
+streamlit>=1.46
+pandas>=2.0
+plotly>=5.20
+requests>=2.31

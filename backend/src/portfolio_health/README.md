@@ -5,6 +5,10 @@ portfolio — and does our Health Score actually mean anything?"* Metrics,
 the 0–100 Health Score, an empirical validation of that score, what-if
 analysis for proposed trades, and the Performance & Benchmark page.
 
+> **Split note:** your files are this engine, `backend/routers/health.py`
+> (+ `/strategy/backtest` presentation), and `frontend/views/portfolio_health.py`.
+> No streamlit in backend/, no `src` imports in frontend/.
+
 ## Your contract (frozen — see `src/interfaces.py`)
 
 ```python

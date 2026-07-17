@@ -4,6 +4,11 @@
 into one answer — *"what should the user do, and how risky is reacting?"* —
 **without double-counting news**, and own the Streamlit product end to end.
 
+> **Split note:** your files are this engine, `backend/routers/recommendation.py`,
+> and `frontend/views/recommendation.py` (plus `frontend/app.py` and
+> `backend/main.py` as product owner). No streamlit in backend/, no `src`
+> imports in frontend/.
+
 ## Your contract (frozen — see `src/interfaces.py`)
 
 ```python

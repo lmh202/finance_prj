@@ -1,26 +1,28 @@
 """AURORA — Portfolio Builder (Streamlit entry point).
 
-Run with:  streamlit run app/app.py
+Run with:  streamlit run frontend/app.py
+(the FastAPI backend must be up: uvicorn main:app --app-dir backend --port 8000,
+or start both with scripts/dev.ps1)
 
 Today's scope: let a user mirror their real portfolio here — pick any
 US-listed security (full NASDAQ symbol directory behind the search box),
 enter shares and cost basis, see live value / P&L / allocation.
-News-driven rebalancing (RSS) plugs in later via src/news_rss.py.
+All data comes from the backend over HTTP via api_client — no backend
+imports anywhere under frontend/.
 """
 
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src import data_loader
-from src import portfolio as pf
+import api_client as api
 
 st.set_page_config(page_title="AURORA — Portfolio Builder", page_icon="🌅", layout="wide")
 
@@ -44,7 +46,7 @@ def theme_type() -> str:
 
 @st.cache_data(ttl=86400, show_spinner="Loading US stock universe…")
 def load_universe() -> pd.DataFrame:
-    return data_loader.load_ticker_universe()
+    return api.get_universe()
 
 
 @st.cache_data(ttl=86400)
@@ -60,20 +62,33 @@ def universe_labels():
 
 @st.cache_data(ttl=300, show_spinner="Fetching latest prices…")
 def get_prices(symbols: tuple) -> dict:
-    return data_loader.get_latest_prices(list(symbols))
+    return api.get_prices(list(symbols))
+
+
+@st.cache_data(ttl=300, show_spinner="Fetching latest prices…")
+def get_view(portfolio_key: str) -> tuple:
+    """Valuation view + totals; keyed on the holdings/cash snapshot so edits
+    invalidate immediately while prices stay cached for 5 minutes."""
+    return api.get_view()
 
 
 def set_holdings(df: pd.DataFrame) -> None:
-    st.session_state.holdings = df
-    pf.save_portfolio(df)
+    clean, _ = api.put_portfolio(df)
+    st.session_state.holdings = clean
 
 
-if "holdings" not in st.session_state:
-    st.session_state.holdings = pf.load_portfolio()
-if "cash" not in st.session_state:
-    st.session_state.cash = pf.load_cash()
-
-symbols, labels, names = universe_labels()
+try:
+    if "holdings" not in st.session_state:
+        st.session_state.holdings = api.get_portfolio()
+    if "cash" not in st.session_state:
+        st.session_state.cash = api.get_cash()
+    symbols, labels, names = universe_labels()
+except api.ApiUnavailable:
+    st.error(
+        "Backend not running — start it with `scripts/dev.ps1` or "
+        "`uvicorn main:app --app-dir backend --port 8000`, then reload."
+    )
+    st.stop()
 
 # ------------------------------------------------------------------- sidebar
 
@@ -86,7 +101,7 @@ with st.sidebar:
     )
     if cash != st.session_state.cash:
         st.session_state.cash = cash
-        pf.save_cash(cash)
+        api.put_cash(cash)
 
     st.divider()
     st.subheader("Import / export")
@@ -95,7 +110,9 @@ with st.sidebar:
         help="Columns: symbol, shares and optionally buy_price, name",
     )
     if uploaded is not None:
-        imported, problems = pf.parse_uploaded_csv(uploaded)
+        imported, problems = api.parse_csv(
+            uploaded.getvalue().decode("utf-8", errors="replace")
+        )
         for p in problems:
             st.warning(p)
         if not imported.empty:
@@ -123,20 +140,20 @@ with st.sidebar:
 
     st.divider()
     if st.button("Load sample portfolio"):
-        sample = pf.load_portfolio(pf.SAMPLE_PORTFOLIO_CSV)
-        set_holdings(sample)
-        st.session_state.cash = 23000.0
-        pf.save_cash(23000.0)
+        sample, sample_cash = api.load_sample()
+        st.session_state.holdings = sample
+        st.session_state.cash = sample_cash
         st.rerun()
     if st.button("Refresh prices"):
         get_prices.clear()
+        get_view.clear()
         st.rerun()
 
     st.divider()
     st.caption(
         "📰 **Coming soon:** essential-news feed (RSS) with rebalancing "
-        "suggestions — see `src/news_intelligence/`. Explore the engine "
-        "pages in the sidebar above."
+        "suggestions — see `backend/src/news_intelligence/`. Explore the "
+        "engine pages in the sidebar above."
     )
 
 # -------------------------------------------------------------------- header
@@ -182,8 +199,8 @@ with st.container(border=True):
                     )
                     st.stop()
                 price = fetched
-            set_holdings(
-                pf.add_holding(st.session_state.holdings, pick, names.get(pick, ""), shares, price)
+            st.session_state.holdings = api.add_holding(
+                pick, names.get(pick, ""), shares, price
             )
             st.toast(f"Added {shares:g} × {pick} @ ${price:,.2f}")
             st.rerun()
@@ -199,8 +216,7 @@ if holdings.empty:
 
 # ------------------------------------------------------------------ valuation
 
-prices = get_prices(tuple(holdings["symbol"]))
-view, totals = pf.build_view(holdings, prices, st.session_state.cash)
+view, totals = get_view(holdings.to_json() + f"|cash={st.session_state.cash}")
 
 st.divider()
 st.subheader("📊 Overview")
@@ -324,8 +340,8 @@ with st.expander("✏️ Edit or remove holdings"):
             },
         )
         if st.form_submit_button("💾 Save changes"):
-            clean, problems = pf.normalize_holdings(edited)
+            clean, problems = api.put_portfolio(edited)
             for p in problems:
                 st.warning(p)
-            set_holdings(clean)
+            st.session_state.holdings = clean
             st.rerun()

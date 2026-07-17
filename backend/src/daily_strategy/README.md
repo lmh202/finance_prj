@@ -6,6 +6,10 @@ daily asset scoring, upgraded from the rule-based baseline to a trained
 ML model, with news sentiment as an **optional feature channel** and a
 rigorous ablation proving whether it helps.
 
+> **Split note:** your files are this engine, `backend/routers/strategy.py`,
+> and `frontend/views/daily_strategy.py`. No streamlit in backend/, no `src`
+> imports in frontend/.
+
 ## Your contract (frozen — see `src/interfaces.py`)
 
 ```python
