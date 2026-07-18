@@ -12,62 +12,120 @@ npm run lint         # ESLint (flat config, Next.js core-web-vitals)
 npm run typecheck    # TypeScript check (tsc --noEmit)
 ```
 
-Seeding the stocks catalog:
-```bash
-npx tsx src/db/seed.ts
-```
+This app has no database anymore — there is nothing to seed or migrate.
+`drizzle.config.json` is a leftover from the removed database layer; there's
+no `DATABASE_URL` and nothing runs migrations.
+
+The Python FastAPI backend at the repo root must be running for search or
+analysis to work (`uvicorn main:app --app-dir ../backend --reload --port
+8000`, or `..\scripts\dev.ps1` from the repo root) — see the top-level
+`CLAUDE.md`.
 
 ## Architecture
 
-**Aurora** is a portfolio analytics platform — a single-page Next.js 16 App Router app that lets visitors compose a stock/ETF portfolio and see 5 years of risk/performance analytics benchmarked against SPY and QQQ.
+**Aurora** is a portfolio analytics platform — a Next.js 16 App Router app
+with two kinds of pages:
+
+- **`/` (Analyzer)** — the original single-page experience: compose a
+  hypothetical stock/ETF portfolio (localStorage only) and see 5 years of
+  risk/performance analytics benchmarked against SPY and QQQ.
+- **Engine pages** — Next.js ports of the Streamlit pages in the repo-root
+  `frontend/`, all reading the **backend-persisted** AURORA portfolio
+  (`data/portfolio.csv` + cash), NOT the analyzer's localStorage one:
+  - `/portfolio` — builder for the saved portfolio (add/edit/delete
+    holdings, cash, CSV import/export, sample load with replace-confirm)
+  - `/health` — Engine 1 health report (score gauge, metrics, correlation)
+  - `/strategy` — Engine 2 market regime + daily asset ranking
+  - `/news` — Engine 3 essential news (planned-feeds empty state while the
+    engine is a stub)
+  - `/react` — Engine 4 daily recommendation + event reaction risk
+  - `/performance` — Dev 2's backtest curves rendered with PerformanceChart
+
+Engine pages share scaffolding: `useEngine` (src/lib/use-engine.ts) fetches
+with abort + classifies errors; `EngineShell` (src/components/EngineShell.tsx)
+renders chrome, loading skeletons and the three expected non-ready states —
+backend down, `empty_portfolio` (409 → onboarding card with sample-load) and
+`no_history` (502 → retry). Small primitives (Section, Metric, Chip, ThinBar,
+ArcGauge, Note, StateCard) live in EngineShell.tsx too.
+
+This app used to be fully self-contained (its own PostgreSQL database,
+Drizzle schema, and Next.js API routes doing price fetching and analytics
+locally). **That has been removed.** It is now a pure client: every data
+operation calls out to the AURORA Python FastAPI backend that lives at the
+repo root (`../backend/`). There are no `src/app/api/*` routes and no
+`src/db/` anymore.
 
 ### Tech stack
 
-Next.js 16 (React 19) · TypeScript 5.9 strict · PostgreSQL + Drizzle ORM · Tailwind CSS 4 · Framer Motion · lucide-react icons
+Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motion · lucide-react icons — no database, no ORM.
 
 ### Key architectural decisions
 
-- **Anonymous client identity** — a UUID is generated and stored in `localStorage` on first visit. No auth.
-- **Portfolios stored as JSON** in the `portfolios` table (`holdings` column) for MVP simplicity. Client auto-saves via `PUT /api/portfolio` with a 700ms debounce; hydration reads back from `GET /api/portfolio?client=<id>`.
-- **Constant-mix portfolio** — the analysis engine builds a daily-rebalanced portfolio (assumes positions are reset to target weights each day). No transaction-cost modeling.
-- **Market data resolution order** (in `src/lib/prices.ts`):
-  1. In-process memory cache (5-minute TTL)
-  2. PostgreSQL `price_cache` table (shared, persistent, write-through)
-  3. Live fetch: Nasdaq API → Yahoo Finance fallback (both via `curl` — Yahoo blocks Node `fetch` 429)
-  4. Deterministic synthetic random walk (per-symbol seeded PRNG, flagged `simulated: true`)
-- **Concurrent upstream scheduling** — max 3 in-flight requests, 140ms minimum gap between requests, to stay under upstream rate limits.
-- **Calendar alignment** — `alignSeries()` unions the calendars of all holdings, forward-fills missing bars, and truncates to the latest-starting / earliest-ending instrument so every series covers the full window.
-- **Context-prop drilling, not state library** — page.tsx owns all state and passes it down. No Redux/Zustand.
+- **The backend is the Python FastAPI service in `../backend/`**, not this
+  app. `src/lib/api-client.ts` is the only place that talks to it, via
+  `NEXT_PUBLIC_BACKEND_URL` (set in the tracked `.env.local` to
+  `http://localhost:8000` for local dev). Endpoints used:
+  - `GET /market/search?q=` + `GET /market/prices` — symbol universe search
+    and latest closes
+  - `POST /analysis/explore` — the analyzer's full analytics engine
+    (calendar alignment, constant-mix construction, risk stats), backed by
+    `backend/src/analysis/engine.py`
+  - `/portfolio*` — saved-portfolio CRUD, cash, CSV parse, sample, view
+  - `/health/report`, `/strategy/{regime,signals,backtest}`,
+    `/news/{essential,feeds}`, `/recommendation/{daily,events,react}` —
+    the four engine routers consumed by the engine pages
+  Expected conditions arrive as marker details (`empty_portfolio` 409,
+  `no_history` 502) and are thrown as `ApiMarkerError`; an unreachable
+  backend throws `BackendDownError`.
+  Backend CORS (`backend/main.py`) allow-lists `http://localhost:3000`
+  specifically so this app can call it directly from the browser.
+- **No auth. Two portfolio stores, deliberately separate** — the analyzer's
+  hypothetical portfolio round-trips through `localStorage`
+  (`aurora_portfolio` key) only; the engine pages read/write the backend's
+  saved portfolio (`data/portfolio.csv`), shared with the Streamlit
+  frontend. There is no per-client UUID.
+- **Constant-mix portfolio** — the analysis engine builds a daily-rebalanced
+  portfolio (assumes positions are reset to target weights each day). No
+  transaction-cost modeling.
+- **Calendar alignment** happens server-side now, in
+  `backend/src/analysis/engine.py`'s `align_series()`: it unions the
+  calendars of all holdings, forward-fills missing bars, and truncates to
+  the latest-starting / earliest-ending instrument so every series covers
+  the full window.
+- **Context-prop drilling, not a state library** — `page.tsx` owns all
+  state and passes it down. No Redux/Zustand.
 
 ### Request flow
 
-1. User types ticker → `GET /api/stocks/search?q=` → seeded PostgreSQL catalog (ILIKE, ranked by match quality + popularity), live-augmented from Nasdaq/Yahoo if local results are thin.
-2. User adds holdings → `PUT /api/portfolio` persists.
-3. Analysis triggers via `POST /api/analyze` with `{mode, holdings}` → fetches prices for all symbols + SPY/QQQ → aligns calendars → builds constant-mix index → computes 14 metrics per holding → returns `AnalyzeResponse`.
-4. Client runs `deriveRangeView()` to slice all series to the selected range (6M/1Y/2Y/3Y/5Y) and recompute every stat on that window — no refetch.
-
-### Database schema
-
-Three tables, all managed by Drizzle (`src/db/schema.ts`):
-- **`stocks`** — tradable universe (symbol PK, name, exchange, sector, quoteType, popularity). Seeded from `src/db/stock-universe.ts` (~400 US equities + ETFs), grown at runtime via live search.
-- **`price_cache`** — daily adjusted closes (symbol, date, close), unique on `(symbol, date)`.
-- **`portfolios`** — one row per client (`client_id` unique, `holdings` JSON, `mode`, `name`).
+1. User types ticker → `searchStocks()` in `src/lib/api-client.ts` →
+   `GET /market/search?q=` on the Python backend.
+2. User adds/edits holdings → held in React state, mirrored to
+   `localStorage` client-side — no network call.
+3. Analysis triggers via `analyze()` → `POST /analysis/explore` with
+   `{holdings, mode}` → the backend fetches 5y of prices for all symbols +
+   SPY/QQQ, aligns calendars, builds the constant-mix index, computes
+   per-holding metrics, and returns an `AnalyzeResponse`.
+4. Client runs `deriveRangeView()` to slice all series to the selected
+   range (6M/1Y/2Y/3Y/5Y) and recompute every stat on that window — no
+   refetch.
 
 ### Directory map
 
 ```
 src/
 ├── app/
-│   ├── api/
-│   │   ├── analyze/route.ts    # POST — the core analytics engine
-│   │   ├── portfolio/route.ts  # GET/PUT — portfolio persistence
-│   │   ├── stocks/search/route.ts  # GET — instrument search
-│   │   └── health/route.ts     # GET — DB connectivity check
 │   ├── layout.tsx              # Root layout (fonts, metadata)
-│   ├── page.tsx                # Single client page (hero → dashboard)
+│   ├── page.tsx                # Analyzer (hero -> dashboard, localStorage portfolio)
+│   ├── portfolio/page.tsx      # Saved-portfolio builder (backend CRUD)
+│   ├── health/page.tsx         # Engine 1 — health report
+│   ├── strategy/page.tsx       # Engine 2 — regime + asset ranking
+│   ├── news/page.tsx           # Engine 3 — essential news
+│   ├── react/page.tsx          # Engine 4 — should-I-react flow
+│   ├── performance/page.tsx    # Backtest curves (Dev 2 engine, Dev 1 page)
 │   └── globals.css             # Tailwind theme tokens + utility classes
 ├── components/
-│   ├── chrome.tsx              # Header, Footer, Hero, presets, logo
+│   ├── chrome.tsx              # Header (real nav, active route), Footer, Hero, presets
+│   ├── EngineShell.tsx         # Engine-page shell + status states + UI primitives
 │   ├── SearchBox.tsx           # Autocomplete search with keyboard nav
 │   ├── HoldingsPanel.tsx       # Editable position list (weight/shares toggle)
 │   ├── PerformanceChart.tsx    # SVG area chart with crosshair tooltip
@@ -75,25 +133,20 @@ src/
 │   ├── AllocationDonut.tsx     # Donut chart + sector breakdown bars
 │   ├── HoldingsTable.tsx       # Per-position analytics table with sparklines
 │   └── MonthlyHeatmap.tsx      # Calendar heatmap of monthly returns
-├── db/
-│   ├── schema.ts               # Drizzle schema (stocks, price_cache, portfolios)
-│   ├── index.ts                # Drizzle client + pg Pool singleton
-│   ├── seed.ts                 # DB seeder
-│   └── stock-universe.ts       # Static seed data (~400 instruments)
 └── lib/
-    ├── types.ts                # Shared TypeScript types + RANGES constant
-    ├── format.ts               # Client formatting (fmtPct, fmtPrice, fmtDate, etc.)
-    ├── metrics.ts              # Quant toolkit (alignment, indexing, stats)
-    ├── prices.ts               # Market data engine (cache, fetch, synthetic)
-    ├── stocks.ts               # Search across seeded + live instrument universe
-    └── view.ts                 # Client-side range slicing & metric recomputation
+    ├── types.ts                # Shared types incl. engine API types + RANGES
+    ├── format.ts                # Client formatting (fmtPct, fmtPrice, fmtDate, etc.)
+    ├── api-client.ts            # Typed fetch client over the FastAPI backend (all endpoints)
+    ├── use-engine.ts           # Fetch hook: abort, reload, marker/error classification
+    ├── metrics.ts              # Legacy quant toolkit; superseded by backend/src/analysis/engine.py
+    └── view.ts                  # Client-side range slicing & metric recomputation
 ```
 
 ### Important conventions
 
-- **Ticker normalization** — `normalizeSymbol()` uppercases, replaces `.` with `-`, truncates to 14 chars. Always normalize before DB lookups or cache keys.
-- **API route boilerplate** — every route exports `runtime = "nodejs"` and `dynamic = "force-dynamic"` (no static generation for data routes).
 - **All path aliases** are `@/*` → `./src/*`.
-- **The `curl` binary is required at runtime** for live price fetching. The app falls back to `fetch` if curl is absent, but Yahoo Finance blocks Node fetch with 429.
-- **The seed script** expects `DATABASE_URL` in the environment. Production uses the same environment variable.
-- **Range views are pure client-side derivation** — `deriveRangeView()` can be called on any `AnalyzeResponse` to window it differently without a network round-trip.
+- **`NEXT_PUBLIC_BACKEND_URL`** must be set and the Python backend must be
+  running for search or analysis to work — there's no local fallback.
+- **Range views are pure client-side derivation** — `deriveRangeView()` can
+  be called on any `AnalyzeResponse` to window it differently without a
+  network round-trip.

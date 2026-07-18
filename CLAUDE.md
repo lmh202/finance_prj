@@ -43,7 +43,8 @@ The repo is split into two processes that talk **only over HTTP**. No
 backend/                     FastAPI service
   main.py                    entry point — uvicorn main:app --app-dir backend
   serialize.py               dataclass/DataFrame → JSON helpers (df_records, df_split, as_dict)
-  routers/                   one thin router per engine (health, strategy, news, recommendation)
+  routers/                   one thin router per owned engine (health, strategy, news, recommendation),
+                              plus shared-kernel routers (market, portfolio) and analysis (see below)
     _common.py               shared request plumbing: load holdings → bail markers (409/502)
   src/
     interfaces.py            THE FROZEN CONTRACT (custodian: Developer 4)
@@ -54,6 +55,10 @@ backend/                     FastAPI service
     daily_strategy/          Developer 2 — classify_regime, score_assets, backtest (walk-forward ML)
     news_intelligence/       Developer 3 — fetch_headlines, essential_news, sentiment_features
     recommendation/          Developer 4 — reaction_risk, recommend_daily, recommend_event, apply_constraints
+    analysis/                NOT one of the four contract engines — calendar alignment, constant-mix
+                              portfolio construction, and risk stats. Ported from frontendjs' old
+                              src/lib/metrics.ts; used only by routers/analysis.py's /analysis/explore,
+                              which serves frontendjs (see "Separate projects" below), not frontend/.
 
 frontend/                    Streamlit UI
   app.py                     Home — portfolio builder (Developer 4)
@@ -164,15 +169,26 @@ many times — don't rebuild it from raw corpora on every run).
 
 ### `frontendjs/` — Aurora (Next.js portfolio analytics)
 
-An **untracked, separate** Next.js 16 App Router app with its own
-`CLAUDE.md`. PostgreSQL + Drizzle ORM, Tailwind CSS 4, Framer Motion.
-Not part of the AURORA Python system — it's an independent single-page
-analytics platform. See `frontendjs/CLAUDE.md` for its commands and
-architecture.
+A **tracked, separate** Next.js 16 App Router app with its own `CLAUDE.md`.
+It is not part of the AURORA Python system's ownership model (no engine
+folder, no Developer owns it) but it is no longer fully independent either:
+it used to run its own PostgreSQL database and Next.js API routes, but that
+was ripped out — it now has **no database and no server-side API routes of
+its own**. Every data operation goes through `frontendjs/src/lib/api-client.ts`,
+a typed fetch client that calls this repo's FastAPI backend directly at
+`NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8000`).
+`backend/main.py` sets CORS to allow `http://localhost:3000` specifically
+for this.
 
-### `AGENTS.md`
+The app has two kinds of pages:
+- `/` — the original analyzer (hypothetical portfolio in `localStorage`,
+  `/market/search` + `/analysis/explore`).
+- Engine pages ported from `frontend/`'s Streamlit views: `/portfolio`
+  (builder for the backend-saved portfolio via `/portfolio*`), `/health`,
+  `/strategy`, `/news`, `/react` and `/performance`, consuming the four
+  engine routers (`/health/report`, `/strategy/*`, `/news/*`,
+  `/recommendation/*`). These read the same `data/portfolio.csv` the
+  Streamlit frontend edits — the `empty_portfolio` / `no_history` markers
+  are surfaced through `ApiMarkerError` in the api-client.
 
-A **stale copy** of an older CLAUDE.md — paths are outdated (`src/` instead
-of `backend/src/`, `app/` instead of `frontend/`). It was written for
-Codex.ai, not Claude Code. If no one is actively using Codex, it should be
-deleted or synced to match this file.
+See `frontendjs/CLAUDE.md` for the app's own architecture notes.

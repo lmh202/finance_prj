@@ -1,13 +1,21 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
+  Activity,
+  Briefcase,
+  Flag,
+  HeartPulse,
   LineChart,
   Rss,
+  Scale,
   Search,
   SlidersHorizontal,
-  Activity,
+  TrendingUp,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -37,13 +45,56 @@ export function AuroraMark({ size = 26 }: { size?: number }) {
 /* Header                                                              */
 /* ------------------------------------------------------------------ */
 
+const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/", label: "Analyzer", icon: Activity },
+  { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+  { href: "/health", label: "Health", icon: HeartPulse },
+  { href: "/strategy", label: "Strategy", icon: TrendingUp },
+  { href: "/news", label: "News", icon: Rss },
+  { href: "/react", label: "React?", icon: Scale },
+  { href: "/performance", label: "Performance", icon: Flag },
+];
+
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  alwaysLabel,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+  alwaysLabel?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      title={label}
+      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+        active
+          ? "border-accent/30 bg-accent-dim font-medium text-accent"
+          : "border-transparent text-mut hover:bg-white/[0.04] hover:text-ink"
+      }`}
+    >
+      <Icon className="size-3" />
+      <span className={alwaysLabel ? "" : "hidden xl:block"}>{label}</span>
+    </Link>
+  );
+}
+
 export function Header({
   source,
   asOf,
 }: {
-  source: "live" | "mixed" | "simulated" | null;
+  source?: "live" | "mixed" | "simulated" | null;
   asOf?: string;
 }) {
+  const pathname = usePathname();
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
+
   const chip =
     source === "live"
       ? { dot: "bg-gain", text: `Live feed · ${asOf ?? ""}`, cls: "border-gain/25 bg-gain/10 text-gain" }
@@ -55,40 +106,38 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg0/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-[1480px] items-center gap-4 px-4 lg:px-8">
-        <a href="#" className="flex items-center gap-2.5" aria-label="Aurora home">
-          <AuroraMark />
-          <span className="text-[17px] font-bold tracking-tight">Aurora</span>
-          <span className="mt-0.5 hidden font-mono text-[9px] uppercase tracking-[0.22em] text-mut sm:block">
-            portfolio intelligence
-          </span>
-        </a>
-
-        <nav className="ml-6 hidden items-center gap-1 md:flex">
-          <span className="flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent-dim px-3 py-1 text-xs font-medium text-accent">
-            <Activity className="size-3" />
-            Analyzer
-          </span>
-          <span
-            className="flex cursor-not-allowed items-center gap-1.5 rounded-full px-3 py-1 text-xs text-mut/70"
-            title="News-driven rebalancing signals — next milestone"
-          >
-            <Rss className="size-3" />
-            News signals
-            <span className="rounded-full border border-amber-300/25 bg-amber-300/10 px-1.5 py-px font-mono text-[9px] uppercase tracking-wider text-amber-200/80">
-              RSS · soon
+      <div className="mx-auto max-w-[1480px] px-4 lg:px-8">
+        <div className="flex h-14 items-center gap-3">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Aurora home">
+            <AuroraMark />
+            <span className="text-[17px] font-bold tracking-tight">Aurora</span>
+            <span className="mt-0.5 hidden font-mono text-[9px] uppercase tracking-[0.22em] text-mut sm:block">
+              portfolio intelligence
             </span>
-          </span>
-        </nav>
+          </Link>
 
-        <div className="ml-auto">
-          {chip && (
-            <div className={`flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider ${chip.cls}`}>
-              <span className={`pulse-dot size-1.5 rounded-full ${chip.dot}`} />
-              {chip.text}
-            </div>
-          )}
+          <nav className="ml-3 hidden items-center gap-0.5 md:flex">
+            {NAV.map((item) => (
+              <NavLink key={item.href} {...item} active={isActive(item.href)} />
+            ))}
+          </nav>
+
+          <div className="ml-auto">
+            {chip && (
+              <div className={`flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider ${chip.cls}`}>
+                <span className={`pulse-dot size-1.5 rounded-full ${chip.dot}`} />
+                {chip.text}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* small screens: scrollable nav row */}
+        <nav className="scroll-slim -mx-1 flex items-center gap-0.5 overflow-x-auto px-1 pb-2 md:hidden">
+          {NAV.map((item) => (
+            <NavLink key={item.href} {...item} active={isActive(item.href)} alwaysLabel />
+          ))}
+        </nav>
       </div>
     </header>
   );
@@ -328,8 +377,8 @@ export function Footer() {
           <span>Not investment advice</span>
           <span className="size-1 rounded-full bg-mut/40" />
           <span className="flex items-center gap-1">
-            <Rss className="size-3 text-amber-200/70" />
-            next: RSS news signals → rebalancing
+            <Activity className="size-3 text-accent/70" />
+            powered by the AURORA engine API
           </span>
         </div>
       </div>

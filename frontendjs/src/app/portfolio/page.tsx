@@ -1,0 +1,844 @@
+"use client";
+
+/**
+ * Portfolio builder — mirrors the Streamlit Home page (frontend/app.py).
+ *
+ * Unlike the analyzer on "/", which explores a hypothetical localStorage
+ * portfolio, this page edits the SAVED portfolio on the backend
+ * (data/portfolio.csv + cash) — the portfolio every engine page reads.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Briefcase,
+  Download,
+  FileUp,
+  Loader2,
+  PackageOpen,
+  Plus,
+  RefreshCw,
+  ServerCrash,
+  Trash2,
+  TriangleAlert,
+  Undo2,
+  X,
+} from "lucide-react";
+import {
+  BTN_GHOST,
+  BTN_PRIMARY,
+  Metric,
+  Note,
+  PageShell,
+  Section,
+  StateCard,
+  ThinBar,
+} from "@/components/EngineShell";
+import { SearchBox } from "@/components/SearchBox";
+import {
+  addHolding,
+  BackendDownError,
+  fetchCash,
+  fetchLatestPrices,
+  fetchPortfolio,
+  fetchPortfolioView,
+  loadSamplePortfolio,
+  parsePortfolioCsv,
+  saveCash,
+  savePortfolio,
+} from "@/lib/api-client";
+import { fmtNum, signClass } from "@/lib/format";
+import type {
+  BackendHolding,
+  PortfolioTotals,
+  PortfolioViewRow,
+  StockInfo,
+} from "@/lib/types";
+
+const INPUT =
+  "w-full rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-accent/50";
+const LABEL = "font-mono text-[10px] uppercase tracking-wider text-mut";
+
+function fmtMoney(v: number): string {
+  return (
+    "$" +
+    v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  );
+}
+
+/** Editable string-typed row so number inputs stay free to type into. */
+interface EditRow {
+  symbol: string;
+  name: string;
+  shares: string;
+  buy_price: string;
+}
+
+/** ≤4 decimals so CSV float noise (331.8699951172) doesn't flood the inputs. */
+function trimNum(v: number): string {
+  return String(Math.round(v * 1e4) / 1e4);
+}
+
+function toEdit(h: BackendHolding): EditRow {
+  return {
+    symbol: h.symbol,
+    name: h.name ?? "",
+    shares: trimNum(h.shares),
+    buy_price: trimNum(h.buy_price),
+  };
+}
+
+function toHolding(r: EditRow): BackendHolding {
+  return {
+    symbol: r.symbol,
+    name: r.name,
+    shares: Number.parseFloat(r.shares) || 0,
+    buy_price: Number.parseFloat(r.buy_price) || 0,
+  };
+}
+
+function sameRows(a: EditRow[], b: EditRow[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (r, i) =>
+      r.symbol === b[i].symbol &&
+      r.shares === b[i].shares &&
+      r.buy_price === b[i].buy_price
+  );
+}
+
+function downloadText(filename: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function holdingsCsv(rows: BackendHolding[]): string {
+  const lines = ["symbol,name,shares,buy_price"];
+  for (const r of rows) {
+    const name = /[",]/.test(r.name) ? `"${r.name.replace(/"/g, '""')}"` : r.name;
+    lines.push(`${r.symbol},${name},${r.shares},${r.buy_price}`);
+  }
+  return lines.join("\n") + "\n";
+}
+
+interface PendingAdd {
+  info: StockInfo;
+  shares: string;
+  buyPrice: string;
+  error: string | null;
+}
+
+export default function PortfolioPage() {
+  const [boot, setBoot] = useState<"loading" | "down" | "error" | "ready">("loading");
+  const [bootMsg, setBootMsg] = useState("");
+
+  const [saved, setSaved] = useState<BackendHolding[]>([]);
+  const [rows, setRows] = useState<EditRow[]>([]);
+  const [cash, setCash] = useState(0);
+  const [cashText, setCashText] = useState("0");
+  const [view, setView] = useState<PortfolioViewRow[]>([]);
+  const [totals, setTotals] = useState<PortfolioTotals | null>(null);
+
+  const [busy, setBusy] = useState<string | null>(null);
+  const [problems, setProblems] = useState<string[]>([]);
+  const [pending, setPending] = useState<PendingAdd | null>(null);
+  const [confirmSample, setConfirmSample] = useState(false);
+  const [importPrev, setImportPrev] = useState<{
+    holdings: BackendHolding[];
+    problems: string[];
+  } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const applySaved = useCallback((h: BackendHolding[]) => {
+    setSaved(h);
+    setRows(h.map(toEdit));
+  }, []);
+
+  const refreshView = useCallback(async () => {
+    const { view, totals } = await fetchPortfolioView();
+    setView(view);
+    setTotals(totals);
+  }, []);
+
+  // No synchronous setState before the first await — safe to call from the
+  // mount effect; retry() flips boot back to "loading" from its own handler.
+  const bootstrap = useCallback(async () => {
+    try {
+      const [holdings, cashValue, viewData] = await Promise.all([
+        fetchPortfolio(),
+        fetchCash(),
+        fetchPortfolioView(),
+      ]);
+      applySaved(holdings);
+      setCash(cashValue);
+      setCashText(String(cashValue));
+      setView(viewData.view);
+      setTotals(viewData.totals);
+      setBoot("ready");
+    } catch (err) {
+      setBootMsg(err instanceof Error ? err.message : String(err));
+      setBoot(err instanceof BackendDownError ? "down" : "error");
+    }
+  }, [applySaved]);
+
+  useEffect(() => {
+    // Deferred so no setState runs synchronously inside the effect body
+    // (react-hooks/set-state-in-effect); also skips strict-mode double fires.
+    const timer = setTimeout(() => void bootstrap(), 0);
+    return () => clearTimeout(timer);
+  }, [bootstrap]);
+
+  async function run(name: string, fn: () => Promise<void>) {
+    setBusy(name);
+    setProblems([]);
+    try {
+      await fn();
+    } catch (err) {
+      setProblems([err instanceof Error ? err.message : String(err)]);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /* ------------------------------- derived ------------------------------- */
+
+  const savedRows = useMemo(() => saved.map(toEdit), [saved]);
+  const dirty = boot === "ready" && !sameRows(rows, savedRows);
+  const existing = useMemo(() => new Set(saved.map((h) => h.symbol)), [saved]);
+  const viewBy = useMemo(() => new Map(view.map((r) => [r.symbol, r])), [view]);
+  const unpriced = useMemo(
+    () => view.filter((r) => !r.has_price).map((r) => r.symbol),
+    [view]
+  );
+
+  const displayRows = useMemo(() => {
+    const value = (r: EditRow) => viewBy.get(r.symbol)?.market_value ?? 0;
+    return [...rows].sort((a, b) => value(b) - value(a));
+  }, [rows, viewBy]);
+
+  const alloc = useMemo(() => {
+    if (!totals || totals.market_value <= 0) return [];
+    const items = view
+      .map((r) => ({ label: r.symbol, value: r.market_value, weight: r.weight_pct, cash: false }))
+      .sort((a, b) => b.weight - a.weight);
+    if (totals.cash > 0) {
+      items.push({
+        label: "Cash",
+        value: totals.cash,
+        weight: (totals.cash / totals.market_value) * 100,
+        cash: true,
+      });
+    }
+    return items;
+  }, [view, totals]);
+
+  /* ------------------------------- actions ------------------------------- */
+
+  function startAdd(info: StockInfo) {
+    setPending({ info, shares: "1", buyPrice: "", error: null });
+  }
+
+  async function confirmAdd() {
+    if (!pending) return;
+    const shares = Number.parseFloat(pending.shares) || 0;
+    if (shares <= 0) {
+      setPending({ ...pending, error: "Shares must be greater than zero." });
+      return;
+    }
+    await run("add", async () => {
+      let price = Number.parseFloat(pending.buyPrice) || 0;
+      if (price <= 0) {
+        const prices = await fetchLatestPrices([pending.info.symbol]);
+        const live = prices[pending.info.symbol];
+        if (live == null) {
+          setPending({
+            ...pending,
+            error: `No live price available for ${pending.info.symbol} — enter your buy price manually.`,
+          });
+          return;
+        }
+        price = live;
+      }
+      const holdings = await addHolding({
+        symbol: pending.info.symbol,
+        name: pending.info.name,
+        shares,
+        buy_price: price,
+      });
+      applySaved(holdings);
+      setPending(null);
+      await refreshView();
+    });
+  }
+
+  function editRow(symbol: string, field: "shares" | "buy_price", value: string) {
+    setRows((rs) => rs.map((r) => (r.symbol === symbol ? { ...r, [field]: value } : r)));
+  }
+
+  function removeRow(symbol: string) {
+    setRows((rs) => rs.filter((r) => r.symbol !== symbol));
+  }
+
+  async function saveRows() {
+    await run("save", async () => {
+      const { holdings, problems } = await savePortfolio(rows.map(toHolding));
+      applySaved(holdings);
+      setProblems(problems);
+      await refreshView();
+    });
+  }
+
+  async function commitCash() {
+    const value = Number.parseFloat(cashText) || 0;
+    if (value === cash) return;
+    await run("cash", async () => {
+      await saveCash(value);
+      setCash(value);
+      setCashText(String(value));
+      await refreshView();
+    });
+  }
+
+  async function loadSample() {
+    await run("sample", async () => {
+      const { holdings, cash: sampleCash } = await loadSamplePortfolio();
+      applySaved(holdings);
+      setCash(sampleCash);
+      setCashText(String(sampleCash));
+      await refreshView();
+    });
+  }
+
+  /** Loading the sample REPLACES the saved portfolio — two-step confirm
+   *  whenever there is something to lose. */
+  function onLoadSampleClick() {
+    if (saved.length > 0 && !confirmSample) {
+      setConfirmSample(true);
+      setTimeout(() => setConfirmSample(false), 4000);
+      return;
+    }
+    setConfirmSample(false);
+    void loadSample();
+  }
+
+  async function onCsvPicked(file: File) {
+    const text = await file.text();
+    await run("parse", async () => {
+      setImportPrev(await parsePortfolioCsv(text));
+    });
+  }
+
+  async function confirmImport() {
+    if (!importPrev) return;
+    await run("import", async () => {
+      const { holdings, problems } = await savePortfolio(importPrev.holdings);
+      applySaved(holdings);
+      setProblems(problems);
+      setImportPrev(null);
+      await refreshView();
+    });
+  }
+
+  /* ------------------------------- render -------------------------------- */
+
+  if (boot !== "ready") {
+    return (
+      <PageShell
+        title="Portfolio"
+        icon={Briefcase}
+        caption="The saved AURORA portfolio — what every engine page reads"
+        wide
+      >
+        {boot === "loading" ? (
+          <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+            <div className="space-y-4">
+              <div className="skeleton h-40 rounded-2xl" />
+              <div className="skeleton h-64 rounded-2xl" />
+            </div>
+            <div className="space-y-4">
+              <div className="skeleton h-24 rounded-2xl" />
+              <div className="skeleton h-80 rounded-2xl" />
+            </div>
+          </div>
+        ) : (
+          <StateCard
+            icon={boot === "down" ? ServerCrash : TriangleAlert}
+            iconTone="text-loss"
+            title={boot === "down" ? "Backend not running" : "Something went wrong"}
+            body={
+              boot === "down" ? (
+                <>
+                  Start it with{" "}
+                  <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+                    scripts\dev.ps1
+                  </code>{" "}
+                  or{" "}
+                  <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+                    uvicorn main:app --app-dir backend --port 8000
+                  </code>
+                  , then retry.
+                </>
+              ) : (
+                bootMsg
+              )
+            }
+            actions={
+              <button
+                onClick={() => {
+                  setBoot("loading");
+                  void bootstrap();
+                }}
+                className={BTN_PRIMARY}
+              >
+                <RefreshCw className="size-3.5" />
+                Retry
+              </button>
+            }
+          />
+        )}
+      </PageShell>
+    );
+  }
+
+  const pnlPct =
+    totals && totals.cost > 0 ? (totals.pnl / totals.cost) * 100 : 0;
+
+  return (
+    <PageShell
+      title="Portfolio"
+      icon={Briefcase}
+      caption="The saved AURORA portfolio — what every engine page reads"
+      wide
+      actions={
+        <button
+          onClick={() => void run("refresh", refreshView)}
+          disabled={busy != null}
+          className={BTN_GHOST}
+          title="Refresh prices"
+        >
+          <RefreshCw
+            className={`size-3.5 ${busy === "refresh" ? "animate-spin text-accent" : ""}`}
+          />
+          Refresh prices
+        </button>
+      }
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]"
+      >
+        {/* ------------------------------ left rail ------------------------------ */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-[72px] lg:self-start">
+          <Section title="Add a holding">
+            <SearchBox onAdd={startAdd} existing={existing} />
+            {pending ? (
+              <div className="mt-3 rounded-xl border border-line bg-white/[0.03] p-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-semibold text-accent">
+                    {pending.info.symbol}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-mut">
+                    {pending.info.name}
+                  </span>
+                  <button
+                    onClick={() => setPending(null)}
+                    className="text-mut transition-colors hover:text-loss"
+                    aria-label="Cancel"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                  <label className="block">
+                    <span className={LABEL}>Shares</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={pending.shares}
+                      onChange={(e) => setPending({ ...pending, shares: e.target.value, error: null })}
+                      className={`mt-1 ${INPUT}`}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className={LABEL}>Buy price ($)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      placeholder="market"
+                      value={pending.buyPrice}
+                      onChange={(e) => setPending({ ...pending, buyPrice: e.target.value, error: null })}
+                      className={`mt-1 ${INPUT}`}
+                    />
+                  </label>
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-mut/80">
+                  Leave the price empty to use the latest market price as your cost basis.
+                </p>
+                {pending.error && (
+                  <p className="mt-2 text-xs leading-relaxed text-loss">{pending.error}</p>
+                )}
+                <button
+                  onClick={() => void confirmAdd()}
+                  disabled={busy != null}
+                  className={`${BTN_PRIMARY} mt-3 w-full justify-center`}
+                >
+                  {busy === "add" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="size-3.5" />
+                  )}
+                  Add holding
+                </button>
+              </div>
+            ) : (
+              <p className="mt-2.5 text-[11px] leading-relaxed text-mut/80">
+                Search the full NASDAQ / NYSE universe, then enter shares and cost basis.
+              </p>
+            )}
+          </Section>
+
+          <Section title="Cash balance">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={cashText}
+                onChange={(e) => setCashText(e.target.value)}
+                onBlur={() => void commitCash()}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                className={INPUT}
+                aria-label="Cash balance in dollars"
+              />
+              {busy === "cash" && <Loader2 className="size-3.5 shrink-0 animate-spin text-accent" />}
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-mut/80">
+              Counted in total value and allocation, excluded from position weights.
+            </p>
+          </Section>
+
+          <Section title="Import / export">
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void onCsvPicked(f);
+                e.target.value = "";
+              }}
+            />
+            <div className="space-y-2">
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={busy != null}
+                className={`${BTN_GHOST} w-full justify-center`}
+              >
+                {busy === "parse" ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <FileUp className="size-3.5" />
+                )}
+                Upload portfolio CSV
+              </button>
+              <button
+                onClick={() => downloadText("my_portfolio.csv", holdingsCsv(saved))}
+                disabled={saved.length === 0}
+                className={`${BTN_GHOST} w-full justify-center`}
+              >
+                <Download className="size-3.5" />
+                Download current (CSV)
+              </button>
+              <button
+                onClick={() =>
+                  downloadText(
+                    "portfolio_template.csv",
+                    "symbol,shares,buy_price\nAAPL,10,250\nSPY,5,600\n"
+                  )
+                }
+                className={`${BTN_GHOST} w-full justify-center`}
+              >
+                <Download className="size-3.5" />
+                Download CSV template
+              </button>
+            </div>
+            <p className="mt-2.5 text-[11px] leading-relaxed text-mut/80">
+              Columns: <span className="font-mono">symbol, shares</span> and optionally{" "}
+              <span className="font-mono">buy_price, name</span>.
+            </p>
+
+            {importPrev && (
+              <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/[0.06] p-3">
+                <div className="text-xs text-amber-200/90">
+                  {importPrev.holdings.length} holdings found in file.
+                </div>
+                {importPrev.problems.map((p) => (
+                  <div key={p} className="mt-1.5 text-[11px] leading-relaxed text-amber-200/70">
+                    {p}
+                  </div>
+                ))}
+                <div className="mt-2.5 flex gap-2">
+                  <button
+                    onClick={() => void confirmImport()}
+                    disabled={busy != null || importPrev.holdings.length === 0}
+                    className={`${BTN_PRIMARY} flex-1 justify-center`}
+                  >
+                    {busy === "import" && <Loader2 className="size-3.5 animate-spin" />}
+                    Import (replaces current)
+                  </button>
+                  <button onClick={() => setImportPrev(null)} className={BTN_GHOST}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </Section>
+
+          <button
+            onClick={onLoadSampleClick}
+            disabled={busy != null}
+            className={`${
+              confirmSample
+                ? "inline-flex items-center gap-2 rounded-xl border border-loss/40 bg-loss/10 px-4 py-2 text-sm font-medium text-loss transition-colors hover:bg-loss/20"
+                : BTN_GHOST
+            } w-full justify-center`}
+          >
+            {busy === "sample" ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : confirmSample ? (
+              <TriangleAlert className="size-3.5" />
+            ) : (
+              <PackageOpen className="size-3.5" />
+            )}
+            {confirmSample ? "Replace current portfolio?" : "Load sample portfolio"}
+          </button>
+        </aside>
+
+        {/* ------------------------------ main column ---------------------------- */}
+        <div className="min-w-0 space-y-4">
+          {problems.map((p) => (
+            <Note key={p}>{p}</Note>
+          ))}
+
+          {saved.length === 0 && !dirty ? (
+            <StateCard
+              icon={PackageOpen}
+              iconTone="text-accent"
+              title="Your portfolio is empty"
+              body="Add your first holding with the search box, upload a CSV, or load the sample portfolio — then explore the engine pages."
+              actions={
+                <button onClick={() => void loadSample()} disabled={busy != null} className={BTN_PRIMARY}>
+                  {busy === "sample" ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <PackageOpen className="size-3.5" />
+                  )}
+                  Load sample portfolio
+                </button>
+              }
+            />
+          ) : (
+            <>
+              {totals && (
+                <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
+                  <Metric label="Total value" value={fmtMoney(totals.market_value)} sub="incl. cash" />
+                  <Metric label="Invested" value={fmtMoney(totals.invested)} />
+                  <Metric label="Cash" value={fmtMoney(totals.cash)} />
+                  <Metric
+                    label="Unrealized P/L"
+                    value={fmtMoney(totals.pnl)}
+                    tone={signClass(totals.pnl)}
+                    sub={`${pnlPct >= 0 ? "+" : ""}${fmtNum(pnlPct, 2)}% on cost`}
+                  />
+                </div>
+              )}
+
+              {unpriced.length > 0 && (
+                <Note>
+                  No live price for: {unpriced.join(", ")} — showing cost basis instead.
+                </Note>
+              )}
+
+              {dirty && (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-accent/30 bg-accent-dim px-4 py-3">
+                  <span className="text-sm text-ink/90">
+                    Unsaved changes — values and weights refresh after you save.
+                  </span>
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      onClick={() => void saveRows()}
+                      disabled={busy != null}
+                      className={BTN_PRIMARY}
+                    >
+                      {busy === "save" && <Loader2 className="size-3.5 animate-spin" />}
+                      Save changes
+                    </button>
+                    <button
+                      onClick={() => setRows(saved.map(toEdit))}
+                      disabled={busy != null}
+                      className={BTN_GHOST}
+                    >
+                      <Undo2 className="size-3.5" />
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <section className="card px-2 py-2">
+                <h3 className="px-3 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                  Holdings
+                </h3>
+                <div className="scroll-slim overflow-x-auto">
+                  <table className="w-full min-w-[860px] border-collapse">
+                    <thead>
+                      <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
+                        <th className="px-3 py-3 font-medium">Position</th>
+                        <th className="px-3 py-3 text-right font-medium">Shares</th>
+                        <th className="px-3 py-3 text-right font-medium">Avg cost</th>
+                        <th className="px-3 py-3 text-right font-medium">Price</th>
+                        <th className="px-3 py-3 text-right font-medium">Value</th>
+                        <th className="px-3 py-3 text-right font-medium">P/L</th>
+                        <th className="px-3 py-3 text-right font-medium">P/L %</th>
+                        <th className="px-3 py-3 text-right font-medium">Weight</th>
+                        <th className="px-3 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayRows.map((r) => {
+                        const v = viewBy.get(r.symbol);
+                        return (
+                          <tr
+                            key={r.symbol}
+                            className="border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.02]"
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-2.5">
+                                <span className="font-mono text-sm font-semibold text-accent">
+                                  {r.symbol}
+                                </span>
+                                <span className="max-w-[180px] truncate text-xs text-mut">
+                                  {r.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-right">
+                              <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={r.shares}
+                                onChange={(e) => editRow(r.symbol, "shares", e.target.value)}
+                                className={`${INPUT} w-24 text-right`}
+                                aria-label={`${r.symbol} shares`}
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-right">
+                              <input
+                                type="number"
+                                min={0}
+                                step="any"
+                                value={r.buy_price}
+                                onChange={(e) => editRow(r.symbol, "buy_price", e.target.value)}
+                                className={`${INPUT} w-24 text-right`}
+                                aria-label={`${r.symbol} average cost`}
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-mut">
+                              {v?.has_price && v.current_price != null
+                                ? fmtMoney(v.current_price)
+                                : "—"}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-ink/90">
+                              {v ? fmtMoney(v.market_value) : "—"}
+                            </td>
+                            <td
+                              className={`px-3 py-2.5 text-right font-mono text-xs font-medium tabular ${signClass(
+                                v?.pnl ?? null
+                              )}`}
+                            >
+                              {v ? fmtMoney(v.pnl) : "—"}
+                            </td>
+                            <td
+                              className={`px-3 py-2.5 text-right font-mono text-xs tabular ${signClass(
+                                v?.pnl_pct ?? null
+                              )}`}
+                            >
+                              {v?.pnl_pct == null
+                                ? "—"
+                                : `${v.pnl_pct >= 0 ? "+" : ""}${fmtNum(v.pnl_pct, 2)}%`}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center justify-end gap-2">
+                                <ThinBar fraction={(v?.weight_pct ?? 0) / 100} className="w-12" />
+                                <span className="w-11 text-right font-mono text-xs tabular text-ink/85">
+                                  {v ? `${fmtNum(v.weight_pct, 1)}%` : "—"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-right">
+                              <button
+                                onClick={() => removeRow(r.symbol)}
+                                title={`Remove ${r.symbol}`}
+                                className="rounded-lg border border-transparent p-1.5 text-mut transition-colors hover:border-loss/40 hover:text-loss"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              {alloc.length > 0 && (
+                <Section title="Allocation">
+                  <div className="space-y-2.5">
+                    {alloc.map((item) => (
+                      <div key={item.label} className="flex items-center gap-3">
+                        <span
+                          className={`w-14 shrink-0 font-mono text-xs font-semibold ${
+                            item.cash ? "text-mut" : "text-accent"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${Math.min(item.weight, 100)}%`,
+                              backgroundColor: item.cash ? "#86938a" : "var(--color-accent)",
+                              opacity: item.cash ? 0.7 : 0.85,
+                            }}
+                          />
+                        </div>
+                        <span className="w-12 text-right font-mono text-xs tabular text-ink/85">
+                          {fmtNum(item.weight, 1)}%
+                        </span>
+                        <span className="hidden w-24 text-right font-mono text-[11px] tabular text-mut sm:block">
+                          {fmtMoney(item.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    </PageShell>
+  );
+}
