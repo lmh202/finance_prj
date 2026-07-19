@@ -26,14 +26,21 @@ analysis to work (`uvicorn main:app --app-dir ../backend --reload --port
 **Aurora** is a portfolio analytics platform — a Next.js 16 App Router app
 with two kinds of pages:
 
-- **`/` (Analyzer)** — the original single-page experience: compose a
-  hypothetical stock/ETF portfolio (localStorage only) and see 5 years of
-  risk/performance analytics benchmarked against SPY and QQQ.
+- **`/` (Home)** — a clean entry point: a hero search box over the symbol
+  universe. Picking a result routes to `/portfolio?add=SYMBOL&name=…`,
+  where the builder prompts for the share count (avg cost optional). The
+  old localStorage analyzer that used to live here is gone — its analytics
+  were merged into `/portfolio`.
 - **Engine pages** — Next.js ports of the Streamlit pages in the repo-root
   `frontend/`, all reading the **backend-persisted** AURORA portfolio
-  (`data/portfolio.csv` + cash), NOT the analyzer's localStorage one:
+  (`data/portfolio.csv` + cash):
   - `/portfolio` — builder for the saved portfolio (add/edit/delete
     holdings, cash, CSV import/export, sample load with replace-confirm)
+    plus the analytics absorbed from the old analyzer: constant-mix
+    performance chart vs SPY/QQQ with 6M–5Y ranges, stat cards, allocation
+    donut + sector bars, monthly-returns heatmap (all fed by
+    `POST /analysis/explore` in `"shares"` mode), and per-position
+    Sharpe / Contribution / Trend columns in the holdings table
   - `/health` — Engine 1 health report (score gauge, metrics, correlation)
   - `/strategy` — Engine 2 market regime + daily asset ranking
   - `/news` — Engine 3 essential news (planned-feeds empty state while the
@@ -67,9 +74,10 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
   `http://localhost:8000` for local dev). Endpoints used:
   - `GET /market/search?q=` + `GET /market/prices` — symbol universe search
     and latest closes
-  - `POST /analysis/explore` — the analyzer's full analytics engine
+  - `POST /analysis/explore` — /portfolio's full analytics engine
     (calendar alignment, constant-mix construction, risk stats), backed by
-    `backend/src/analysis/engine.py`
+    `backend/src/analysis/engine.py`; called in `"shares"` mode with the
+    saved holdings
   - `/portfolio*` — saved-portfolio CRUD, cash, CSV parse, sample, view
   - `/health/report`, `/strategy/{regime,signals,backtest}`,
     `/news/{essential,feeds}`, `/recommendation/{daily,events,react}` —
@@ -79,11 +87,10 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
   backend throws `BackendDownError`.
   Backend CORS (`backend/main.py`) allow-lists `http://localhost:3000`
   specifically so this app can call it directly from the browser.
-- **No auth. Two portfolio stores, deliberately separate** — the analyzer's
-  hypothetical portfolio round-trips through `localStorage`
-  (`aurora_portfolio` key) only; the engine pages read/write the backend's
+- **No auth. One portfolio store** — every page reads/writes the backend's
   saved portfolio (`data/portfolio.csv`), shared with the Streamlit
-  frontend. There is no per-client UUID.
+  frontend. The analyzer's old localStorage portfolio (`aurora_portfolio`
+  key) no longer exists. There is no per-client UUID.
 - **Constant-mix portfolio** — the analysis engine builds a daily-rebalanced
   portfolio (assumes positions are reset to target weights each day). No
   transaction-cost modeling.
@@ -97,17 +104,22 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
 
 ### Request flow
 
-1. User types ticker → `searchStocks()` in `src/lib/api-client.ts` →
-   `GET /market/search?q=` on the Python backend.
-2. User adds/edits holdings → held in React state, mirrored to
-   `localStorage` client-side — no network call.
-3. Analysis triggers via `analyze()` → `POST /analysis/explore` with
-   `{holdings, mode}` → the backend fetches 5y of prices for all symbols +
+1. User types a ticker on `/` (or in /portfolio's "Add a holding" box) →
+   `searchStocks()` in `src/lib/api-client.ts` → `GET /market/search?q=`
+   on the Python backend.
+2. On `/`, picking a result routes to `/portfolio?add=SYMBOL&name=…`; the
+   builder opens its pending-add panel asking for shares (buy price
+   optional — falls back to the latest close) and POSTs
+   `/portfolio/holdings`.
+3. Whenever the saved holdings change, /portfolio calls `analyze()` →
+   `POST /analysis/explore` with `{holdings: [{symbol, value: shares}],
+   mode: "shares"}` → the backend fetches 5y of prices for all symbols +
    SPY/QQQ, aligns calendars, builds the constant-mix index, computes
    per-holding metrics, and returns an `AnalyzeResponse`.
 4. Client runs `deriveRangeView()` to slice all series to the selected
    range (6M/1Y/2Y/3Y/5Y) and recompute every stat on that window — no
-   refetch.
+   refetch. The holdings table's Sharpe / Contribution / Trend columns
+   follow the selected range.
 
 ### Directory map
 
@@ -115,8 +127,8 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
 src/
 ├── app/
 │   ├── layout.tsx              # Root layout (fonts, metadata)
-│   ├── page.tsx                # Analyzer (hero -> dashboard, localStorage portfolio)
-│   ├── portfolio/page.tsx      # Saved-portfolio builder (backend CRUD)
+│   ├── page.tsx                # Home — hero search, routes picks to /portfolio?add=
+│   ├── portfolio/page.tsx      # Saved-portfolio builder + analytics (CRUD + /analysis/explore)
 │   ├── health/page.tsx         # Engine 1 — health report
 │   ├── strategy/page.tsx       # Engine 2 — regime + asset ranking
 │   ├── news/page.tsx           # Engine 3 — essential news
@@ -124,14 +136,13 @@ src/
 │   ├── performance/page.tsx    # Backtest curves (Dev 2 engine, Dev 1 page)
 │   └── globals.css             # Tailwind theme tokens + utility classes
 ├── components/
-│   ├── chrome.tsx              # Header (real nav, active route), Footer, Hero, presets
+│   ├── chrome.tsx              # Header (real nav, active route), Footer, Hero
 │   ├── EngineShell.tsx         # Engine-page shell + status states + UI primitives
 │   ├── SearchBox.tsx           # Autocomplete search with keyboard nav
-│   ├── HoldingsPanel.tsx       # Editable position list (weight/shares toggle)
 │   ├── PerformanceChart.tsx    # SVG area chart with crosshair tooltip
 │   ├── StatsRow.tsx            # Animated metric cards (Sharpe, beta, etc.)
 │   ├── AllocationDonut.tsx     # Donut chart + sector breakdown bars
-│   ├── HoldingsTable.tsx       # Per-position analytics table with sparklines
+│   ├── Sparkline.tsx           # Tiny trend line for table rows
 │   └── MonthlyHeatmap.tsx      # Calendar heatmap of monthly returns
 └── lib/
     ├── types.ts                # Shared types incl. engine API types + RANGES

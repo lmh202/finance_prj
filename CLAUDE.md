@@ -181,14 +181,16 @@ a typed fetch client that calls this repo's FastAPI backend directly at
 for this.
 
 The app has two kinds of pages:
-- `/` — the original analyzer (hypothetical portfolio in `localStorage`,
-  `/market/search` + `/analysis/explore`).
+- `/` — a clean home/search entry point; picking a symbol routes to
+  `/portfolio?add=SYMBOL` (the old localStorage analyzer was merged into
+  `/portfolio` and no longer exists).
 - Engine pages ported from `frontend/`'s Streamlit views: `/portfolio`
-  (builder for the backend-saved portfolio via `/portfolio*`), `/health`,
-  `/strategy`, `/news`, `/react` and `/performance`, consuming the four
-  engine routers (`/health/report`, `/strategy/*`, `/news/*`,
-  `/recommendation/*`). These read the same `data/portfolio.csv` the
-  Streamlit frontend edits — the `empty_portfolio` / `no_history` markers
-  are surfaced through `ApiMarkerError` in the api-client.
+  (builder + analytics for the backend-saved portfolio via `/portfolio*`
+  plus `/analysis/explore` in shares mode), `/health`, `/strategy`,
+  `/news`, `/react` and `/performance`, consuming the four engine routers
+  (`/health/report`, `/strategy/*`, `/news/*`, `/recommendation/*`).
+  These read the same `data/portfolio.csv` the Streamlit frontend edits —
+  the `empty_portfolio` / `no_history` markers are surfaced through
+  `ApiMarkerError` in the api-client.
 
 See `frontendjs/CLAUDE.md` for the app's own architecture notes.

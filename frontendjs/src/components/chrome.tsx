@@ -9,11 +9,11 @@ import {
   Briefcase,
   Flag,
   HeartPulse,
+  Home,
   LineChart,
   Rss,
   Scale,
   Search,
-  SlidersHorizontal,
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
@@ -46,7 +46,7 @@ export function AuroraMark({ size = 26 }: { size?: number }) {
 /* ------------------------------------------------------------------ */
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/", label: "Analyzer", icon: Activity },
+  { href: "/", label: "Home", icon: Home },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/health", label: "Health", icon: HeartPulse },
   { href: "/strategy", label: "Strategy", icon: TrendingUp },
@@ -144,87 +144,7 @@ export function Header({
 }
 
 /* ------------------------------------------------------------------ */
-/* Presets                                                             */
-/* ------------------------------------------------------------------ */
-
-export interface PresetHolding {
-  symbol: string;
-  value: number;
-  name?: string;
-  quoteType?: string;
-}
-
-export interface Preset {
-  label: string;
-  holdings: PresetHolding[];
-}
-
-export const PRESETS: Preset[] = [
-  {
-    label: "Magnificent 7",
-    holdings: [
-      { symbol: "AAPL", value: 15, name: "Apple Inc." },
-      { symbol: "MSFT", value: 15, name: "Microsoft Corporation" },
-      { symbol: "NVDA", value: 15, name: "NVIDIA Corporation" },
-      { symbol: "AMZN", value: 14, name: "Amazon.com Inc." },
-      { symbol: "META", value: 14, name: "Meta Platforms Inc." },
-      { symbol: "GOOGL", value: 13, name: "Alphabet Inc." },
-      { symbol: "TSLA", value: 14, name: "Tesla Inc." },
-    ],
-  },
-  {
-    label: "AI & Semis",
-    holdings: [
-      { symbol: "NVDA", value: 20, name: "NVIDIA Corporation" },
-      { symbol: "AVGO", value: 14, name: "Broadcom Inc." },
-      { symbol: "TSM", value: 14, name: "Taiwan Semiconductor" },
-      { symbol: "ASML", value: 13, name: "ASML Holding" },
-      { symbol: "AMD", value: 13, name: "Advanced Micro Devices" },
-      { symbol: "MU", value: 9, name: "Micron Technology" },
-      { symbol: "MRVL", value: 9, name: "Marvell Technology" },
-      { symbol: "QCOM", value: 8, name: "QUALCOMM" },
-    ],
-  },
-  {
-    label: "Buffett Core",
-    holdings: [
-      { symbol: "AAPL", value: 32, name: "Apple Inc." },
-      { symbol: "AXP", value: 14, name: "American Express" },
-      { symbol: "BAC", value: 12, name: "Bank of America" },
-      { symbol: "KO", value: 11, name: "Coca-Cola" },
-      { symbol: "CVX", value: 10, name: "Chevron" },
-      { symbol: "OXY", value: 7, name: "Occidental Petroleum" },
-      { symbol: "MCO", value: 5, name: "Moody's" },
-      { symbol: "CB", value: 5, name: "Chubb" },
-      { symbol: "V", value: 4, name: "Visa" },
-    ],
-  },
-  {
-    label: "Dividend Fortress",
-    holdings: [
-      { symbol: "SCHD", value: 14, name: "Schwab U.S. Dividend Equity ETF", quoteType: "ETF" },
-      { symbol: "KO", value: 11, name: "Coca-Cola" },
-      { symbol: "PEP", value: 11, name: "PepsiCo" },
-      { symbol: "PG", value: 11, name: "Procter & Gamble" },
-      { symbol: "JNJ", value: 11, name: "Johnson & Johnson" },
-      { symbol: "MCD", value: 10, name: "McDonald's" },
-      { symbol: "MO", value: 8, name: "Altria" },
-      { symbol: "VZ", value: 8, name: "Verizon" },
-      { symbol: "O", value: 8, name: "Realty Income" },
-      { symbol: "OKE", value: 8, name: "ONEOK" },
-    ],
-  },
-  {
-    label: "Classic 60/40",
-    holdings: [
-      { symbol: "VTI", value: 60, name: "Vanguard Total Stock Market ETF", quoteType: "ETF" },
-      { symbol: "AGG", value: 40, name: "iShares Core U.S. Aggregate Bond ETF", quoteType: "ETF" },
-    ],
-  },
-];
-
-/* ------------------------------------------------------------------ */
-/* Hero (empty state)                                                  */
+/* Hero (home entry)                                                   */
 /* ------------------------------------------------------------------ */
 
 const STEPS = [
@@ -234,14 +154,14 @@ const STEPS = [
     body: "Search the live NASDAQ / NYSE universe — every ticker you own, from Apple to a 60/40 ETF mix.",
   },
   {
-    icon: SlidersHorizontal,
-    title: "Mirror your positions",
-    body: "Dial in weights or exact share counts. We normalize and price them against the latest close.",
+    icon: Briefcase,
+    title: "Build your portfolio",
+    body: "Picking a stock opens the portfolio builder — enter your share count; average cost is optional.",
   },
   {
     icon: LineChart,
     title: "Read the truth",
-    body: "Blended trend vs SPY & QQQ, annual return, Sharpe, drawdowns and monthly heat — one honest picture.",
+    body: "Blended trend vs SPY & QQQ, Sharpe, drawdowns and monthly heat — all on the Portfolio page.",
   },
 ];
 
@@ -251,7 +171,7 @@ export function Hero({
   error,
 }: {
   searchSlot: ReactNode;
-  presetsSlot: ReactNode;
+  presetsSlot?: ReactNode;
   error: string | null;
 }) {
   return (
@@ -333,7 +253,7 @@ export function Hero({
           className="mx-auto mt-9 max-w-xl"
         >
           {searchSlot}
-          <div className="mt-4">{presetsSlot}</div>
+          {presetsSlot && <div className="mt-4">{presetsSlot}</div>}
           {error && (
             <div className="mt-4 rounded-xl border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
               {error}

@@ -45,12 +45,13 @@ export function AllocationDonut({ items }: { items: AllocationItem[] }) {
         color: OTHER_COLOR,
       });
     }
+    const out: ((typeof list)[number] & { offset: number })[] = [];
     let cum = 0;
-    return list.map((s) => {
-      const start = cum;
+    for (const s of list) {
+      out.push({ ...s, offset: cum });
       cum += s.weight;
-      return { ...s, offset: start };
-    });
+    }
+    return out;
   }, [items]);
 
   const activeSlice = active != null ? slices[active] : null;

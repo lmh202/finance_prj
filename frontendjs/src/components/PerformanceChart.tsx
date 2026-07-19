@@ -79,7 +79,6 @@ export function PerformanceChart({ dates, series, height = 380 }: Props) {
       out.push({ i, label: fmtDate(dates[i], n > 400) });
     }
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dates, n]);
 
   function onMove(e: React.MouseEvent) {

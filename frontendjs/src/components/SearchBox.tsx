@@ -26,29 +26,35 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
 
   useEffect(() => {
     const query = q.trim();
-    if (query.length === 0) {
-      setResults([]);
-      setOpen(false);
-      return;
-    }
-    setLoading(true);
-    const t = setTimeout(async () => {
-      abortRef.current?.abort();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-      try {
-        const results = await searchStocks(query, ctrl.signal);
-        if (!ctrl.signal.aborted) {
-          setResults(results);
-          setActive(0);
-          setOpen(true);
+    // All setState lives inside the debounce timer so nothing fires
+    // synchronously in the effect body (react-hooks/set-state-in-effect).
+    const t = setTimeout(
+      async () => {
+        if (query.length === 0) {
+          setResults([]);
+          setOpen(false);
+          setLoading(false);
+          return;
         }
-      } catch {
-        /* aborted */
-      } finally {
-        if (!ctrl.signal.aborted) setLoading(false);
-      }
-    }, 200);
+        setLoading(true);
+        abortRef.current?.abort();
+        const ctrl = new AbortController();
+        abortRef.current = ctrl;
+        try {
+          const results = await searchStocks(query, ctrl.signal);
+          if (!ctrl.signal.aborted) {
+            setResults(results);
+            setActive(0);
+            setOpen(true);
+          }
+        } catch {
+          /* aborted */
+        } finally {
+          if (!ctrl.signal.aborted) setLoading(false);
+        }
+      },
+      query.length === 0 ? 0 : 200
+    );
     return () => clearTimeout(t);
   }, [q]);
 

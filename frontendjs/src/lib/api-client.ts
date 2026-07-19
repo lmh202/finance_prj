@@ -4,8 +4,8 @@
  * Every data operation that used to hit a local Next.js API route or
  * PostgreSQL now calls the backend at NEXT_PUBLIC_BACKEND_URL instead.
  * The engine pages (/health, /strategy, /news, /react, /performance)
- * consume the four engine routers; the analyzer home page consumes
- * /market/search and /analysis/explore.
+ * consume the four engine routers; the home page consumes /market/search
+ * and /portfolio consumes /analysis/explore for its analytics.
  */
 import type {
   AnalyzeResponse,
@@ -147,12 +147,18 @@ export async function fetchLatestPrices(
 
 export async function analyze(
   holdings: HoldingInput[],
-  mode: InputMode
+  mode: InputMode,
+  signal?: AbortSignal
 ): Promise<AnalyzeResponse> {
-  const json = (await send("POST", "/analysis/explore", {
-    holdings: holdings.map((h) => ({ symbol: h.symbol, value: h.value })),
-    mode,
-  })) as { ok: boolean; detail?: string } & AnalyzeResponse;
+  const json = (await send(
+    "POST",
+    "/analysis/explore",
+    {
+      holdings: holdings.map((h) => ({ symbol: h.symbol, value: h.value })),
+      mode,
+    },
+    signal
+  )) as { ok: boolean; detail?: string } & AnalyzeResponse;
 
   if (!json.ok) {
     throw new Error(json.detail ?? "Analysis failed");

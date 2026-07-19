@@ -1,18 +1,24 @@
 "use client";
 
 /**
- * Portfolio builder — mirrors the Streamlit Home page (frontend/app.py).
+ * Portfolio builder + analytics — mirrors the Streamlit Home page
+ * (frontend/app.py) and absorbs the retired "/" analyzer.
  *
- * Unlike the analyzer on "/", which explores a hypothetical localStorage
- * portfolio, this page edits the SAVED portfolio on the backend
- * (data/portfolio.csv + cash) — the portfolio every engine page reads.
+ * This page edits the SAVED portfolio on the backend (data/portfolio.csv +
+ * cash) — the portfolio every engine page reads — and analyzes it via
+ * POST /analysis/explore in "shares" mode (constant-mix curve, stats,
+ * allocation donut, monthly heatmap, per-position Sharpe/contribution).
+ * The home page hands off searched symbols through the ?add= query param.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Briefcase,
   Download,
+  Eye,
+  EyeOff,
   FileUp,
   Loader2,
   PackageOpen,
@@ -22,6 +28,7 @@ import {
   Trash2,
   TriangleAlert,
   Undo2,
+  Waypoints,
   X,
 } from "lucide-react";
 import {
@@ -34,9 +41,15 @@ import {
   StateCard,
   ThinBar,
 } from "@/components/EngineShell";
+import { AllocationDonut, SectorBars } from "@/components/AllocationDonut";
+import { MonthlyHeatmap } from "@/components/MonthlyHeatmap";
+import { PerformanceChart, type ChartSeries } from "@/components/PerformanceChart";
 import { SearchBox } from "@/components/SearchBox";
+import { Sparkline } from "@/components/Sparkline";
+import { StatsRow } from "@/components/StatsRow";
 import {
   addHolding,
+  analyze,
   BackendDownError,
   fetchCash,
   fetchLatestPrices,
@@ -47,13 +60,19 @@ import {
   saveCash,
   savePortfolio,
 } from "@/lib/api-client";
-import { fmtNum, signClass } from "@/lib/format";
-import type {
-  BackendHolding,
-  PortfolioTotals,
-  PortfolioViewRow,
-  StockInfo,
+import { fmtDate, fmtNum, fmtPct, signClass } from "@/lib/format";
+import {
+  RANGES,
+  type AnalyzeResponse,
+  type BackendHolding,
+  type PortfolioTotals,
+  type PortfolioViewRow,
+  type RangeId,
+  type StockInfo,
 } from "@/lib/types";
+import { deriveRangeView } from "@/lib/view";
+
+const ACCENT = "#B3F34C";
 
 const INPUT =
   "w-full rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-accent/50";
@@ -77,6 +96,12 @@ interface EditRow {
 /** ≤4 decimals so CSV float noise (331.8699951172) doesn't flood the inputs. */
 function trimNum(v: number): string {
   return String(Math.round(v * 1e4) / 1e4);
+}
+
+/** Saved symbols may use directory dots (BRK.B); /analysis/explore normalizes
+ *  to dashes (BRK-B). Match its _normalize_symbol so lookups line up. */
+function analysisKey(symbol: string): string {
+  return symbol.trim().toUpperCase().replace(/\./g, "-").slice(0, 14);
 }
 
 function toEdit(h: BackendHolding): EditRow {
@@ -130,9 +155,23 @@ interface PendingAdd {
   shares: string;
   buyPrice: string;
   error: string | null;
+  /** true when the symbol arrived from the home-page search (?add=) —
+   *  shares start empty and the panel prompts for them. */
+  fromSearch?: boolean;
 }
 
+/** useSearchParams needs a Suspense boundary during prerendering. */
 export default function PortfolioPage() {
+  return (
+    <Suspense fallback={null}>
+      <PortfolioPageInner />
+    </Suspense>
+  );
+}
+
+function PortfolioPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [boot, setBoot] = useState<"loading" | "down" | "error" | "ready">("loading");
   const [bootMsg, setBootMsg] = useState("");
 
@@ -152,6 +191,40 @@ export default function PortfolioPage() {
     problems: string[];
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  /* ---- analytics (the retired analyzer, fed by the saved portfolio) ---- */
+  const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [range, setRange] = useState<RangeId>("5Y");
+  const [showSpy, setShowSpy] = useState(true);
+  const [showQqq, setShowQqq] = useState(false);
+
+  /* ---- symbol handed off from the home-page search (?add=NVDA) ---- */
+  const consumedAdd = useRef(false);
+  useEffect(() => {
+    const raw = searchParams.get("add");
+    if (!raw) return;
+    const name = searchParams.get("name")?.trim();
+    // Deferred so no setState runs synchronously inside the effect body;
+    // the ref survives strict-mode double fires, the timer their cleanup.
+    const timer = setTimeout(() => {
+      if (consumedAdd.current) return;
+      consumedAdd.current = true;
+      const symbol = raw.trim().toUpperCase();
+      if (symbol) {
+        setPending({
+          info: { symbol, name: name || symbol, exchange: "", sector: "", quoteType: "" },
+          shares: "",
+          buyPrice: "",
+          error: null,
+          fromSearch: true,
+        });
+      }
+      router.replace("/portfolio", { scroll: false });
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [searchParams, router]);
 
   const applySaved = useCallback((h: BackendHolding[]) => {
     setSaved(h);
@@ -191,6 +264,53 @@ export default function PortfolioPage() {
     const timer = setTimeout(() => void bootstrap(), 0);
     return () => clearTimeout(timer);
   }, [bootstrap]);
+
+  /* Re-analyze whenever the SAVED holdings change (shares mode: weights
+     derive from share count × latest close, like the engines see them).
+     All setState lives inside the debounce timer so nothing fires
+     synchronously in the effect body. */
+  useEffect(() => {
+    if (boot !== "ready") return;
+    const positions = saved.filter((h) => h.shares > 0);
+    const ctrl = new AbortController();
+    const t = setTimeout(
+      async () => {
+        if (positions.length === 0) {
+          setAnalysis(null);
+          setAnalysisError(null);
+          setAnalyzing(false);
+          return;
+        }
+        setAnalyzing(true);
+        setAnalysisError(null);
+        try {
+          const json = await analyze(
+            positions.map((h) => ({ symbol: h.symbol, value: h.shares })),
+            "shares",
+            ctrl.signal
+          );
+          if (!ctrl.signal.aborted) setAnalysis(json);
+        } catch (err) {
+          if (!ctrl.signal.aborted) {
+            setAnalysisError(
+              err instanceof BackendDownError
+                ? "Backend not reachable."
+                : err instanceof Error
+                  ? err.message
+                  : "Could not analyze the portfolio."
+            );
+          }
+        } finally {
+          if (!ctrl.signal.aborted) setAnalyzing(false);
+        }
+      },
+      positions.length === 0 ? 0 : 300
+    );
+    return () => {
+      ctrl.abort();
+      clearTimeout(t);
+    };
+  }, [boot, saved]);
 
   async function run(name: string, fn: () => Promise<void>) {
     setBusy(name);
@@ -235,6 +355,45 @@ export default function PortfolioPage() {
     }
     return items;
   }, [view, totals]);
+
+  /* ---- analysis view (range-sliced client-side, no refetch) ---- */
+  const months = RANGES.find((r) => r.id === range)!.months;
+  const rangeView = useMemo(
+    () => (analysis ? deriveRangeView(analysis, months) : null),
+    [analysis, months]
+  );
+  const analysisBy = useMemo(
+    () => new Map((rangeView?.holdings ?? []).map((h) => [h.symbol, h])),
+    [rangeView]
+  );
+  /* Holdings the analysis dropped (no usable history / backend cap). */
+  const excluded = useMemo(() => {
+    if (!analysis) return [];
+    const have = new Set(analysis.holdings.map((h) => h.symbol));
+    return saved
+      .filter((h) => h.shares > 0 && !have.has(analysisKey(h.symbol)))
+      .map((h) => h.symbol);
+  }, [analysis, saved]);
+  const maxContrib = useMemo(
+    () =>
+      Math.max(...(rangeView?.holdings ?? []).map((h) => Math.abs(h.contribution)), 1e-9),
+    [rangeView]
+  );
+  const chartSeries: ChartSeries[] = useMemo(() => {
+    if (!rangeView) return [];
+    const out: ChartSeries[] = [
+      { id: "PF", label: "Portfolio", color: ACCENT, values: rangeView.portfolio, width: 2.5 },
+    ];
+    for (const b of rangeView.benchmarks) {
+      if (b.symbol === "SPY" && showSpy) out.push({ id: "SPY", label: b.name, color: b.color, values: b.values });
+      if (b.symbol === "QQQ" && showQqq) out.push({ id: "QQQ", label: b.name, color: b.color, values: b.values });
+    }
+    return out;
+  }, [rangeView, showSpy, showQqq]);
+  const spyStats = rangeView?.benchmarks.find((b) => b.symbol === "SPY")?.stats ?? null;
+  const endReturn = rangeView
+    ? rangeView.portfolio[rangeView.portfolio.length - 1] / 100 - 1
+    : 0;
 
   /* ------------------------------- actions ------------------------------- */
 
@@ -438,7 +597,11 @@ export default function PortfolioPage() {
           <Section title="Add a holding">
             <SearchBox onAdd={startAdd} existing={existing} />
             {pending ? (
-              <div className="mt-3 rounded-xl border border-line bg-white/[0.03] p-3">
+              <div
+                className={`mt-3 rounded-xl border bg-white/[0.03] p-3 ${
+                  pending.fromSearch ? "border-accent/40" : "border-line"
+                }`}
+              >
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-semibold text-accent">
                     {pending.info.symbol}
@@ -454,6 +617,18 @@ export default function PortfolioPage() {
                     <X className="size-3.5" />
                   </button>
                 </div>
+                {pending.fromSearch && (
+                  <p className="mt-2 text-xs leading-relaxed text-accent">
+                    How many shares of {pending.info.symbol} do you own? Avg cost is
+                    optional.
+                  </p>
+                )}
+                {existing.has(pending.info.symbol) && (
+                  <p className="mt-2 text-[11px] leading-relaxed text-amber-200/80">
+                    You already hold {pending.info.symbol} — adding merges into the
+                    existing position at weighted-average cost.
+                  </p>
+                )}
                 <div className="mt-3 grid grid-cols-2 gap-2.5">
                   <label className="block">
                     <span className={LABEL}>Shares</span>
@@ -461,6 +636,8 @@ export default function PortfolioPage() {
                       type="number"
                       min={0}
                       step="any"
+                      autoFocus={pending.fromSearch}
+                      placeholder={pending.fromSearch ? "required" : undefined}
                       value={pending.shares}
                       onChange={(e) => setPending({ ...pending, shares: e.target.value, error: null })}
                       className={`mt-1 ${INPUT}`}
@@ -695,11 +872,18 @@ export default function PortfolioPage() {
               )}
 
               <section className="card px-2 py-2">
-                <h3 className="px-3 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
-                  Holdings
-                </h3>
+                <div className="flex items-baseline justify-between gap-3 px-3 pb-1 pt-3">
+                  <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                    Holdings
+                  </h3>
+                  {rangeView && (
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-mut/60">
+                      Sharpe · Contribution · Trend over {range}
+                    </span>
+                  )}
+                </div>
                 <div className="scroll-slim overflow-x-auto">
-                  <table className="w-full min-w-[860px] border-collapse">
+                  <table className="w-full min-w-[1160px] border-collapse">
                     <thead>
                       <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
                         <th className="px-3 py-3 font-medium">Position</th>
@@ -710,12 +894,16 @@ export default function PortfolioPage() {
                         <th className="px-3 py-3 text-right font-medium">P/L</th>
                         <th className="px-3 py-3 text-right font-medium">P/L %</th>
                         <th className="px-3 py-3 text-right font-medium">Weight</th>
+                        <th className="px-3 py-3 text-right font-medium">Sharpe</th>
+                        <th className="px-3 py-3 text-right font-medium">Contribution</th>
+                        <th className="px-3 py-3 text-right font-medium">Trend</th>
                         <th className="px-3 py-3" />
                       </tr>
                     </thead>
                     <tbody>
                       {displayRows.map((r) => {
                         const v = viewBy.get(r.symbol);
+                        const a = analysisBy.get(analysisKey(r.symbol));
                         return (
                           <tr
                             key={r.symbol}
@@ -785,6 +973,47 @@ export default function PortfolioPage() {
                                 </span>
                               </div>
                             </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-ink/85">
+                              {a ? fmtNum(a.stats.sharpe, 2) : "—"}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              {a ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="h-[3px] w-12 overflow-hidden rounded-full bg-white/[0.07]">
+                                    <div
+                                      className={`h-full rounded-full ${
+                                        a.contribution >= 0 ? "bg-gain/80" : "bg-loss/80"
+                                      }`}
+                                      style={{
+                                        width: `${Math.min(
+                                          (Math.abs(a.contribution) / maxContrib) * 100,
+                                          100
+                                        )}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <span
+                                    className={`font-mono text-xs tabular ${signClass(a.contribution)}`}
+                                  >
+                                    {fmtPct(a.contribution)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="text-right font-mono text-xs text-mut">—</div>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              {a ? (
+                                <div className="flex justify-end">
+                                  <Sparkline
+                                    values={a.values}
+                                    positive={a.stats.totalReturn >= 0}
+                                  />
+                                </div>
+                              ) : (
+                                <div className="text-right font-mono text-xs text-mut">—</div>
+                              )}
+                            </td>
                             <td className="px-3 py-2.5 text-right">
                               <button
                                 onClick={() => removeRow(r.symbol)}
@@ -834,6 +1063,167 @@ export default function PortfolioPage() {
                     ))}
                   </div>
                 </Section>
+              )}
+
+              {/* ---- analytics migrated from the retired "/" analyzer ---- */}
+              {analysisError && (
+                <Note>
+                  Portfolio analytics unavailable — {analysisError}
+                  {analysis ? " Showing the last successful analysis below." : ""}
+                </Note>
+              )}
+              {excluded.length > 0 && (
+                <Note>
+                  Excluded from the analytics below (no usable price history):{" "}
+                  {excluded.join(", ")}.
+                </Note>
+              )}
+
+              {!rangeView && analyzing && (
+                <div className="space-y-4">
+                  <div className="skeleton h-[430px] rounded-2xl" />
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div key={i} className="skeleton h-[92px] rounded-2xl" />
+                    ))}
+                  </div>
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="skeleton h-[300px] rounded-2xl" />
+                    <div className="skeleton h-[300px] rounded-2xl" />
+                  </div>
+                </div>
+              )}
+
+              {rangeView && analysis && (
+                <>
+                  <section className="card relative overflow-hidden p-5 pb-7">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                          <Waypoints className="size-3.5 text-accent" />
+                          Constant-mix portfolio · indexed to 100
+                        </div>
+                        <div className="mt-1.5 flex items-baseline gap-3">
+                          <span
+                            className={`text-4xl font-bold tracking-tight tabular ${
+                              endReturn >= 0 ? "text-gain" : "text-loss"
+                            }`}
+                          >
+                            {fmtPct(endReturn)}
+                          </span>
+                          <span className="font-mono text-xs text-mut">
+                            {fmtDate(rangeView.dates[0], true)} →{" "}
+                            {fmtDate(rangeView.dates[rangeView.dates.length - 1], true)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {rangeView.benchmarks.map((b) => {
+                          const on = b.symbol === "SPY" ? showSpy : showQqq;
+                          const toggle =
+                            b.symbol === "SPY"
+                              ? () => setShowSpy((x) => !x)
+                              : () => setShowQqq((x) => !x);
+                          return (
+                            <button
+                              key={b.symbol}
+                              onClick={toggle}
+                              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
+                                on
+                                  ? "border-line bg-white/[0.05] text-ink/85"
+                                  : "border-line/50 text-mut/45"
+                              }`}
+                            >
+                              <span
+                                className="size-1.5 rounded-full"
+                                style={{ backgroundColor: b.color, opacity: on ? 1 : 0.35 }}
+                              />
+                              {b.symbol}
+                              {on ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
+                            </button>
+                          );
+                        })}
+                        <div className="ml-1 flex rounded-xl border border-line bg-white/[0.03] p-0.5">
+                          {RANGES.map((r) => (
+                            <button
+                              key={r.id}
+                              onClick={() => setRange(r.id)}
+                              className={`rounded-[10px] px-2.5 py-1 font-mono text-[10px] tracking-wider transition-all ${
+                                range === r.id
+                                  ? "bg-accent font-semibold text-[#0a0f07]"
+                                  : "text-mut hover:text-ink"
+                              }`}
+                            >
+                              {r.id}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <PerformanceChart
+                        dates={rangeView.dates}
+                        series={chartSeries}
+                        height={380}
+                      />
+                    </div>
+
+                    {analysis.range.truncatedNote && (
+                      <div className="mt-5 flex items-center gap-2 text-[11px] text-amber-200/80">
+                        <TriangleAlert className="size-3.5 shrink-0" />
+                        {analysis.range.truncatedNote}
+                      </div>
+                    )}
+                    {analysis.source !== "live" && (
+                      <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-200/80">
+                        <TriangleAlert className="size-3.5 shrink-0" />
+                        Live market feed partially unreachable — some series are
+                        deterministic simulations so the analysis remains explorable.
+                      </div>
+                    )}
+
+                    <AnimatePresence>
+                      {analyzing && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute right-4 top-4 flex items-center gap-1.5 rounded-full border border-accent/30 bg-bg0/90 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-accent backdrop-blur"
+                        >
+                          <Loader2 className="size-3 animate-spin" />
+                          Updating
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </section>
+
+                  <StatsRow metrics={rangeView.metrics} spy={spyStats} />
+
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <section className="card p-5">
+                      <h3 className="mb-5 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                        Allocation
+                      </h3>
+                      <AllocationDonut
+                        items={rangeView.holdings.map((h) => ({
+                          symbol: h.symbol,
+                          name: h.name,
+                          sector: h.sector,
+                          weight: h.weight,
+                        }))}
+                      />
+                      <SectorBars sectors={analysis.sectors} />
+                    </section>
+                    <section className="card p-5">
+                      <h3 className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                        Monthly returns · portfolio
+                      </h3>
+                      <MonthlyHeatmap monthly={rangeView.monthly} />
+                    </section>
+                  </div>
+                </>
               )}
             </>
           )}
