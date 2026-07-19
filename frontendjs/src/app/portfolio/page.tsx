@@ -79,10 +79,13 @@ const INPUT =
 const LABEL = "font-mono text-[10px] uppercase tracking-wider text-mut";
 
 function fmtMoney(v: number): string {
-  return (
-    "$" +
-    v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-  );
+  if (v)
+    return (
+      "$" +
+      v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    );
+  else
+    return "";
 }
 
 /** Editable string-typed row so number inputs stay free to type into. */
