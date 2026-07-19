@@ -21,5 +21,8 @@ data/news_raw.json
 .idea/
 Thumbs.db
 
+# frontendjs
+frontendjs/node_modules/
+frontendjs/.next/
 # Dataset
 FNSPID/

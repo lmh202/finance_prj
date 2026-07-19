@@ -1,0 +1,230 @@
+/** Shared types between API routes and client components. */
+
+export type InputMode = "weight" | "shares";
+
+export interface HoldingInput {
+  symbol: string;
+  /** weight % (mode=weight) or share count (mode=shares) */
+  value: number;
+}
+
+export interface StockInfo {
+  symbol: string;
+  name: string;
+  exchange: string;
+  sector: string;
+  quoteType: string;
+  /** true when the instrument came from live lookup vs seed universe */
+  live?: boolean;
+}
+
+export interface SeriesStats {
+  totalReturn: number; // 0.42 = +42%
+  cagr: number;
+  annVol: number;
+  sharpe: number;
+  sortino: number;
+  maxDrawdown: number; // negative
+  calmar: number;
+  bestDay: number;
+  worstDay: number;
+  winRate: number; // 0..1
+}
+
+export interface PortfolioMetrics extends SeriesStats {
+  beta: number | null; // vs SPY
+  alpha: number | null; // annualized, vs SPY
+  ytd: number;
+}
+
+export interface HoldingAnalysis {
+  symbol: string;
+  name: string;
+  sector: string;
+  weight: number; // resolved 0..1
+  inputValue: number;
+  lastPrice: number | null;
+  simulated: boolean;
+  stats: SeriesStats;
+  contribution: number; // share of portfolio total return attributable
+  /** indexed series aligned to dates (start = 100) */
+  values: number[];
+}
+
+export interface BenchmarkSeries {
+  symbol: string;
+  name: string;
+  color: string;
+  values: number[]; // aligned to dates, indexed 100
+  stats: SeriesStats;
+}
+
+export interface MonthCell {
+  year: number;
+  month: number; // 1-12
+  r: number; // return within month
+}
+
+export interface AnalysisRange {
+  start: string;
+  end: string;
+  days: number;
+  truncated: boolean;
+  truncatedNote?: string;
+}
+
+export interface AnalyzeResponse {
+  ok: true;
+  mode: InputMode;
+  source: "live" | "mixed" | "simulated";
+  asOf: string;
+  range: AnalysisRange;
+  dates: string[];
+  portfolio: number[]; // indexed 100
+  portfolioMetrics: PortfolioMetrics;
+  benchmarks: BenchmarkSeries[];
+  holdings: HoldingAnalysis[];
+  sectors: { sector: string; weight: number }[];
+  monthly: MonthCell[];
+}
+
+export interface AnalyzeError {
+  ok: false;
+  error: string;
+}
+
+export type AnalyzeResult = AnalyzeResponse | AnalyzeError;
+
+/* ------------------------------------------------------------------ */
+/* AURORA engine API (FastAPI backend) — see backend/src/interfaces.py */
+/* ------------------------------------------------------------------ */
+
+/** pandas DataFrame serialized with orient="split". */
+export interface SplitFrame {
+  columns: string[];
+  index: string[];
+  data: (number | null)[][];
+}
+
+/** GET /health/report — Engine 1, portfolio_health.compute_health(). */
+export interface HealthReport {
+  score: number;
+  /** annual_return, annual_volatility, sharpe, sortino, max_drawdown,
+   *  beta, diversification, largest_position — NaN arrives as null */
+  metrics: Record<string, number | null>;
+  strengths: string[];
+  weaknesses: string[];
+  correlation: SplitFrame | null; // symbols × symbols
+}
+
+/** GET /strategy/regime — Engine 2, daily_strategy.classify_regime(). */
+export interface RegimeState {
+  regime: "bullish" | "bearish" | "high_volatility" | "sideways" | string;
+  confidence: number; // 0..1
+  indicators: Record<string, number | null>;
+  as_of: string | null; // ISO datetime
+}
+
+/** GET /strategy/signals — one row of the daily asset ranking. */
+export interface AssetSignal {
+  symbol: string;
+  score: number; // 0..100
+  action: "increase" | "hold" | "reduce" | string;
+  indicators: Record<string, number>; // momentum, trend, sharpe, volatility, drawdown
+  rationale: string;
+}
+
+/** GET /news/essential — Engine 3, one classified news story. */
+export interface NewsEvent {
+  title: string;
+  source: string;
+  url: string;
+  published: string | null; // ISO datetime
+  category: string;
+  sentiment: number; // -1..+1
+  importance: number; // 0..100
+  affected_symbols: string[];
+  impact: Record<string, string>;
+  summary: string;
+}
+
+/** Engine 4 — how risky it is to trade on an event. */
+export interface ReactionRisk {
+  risk_pct: number; // 0..100
+  factors: Record<string, number>; // each 0..1, 0 = safe to act
+  reasons: string[];
+  suggestion: "do_nothing" | "moderate" | "aggressive" | string;
+}
+
+export interface ProposedTrade {
+  symbol: string;
+  weight_change_pct: number; // +2.0 = increase weight by 2 points
+  reason: string;
+}
+
+export interface Recommendation {
+  kind: "daily" | "event" | string;
+  trades: ProposedTrade[];
+  confidence: number; // 0..1
+  explanation: string;
+  reaction_risk: ReactionRisk | null;
+}
+
+/** GET /recommendation/daily */
+export interface DailyRecommendation {
+  recommendation: Recommendation;
+  health_before: number | null;
+  health_after: number | null;
+}
+
+/** GET /recommendation/events */
+export interface EventsPayload {
+  events: NewsEvent[];
+  demo: boolean;
+}
+
+/** POST /recommendation/react */
+export interface ReactResponse {
+  risk: ReactionRisk;
+  recommendation: Recommendation;
+}
+
+/* ---------- backend-persisted portfolio (data/portfolio.csv) ---------- */
+
+export interface BackendHolding {
+  symbol: string;
+  name: string;
+  shares: number;
+  buy_price: number;
+}
+
+/** One row of GET /portfolio/view — holdings joined with live prices. */
+export interface PortfolioViewRow extends BackendHolding {
+  current_price: number | null;
+  has_price: boolean;
+  cost_value: number;
+  market_value: number;
+  pnl: number;
+  pnl_pct: number | null; // null when cost basis is 0
+  weight_pct: number;
+}
+
+export interface PortfolioTotals {
+  market_value: number; // incl. cash
+  invested: number;
+  cost: number;
+  pnl: number;
+  cash: number;
+}
+
+/* ---------- range slicing (client) ---------- */
+
+export const RANGES = [
+  { id: "6M", months: 6 },
+  { id: "1Y", months: 12 },
+  { id: "2Y", months: 24 },
+  { id: "3Y", months: 36 },
+  { id: "5Y", months: 63 },
+] as const;
+
+export type RangeId = (typeof RANGES)[number]["id"];
