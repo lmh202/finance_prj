@@ -1,0 +1,14 @@
+# AURORA global theme — dark + lime, ported from the ui_design ("Prism") look.
+# Applies to every Streamlit page automatically; the richer layer (fonts,
+# gradient background, cards, grain) is injected by frontend/theme.py.
+
+[theme]
+base = "dark"
+primaryColor = "#b3f34c"                 # lime accent
+backgroundColor = "#06090c"              # near-black canvas
+secondaryBackgroundColor = "#0d1317"     # panels / sidebar / widget fills
+textColor = "#ecf3ee"                    # off-white ink
+linkColor = "#b3f34c"
+borderColor = "#ffffff14"                # subtle white 8% line
+baseRadius = "large"
+font = "sans-serif"

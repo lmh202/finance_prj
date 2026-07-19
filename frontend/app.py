@@ -23,15 +23,17 @@ import plotly.graph_objects as go
 import streamlit as st
 
 import api_client as api
+from theme import CHART, apply_theme
 
 st.set_page_config(page_title="AURORA — Portfolio Builder", page_icon="🌅", layout="wide")
+apply_theme()
 
-# Chart ink/palette per theme (dataviz reference palette)
+# Chart ink/palette per theme — dark mirrors the ui_design ("Prism") look.
 PALETTE = {
     "light": {"bar": "#2a78d6", "cash": "#898781", "ink": "#0b0b0b",
               "muted": "#898781", "grid": "#e1e0d9"},
-    "dark": {"bar": "#3987e5", "cash": "#898781", "ink": "#ffffff",
-             "muted": "#898781", "grid": "#2c2c2a"},
+    "dark": {"bar": CHART["accent"], "cash": CHART["cash"], "ink": CHART["ink"],
+             "muted": CHART["mut"], "grid": CHART["grid"]},
 }
 
 
@@ -40,6 +42,12 @@ def theme_type() -> str:
         return st.context.theme.type or "light"
     except Exception:
         return "light"
+
+
+def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
 
 
 # ---------------------------------------------------------------- data access
@@ -70,6 +78,11 @@ def get_view(portfolio_key: str) -> tuple:
     """Valuation view + totals; keyed on the holdings/cash snapshot so edits
     invalidate immediately while prices stay cached for 5 minutes."""
     return api.get_view()
+
+
+@st.cache_data(ttl=900, show_spinner="Loading price history…")
+def get_symbol_history(symbol: str) -> pd.DataFrame:
+    return api.get_history([symbol], period="1y")
 
 
 def set_holdings(df: pd.DataFrame) -> None:
@@ -252,13 +265,15 @@ with left:
     def _pnl_color(v):
         if pd.isna(v) or v == 0:
             return ""
-        return "color: #1a7f37" if v > 0 else "color: #d1242f"
+        return f"color: {CHART['gain']}" if v > 0 else f"color: {CHART['loss']}"
 
     styled = display.style.map(_pnl_color, subset=["pnl", "pnl_pct"])
-    st.dataframe(
+    table_event = st.dataframe(
         styled,
         hide_index=True,
         width="stretch",
+        on_select="rerun",
+        selection_mode="single-row",
         column_config={
             "symbol": st.column_config.TextColumn("Ticker"),
             "name": st.column_config.TextColumn("Name", width="medium"),
@@ -318,6 +333,54 @@ with right:
         showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+# --------------------------------------------------------------- stock chart
+
+st.divider()
+st.subheader("📈 Price history")
+
+selected_rows = table_event.selection.rows if table_event is not None else []
+if not selected_rows:
+    st.caption("Select a row in the Holdings table above to see its price chart.")
+else:
+    sel_symbol = display.iloc[selected_rows[0]]["symbol"]
+    hist = get_symbol_history(sel_symbol)
+
+    if hist.empty or sel_symbol not in hist.columns:
+        st.warning(f"No price history available for {sel_symbol}.")
+    else:
+        colors = PALETTE[theme_type()]
+        series = hist[sel_symbol].dropna()
+        last, first = series.iloc[-1], series.iloc[0]
+        chg_pct = (last / first - 1) * 100 if first else 0.0
+
+        st.markdown(
+            f"**{sel_symbol}** — ${last:,.2f} "
+            f"(:{'green' if chg_pct >= 0 else 'red'}[{chg_pct:+.1f}%] over 1y)"
+        )
+        fig2 = go.Figure(
+            go.Scatter(
+                x=series.index,
+                y=series.values,
+                mode="lines",
+                line={"color": colors["bar"], "width": 2},
+                fill="tozeroy",
+                fillcolor=_hex_to_rgba(colors["bar"], 0.12),
+                hovertemplate="%{x|%b %d, %Y}<br>$%{y:,.2f}<extra></extra>",
+            )
+        )
+        fig2.update_layout(
+            height=320,
+            margin={"l": 8, "r": 8, "t": 8, "b": 8},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font={"family": 'system-ui, -apple-system, "Segoe UI", sans-serif',
+                  "color": colors["muted"]},
+            xaxis={"gridcolor": colors["grid"], "showgrid": False},
+            yaxis={"gridcolor": colors["grid"], "tickprefix": "$", "zeroline": False},
+            showlegend=False,
+        )
+        st.plotly_chart(fig2, use_container_width=True, config={"displayModeBar": False})
 
 # ------------------------------------------------------------- edit holdings
 

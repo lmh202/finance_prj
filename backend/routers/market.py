@@ -1,8 +1,8 @@
-"""Shared-kernel market data: ticker universe + latest prices."""
+"""Shared-kernel market data: ticker universe + latest prices + history."""
 
 from fastapi import APIRouter
 
-from serialize import df_records
+from serialize import df_records, df_split
 from src import data_loader
 
 router = APIRouter(prefix="/market", tags=["market"])
@@ -20,3 +20,12 @@ def prices(symbols: str) -> dict:
     src/data_loader.get_latest_prices)."""
     wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     return data_loader.get_latest_prices(wanted)
+
+
+@router.get("/history")
+def history(symbols: str, period: str = "2y") -> dict:
+    """Daily adjusted-close history. `symbols` is comma-separated; a symbol's
+    column is absent if it could not be fetched (contract in
+    src/data_loader.get_history)."""
+    wanted = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    return df_split(data_loader.get_history(wanted, period=period))

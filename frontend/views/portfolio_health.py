@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 import api_client as api
+from theme import apply_theme
 from views._common import call, portfolio_key
 
 
@@ -19,6 +20,7 @@ def _backtest(pkey: str) -> pd.DataFrame:
 
 def render() -> None:
     st.set_page_config(page_title="AURORA — Portfolio Health", page_icon="🩺", layout="wide")
+    apply_theme()
     st.title("🩺 Portfolio Health")
     st.caption("Engine 1 — Portfolio Intelligence (Developer 1)")
 
@@ -63,6 +65,7 @@ def render_performance() -> None:
     alongside the portfolio metrics this engine computes.
     """
     st.set_page_config(page_title="AURORA — Performance", page_icon="🏁", layout="wide")
+    apply_theme()
     st.title("🏁 Performance & Benchmark")
     st.caption("Presentation: Developer 1 · Backtest engine: Developer 2")
 

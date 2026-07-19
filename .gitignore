@@ -20,3 +20,6 @@ data/news_raw.json
 .vscode/
 .idea/
 Thumbs.db
+
+# Dataset
+FNSPID/

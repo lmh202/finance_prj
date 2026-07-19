@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 import api_client as api
+from theme import apply_theme
 from views._common import call, portfolio_key
 
 REGIME_LABELS = {
@@ -29,6 +30,7 @@ def _signals(pkey: str) -> List[dict]:
 
 def render() -> None:
     st.set_page_config(page_title="AURORA — Daily Strategy", page_icon="📈", layout="wide")
+    apply_theme()
     st.title("📈 Daily Strategy")
     st.caption("Engine 2 — Regime-Aware Momentum (Developer 2)")
 
