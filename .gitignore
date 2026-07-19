@@ -24,3 +24,5 @@ Thumbs.db
 # frontendjs
 frontendjs/node_modules/
 frontendjs/.next/
+# Dataset
+FNSPID/

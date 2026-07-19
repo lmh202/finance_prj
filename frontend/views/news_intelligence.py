@@ -3,11 +3,13 @@
 import streamlit as st
 
 import api_client as api
+from theme import apply_theme
 from views._common import call
 
 
 def render() -> None:
     st.set_page_config(page_title="AURORA — Essential News", page_icon="📰", layout="wide")
+    apply_theme()
     st.title("📰 Essential News")
     st.caption("Engine 3 — Event Intelligence (Developer 3)")
 

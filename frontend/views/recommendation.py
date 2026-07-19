@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 import api_client as api
+from theme import apply_theme
 from views._common import call, portfolio_key
 
 SUGGESTION_LABELS = {
@@ -36,6 +37,7 @@ def _trades_table(trades: list) -> None:
 
 def render() -> None:
     st.set_page_config(page_title="AURORA — Should I React?", page_icon="🤔", layout="wide")
+    apply_theme()
     st.title("🤔 Should I React?")
     st.caption("Engine 4 — Reaction Risk & Recommendation (Developer 4)")
 

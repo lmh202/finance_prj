@@ -98,6 +98,15 @@ def get_prices(symbols: List[str]) -> Dict[str, float]:
     return _get("/market/prices", symbols=",".join(symbols))
 
 
+def get_history(symbols: List[str], period: str = "1y") -> pd.DataFrame:
+    if not symbols:
+        return pd.DataFrame()
+    return _split_df(
+        _get("/market/history", symbols=",".join(symbols), period=period),
+        datetime_index=True,
+    )
+
+
 # --------------------------------------------------------------- portfolio
 
 def get_portfolio() -> pd.DataFrame:
