@@ -199,6 +199,9 @@ function PortfolioPageInner() {
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  /** Bump to retry the analysis after a transient failure — the effect below
+   *  re-runs whenever this changes, even if saved/boot stay the same. */
+  const [analysisAttempt, setAnalysisAttempt] = useState(0);
   const [range, setRange] = useState<RangeId>("5Y");
   const [showSpy, setShowSpy] = useState(true);
   const [showQqq, setShowQqq] = useState(false);
@@ -313,7 +316,7 @@ function PortfolioPageInner() {
       ctrl.abort();
       clearTimeout(t);
     };
-  }, [boot, saved]);
+  }, [boot, saved, analysisAttempt]);
 
   async function run(name: string, fn: () => Promise<void>) {
     setBusy(name);
@@ -369,14 +372,17 @@ function PortfolioPageInner() {
     () => new Map((rangeView?.holdings ?? []).map((h) => [h.symbol, h])),
     [rangeView]
   );
-  /* Holdings the analysis dropped (no usable history / backend cap). */
+  /* Holdings the analysis dropped (no usable history / backend cap).
+   * Only show after the analysis settled — during the debounce + round-trip
+   * a newly added symbol is absent from the stale analysis object and would
+   * flash a false "no history" label. */
   const excluded = useMemo(() => {
-    if (!analysis) return [];
+    if (!analysis || analyzing) return [];
     const have = new Set(analysis.holdings.map((h) => h.symbol));
     return saved
       .filter((h) => h.shares > 0 && !have.has(analysisKey(h.symbol)))
       .map((h) => h.symbol);
-  }, [analysis, saved]);
+  }, [analysis, analyzing, saved]);
   const maxContrib = useMemo(
     () =>
       Math.max(...(rangeView?.holdings ?? []).map((h) => Math.abs(h.contribution)), 1e-9),
@@ -1071,8 +1077,29 @@ function PortfolioPageInner() {
               {/* ---- analytics migrated from the retired "/" analyzer ---- */}
               {analysisError && (
                 <Note>
-                  Portfolio analytics unavailable — {analysisError}
-                  {analysis ? " Showing the last successful analysis below." : ""}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      Portfolio analytics unavailable — {analysisError}
+                      {analysis ? " Showing the last successful analysis below." : ""}
+                    </div>
+                    <button
+                      onClick={() => setAnalysisAttempt((n) => n + 1)}
+                      disabled={analyzing}
+                      className="shrink-0 rounded-lg border border-line bg-white/[0.05] px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-accent transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-50"
+                    >
+                      {analyzing ? (
+                        <>
+                          <Loader2 className="mr-1 inline size-3 animate-spin" />
+                          Retrying…
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-1 inline size-3" />
+                          Retry
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </Note>
               )}
               {excluded.length > 0 && (

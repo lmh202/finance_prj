@@ -24,5 +24,11 @@ Thumbs.db
 # frontendjs
 frontendjs/node_modules/
 frontendjs/.next/
+
+# ui_design
+ui_design/node_modules/
+ui_design/.next/
+ui_design/package-lock.json
+
 # Dataset
 FNSPID/
