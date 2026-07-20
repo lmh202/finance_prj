@@ -16,12 +16,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Briefcase,
+  ChevronDown,
+  ChevronUp,
   Download,
   Eye,
   EyeOff,
   FileUp,
   Loader2,
   PackageOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   RefreshCw,
   ServerCrash,
@@ -186,6 +190,9 @@ function PortfolioPageInner() {
   const [totals, setTotals] = useState<PortfolioTotals | null>(null);
 
   const [busy, setBusy] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [collapsedAlloc, setCollapsedAlloc] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [problems, setProblems] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingAdd | null>(null);
   const [confirmSample, setConfirmSample] = useState(false);
@@ -599,11 +606,36 @@ function PortfolioPageInner() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]"
+        className={`grid gap-4 ${sidebarOpen ? "lg:grid-cols-[360px_minmax(0,1fr)]" : ""}`}
       >
         {/* ------------------------------ left rail ------------------------------ */}
-        <aside className="flex flex-col gap-4 lg:sticky lg:top-[72px] lg:self-start">
-          <Section title="Add a holding">
+        <AnimatePresence initial={false}>
+          {sidebarOpen ? (
+            <motion.aside
+              key="sidebar-open"
+              initial={{ x: -380, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -380, opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col gap-4 lg:sticky lg:top-[72px] lg:self-start"
+            >
+          <Section
+            title="Add a holding"
+            action={
+              <button
+                onClick={() => setSidebarOpen((o) => !o)}
+                className="rounded-md p-1 text-mut transition-colors hover:text-ink/80"
+                title={sidebarOpen ? "Hide panel" : "Show panel"}
+                aria-label={sidebarOpen ? "Hide panel" : "Show panel"}
+              >
+                {sidebarOpen ? (
+                  <PanelLeftClose className="size-3.5" />
+                ) : (
+                  <PanelLeftOpen className="size-3.5" />
+                )}
+              </button>
+            }
+          >
             <SearchBox onAdd={startAdd} existing={existing} />
             {pending ? (
               <div
@@ -807,7 +839,22 @@ function PortfolioPageInner() {
             )}
             {confirmSample ? "Replace current portfolio?" : "Load sample portfolio"}
           </button>
-        </aside>
+            </motion.aside>
+          ) : (
+            <motion.button
+              key="sidebar-closed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-line bg-white/[0.04] px-3 py-2 text-sm text-mut transition-colors hover:border-accent/40 hover:text-accent"
+              title="Show sidebar"
+            >
+              <PanelLeftOpen className="size-3.5" />
+              <span className="font-mono text-[10px] uppercase tracking-wider">Panel</span>
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* ------------------------------ main column ---------------------------- */}
         <div className="min-w-0 space-y-4">
@@ -881,197 +928,257 @@ function PortfolioPageInner() {
               )}
 
               <section className="card px-2 py-2">
-                <div className="flex items-baseline justify-between gap-3 px-3 pb-1 pt-3">
-                  <h3 className="font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
-                    Holdings
-                  </h3>
-                  {rangeView && (
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-mut/60">
+                <div className="flex items-center justify-between gap-3 px-3 pb-1 pt-3">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <button
+                      onClick={() => setCollapsed((c) => !c)}
+                      className="shrink-0 rounded-md p-0.5 text-mut transition-colors hover:text-ink/80"
+                      title={collapsed ? "Expand holdings table" : "Collapse holdings table"}
+                      aria-label={collapsed ? "Expand holdings table" : "Collapse holdings table"}
+                    >
+                      {collapsed ? (
+                        <ChevronDown className="size-4" />
+                      ) : (
+                        <ChevronUp className="size-4" />
+                      )}
+                    </button>
+                    <h3 className="shrink-0 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                      Holdings
+                    </h3>
+                    {collapsed && totals && (
+                      <span className="min-w-0 truncate font-mono text-[10px] tracking-wider text-mut/70">
+                        <span className="mx-1.5 text-mut/30">·</span>
+                        {saved.length} position{saved.length !== 1 ? "s" : ""}
+                        <span className="mx-1.5 text-mut/30">·</span>
+                        Invested{" "}
+                        <span className="text-ink/80">{fmtMoney(totals.invested)}</span>
+                        <span className="mx-1.5 text-mut/30">·</span>
+                        Value{" "}
+                        <span className="text-ink/80">{fmtMoney(totals.market_value)}</span>
+                        <span className="mx-1.5 text-mut/30">·</span>
+                        <span className={signClass(totals.pnl)}>
+                          P/L {totals.pnl >= 0 ? "+" : ""}
+                          {fmtMoney(totals.pnl)} ({pnlPct >= 0 ? "+" : ""}
+                          {fmtNum(pnlPct, 2)}%)
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  {!collapsed && rangeView && (
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-mut/60">
                       Sharpe · Contribution · Trend over {range}
                     </span>
                   )}
                 </div>
-                <div className="scroll-slim overflow-x-auto">
-                  <table className="w-full min-w-[1160px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
-                        <th className="px-3 py-3 font-medium">Position</th>
-                        <th className="px-3 py-3 text-right font-medium">Shares</th>
-                        <th className="px-3 py-3 text-right font-medium">Avg cost</th>
-                        <th className="px-3 py-3 text-right font-medium">Price</th>
-                        <th className="px-3 py-3 text-right font-medium">Value</th>
-                        <th className="px-3 py-3 text-right font-medium">P/L</th>
-                        <th className="px-3 py-3 text-right font-medium">P/L %</th>
-                        <th className="px-3 py-3 text-right font-medium">Weight</th>
-                        <th className="px-3 py-3 text-right font-medium">Sharpe</th>
-                        <th className="px-3 py-3 text-right font-medium">Contribution</th>
-                        <th className="px-3 py-3 text-right font-medium">Trend</th>
-                        <th className="px-3 py-3" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayRows.map((r) => {
-                        const v = viewBy.get(r.symbol);
-                        const a = analysisBy.get(analysisKey(r.symbol));
-                        return (
-                          <tr
-                            key={r.symbol}
-                            className="border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.02]"
-                          >
-                            <td className="px-3 py-2.5">
-                              <div className="flex items-center gap-2.5">
-                                <span className="font-mono text-sm font-semibold text-accent">
-                                  {r.symbol}
-                                </span>
-                                <span className="max-w-[180px] truncate text-xs text-mut">
-                                  {r.name}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              <input
-                                type="number"
-                                min={0}
-                                step="any"
-                                value={r.shares}
-                                onChange={(e) => editRow(r.symbol, "shares", e.target.value)}
-                                className={`${INPUT} w-24 text-right`}
-                                aria-label={`${r.symbol} shares`}
-                              />
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              <input
-                                type="number"
-                                min={0}
-                                step="any"
-                                value={r.buy_price}
-                                onChange={(e) => editRow(r.symbol, "buy_price", e.target.value)}
-                                className={`${INPUT} w-24 text-right`}
-                                aria-label={`${r.symbol} average cost`}
-                              />
-                            </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-mut">
-                              {v?.has_price && v.current_price != null
-                                ? fmtMoney(v.current_price)
-                                : "—"}
-                            </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-ink/90">
-                              {v ? fmtMoney(v.market_value) : "—"}
-                            </td>
-                            <td
-                              className={`px-3 py-2.5 text-right font-mono text-xs font-medium tabular ${signClass(
-                                v?.pnl ?? null
-                              )}`}
+
+                {!collapsed && (
+                  <div className="scroll-slim overflow-x-auto">
+                    <table className="w-full min-w-[1160px] border-collapse">
+                      <thead>
+                        <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
+                          <th className="px-3 py-3 font-medium">Position</th>
+                          <th className="px-3 py-3 text-right font-medium">Shares</th>
+                          <th className="px-3 py-3 text-right font-medium">Avg cost</th>
+                          <th className="px-3 py-3 text-right font-medium">Price</th>
+                          <th className="px-3 py-3 text-right font-medium">Value</th>
+                          <th className="px-3 py-3 text-right font-medium">P/L</th>
+                          <th className="px-3 py-3 text-right font-medium">P/L %</th>
+                          <th className="px-3 py-3 text-right font-medium">Weight</th>
+                          <th className="px-3 py-3 text-right font-medium">Sharpe</th>
+                          <th className="px-3 py-3 text-right font-medium">Contribution</th>
+                          <th className="px-3 py-3 text-right font-medium">Trend</th>
+                          <th className="px-3 py-3" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayRows.map((r) => {
+                          const v = viewBy.get(r.symbol);
+                          const a = analysisBy.get(analysisKey(r.symbol));
+                          return (
+                            <tr
+                              key={r.symbol}
+                              className="border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.02]"
                             >
-                              {v ? fmtMoney(v.pnl) : "—"}
-                            </td>
-                            <td
-                              className={`px-3 py-2.5 text-right font-mono text-xs tabular ${signClass(
-                                v?.pnl_pct ?? null
-                              )}`}
-                            >
-                              {v?.pnl_pct == null
-                                ? "—"
-                                : `${v.pnl_pct >= 0 ? "+" : ""}${fmtNum(v.pnl_pct, 2)}%`}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <div className="flex items-center justify-end gap-2">
-                                <ThinBar fraction={(v?.weight_pct ?? 0) / 100} className="w-12" />
-                                <span className="w-11 text-right font-mono text-xs tabular text-ink/85">
-                                  {v ? `${fmtNum(v.weight_pct, 1)}%` : "—"}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-ink/85">
-                              {a ? fmtNum(a.stats.sharpe, 2) : "—"}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              {a ? (
-                                <div className="flex items-center justify-end gap-2">
-                                  <div className="h-[3px] w-12 overflow-hidden rounded-full bg-white/[0.07]">
-                                    <div
-                                      className={`h-full rounded-full ${
-                                        a.contribution >= 0 ? "bg-gain/80" : "bg-loss/80"
-                                      }`}
-                                      style={{
-                                        width: `${Math.min(
-                                          (Math.abs(a.contribution) / maxContrib) * 100,
-                                          100
-                                        )}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <span
-                                    className={`font-mono text-xs tabular ${signClass(a.contribution)}`}
-                                  >
-                                    {fmtPct(a.contribution)}
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="font-mono text-sm font-semibold text-accent">
+                                    {r.symbol}
+                                  </span>
+                                  <span className="max-w-[180px] truncate text-xs text-mut">
+                                    {r.name}
                                   </span>
                                 </div>
-                              ) : (
-                                <div className="text-right font-mono text-xs text-mut">—</div>
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              {a ? (
-                                <div className="flex justify-end">
-                                  <Sparkline
-                                    values={a.values}
-                                    positive={a.stats.totalReturn >= 0}
-                                  />
-                                </div>
-                              ) : (
-                                <div className="text-right font-mono text-xs text-mut">—</div>
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              <button
-                                onClick={() => removeRow(r.symbol)}
-                                title={`Remove ${r.symbol}`}
-                                className="rounded-lg border border-transparent p-1.5 text-mut transition-colors hover:border-loss/40 hover:text-loss"
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step="any"
+                                  value={r.shares}
+                                  onChange={(e) => editRow(r.symbol, "shares", e.target.value)}
+                                  className={`${INPUT} w-24 text-right`}
+                                  aria-label={`${r.symbol} shares`}
+                                />
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step="any"
+                                  value={r.buy_price}
+                                  onChange={(e) => editRow(r.symbol, "buy_price", e.target.value)}
+                                  className={`${INPUT} w-24 text-right`}
+                                  aria-label={`${r.symbol} average cost`}
+                                />
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-mut">
+                                {v?.has_price && v.current_price != null
+                                  ? fmtMoney(v.current_price)
+                                  : "—"}
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-ink/90">
+                                {v ? fmtMoney(v.market_value) : "—"}
+                              </td>
+                              <td
+                                className={`px-3 py-2.5 text-right font-mono text-xs font-medium tabular ${signClass(
+                                  v?.pnl ?? null
+                                )}`}
                               >
-                                <Trash2 className="size-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                                {v ? fmtMoney(v.pnl) : "—"}
+                              </td>
+                              <td
+                                className={`px-3 py-2.5 text-right font-mono text-xs tabular ${signClass(
+                                  v?.pnl_pct ?? null
+                                )}`}
+                              >
+                                {v?.pnl_pct == null
+                                  ? "—"
+                                  : `${v.pnl_pct >= 0 ? "+" : ""}${fmtNum(v.pnl_pct, 2)}%`}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <div className="flex items-center justify-end gap-2">
+                                  <ThinBar fraction={(v?.weight_pct ?? 0) / 100} className="w-12" />
+                                  <span className="w-11 text-right font-mono text-xs tabular text-ink/85">
+                                    {v ? `${fmtNum(v.weight_pct, 1)}%` : "—"}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-ink/85">
+                                {a ? fmtNum(a.stats.sharpe, 2) : "—"}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {a ? (
+                                  <div className="flex items-center justify-end gap-2">
+                                    <div className="h-[3px] w-12 overflow-hidden rounded-full bg-white/[0.07]">
+                                      <div
+                                        className={`h-full rounded-full ${
+                                          a.contribution >= 0 ? "bg-gain/80" : "bg-loss/80"
+                                        }`}
+                                        style={{
+                                          width: `${Math.min(
+                                            (Math.abs(a.contribution) / maxContrib) * 100,
+                                            100
+                                          )}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span
+                                      className={`font-mono text-xs tabular ${signClass(a.contribution)}`}
+                                    >
+                                      {fmtPct(a.contribution)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="text-right font-mono text-xs text-mut">—</div>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5">
+                                {a ? (
+                                  <div className="flex justify-end">
+                                    <Sparkline
+                                      values={a.values}
+                                      positive={a.stats.totalReturn >= 0}
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="text-right font-mono text-xs text-mut">—</div>
+                                )}
+                              </td>
+                              <td className="px-3 py-2.5 text-right">
+                                <button
+                                  onClick={() => removeRow(r.symbol)}
+                                  title={`Remove ${r.symbol}`}
+                                  className="rounded-lg border border-transparent p-1.5 text-mut transition-colors hover:border-loss/40 hover:text-loss"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
 
-              {alloc.length > 0 && (
-                <Section title="Allocation">
-                  <div className="space-y-2.5">
-                    {alloc.map((item) => (
-                      <div key={item.label} className="flex items-center gap-3">
-                        <span
-                          className={`w-14 shrink-0 font-mono text-xs font-semibold ${
-                            item.cash ? "text-mut" : "text-accent"
-                          }`}
-                        >
-                          {item.label}
+              {rangeView && analysis && (
+                <section className="card px-2 py-2">
+                  <div className="flex items-center justify-between gap-3 px-3 pb-1 pt-3">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <button
+                        onClick={() => setCollapsedAlloc((c) => !c)}
+                        className="shrink-0 rounded-md p-0.5 text-mut transition-colors hover:text-ink/80"
+                        title={collapsedAlloc ? "Expand allocation" : "Collapse allocation"}
+                        aria-label={collapsedAlloc ? "Expand allocation" : "Collapse allocation"}
+                      >
+                        {collapsedAlloc ? (
+                          <ChevronDown className="size-4" />
+                        ) : (
+                          <ChevronUp className="size-4" />
+                        )}
+                      </button>
+                      <h3 className="shrink-0 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                        Allocation
+                      </h3>
+                      {collapsedAlloc && (
+                        <span className="min-w-0 truncate font-mono text-[10px] tracking-wider text-mut/70">
+                          <span className="mx-1.5 text-mut/30">·</span>
+                          Sector exposure
+                          {analysis.sectors
+                            .sort((a, b) => b.weight - a.weight)
+                            .slice(0, 5)
+                            .map((s) => (
+                              <span key={s.sector}>
+                                <span className="mx-1.5 text-mut/30">·</span>
+                                {s.sector}{" "}
+                                <span className="text-ink/80">{fmtNum(s.weight * 100, 1)}%</span>
+                              </span>
+                            ))}
+                          {analysis.sectors.length > 5 && (
+                            <span className="text-mut/50">
+                              {" "}
+                              +{analysis.sectors.length - 5} more
+                            </span>
+                          )}
                         </span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${Math.min(item.weight, 100)}%`,
-                              backgroundColor: item.cash ? "#86938a" : "var(--color-accent)",
-                              opacity: item.cash ? 0.7 : 0.85,
-                            }}
-                          />
-                        </div>
-                        <span className="w-12 text-right font-mono text-xs tabular text-ink/85">
-                          {fmtNum(item.weight, 1)}%
-                        </span>
-                        <span className="hidden w-24 text-right font-mono text-[11px] tabular text-mut sm:block">
-                          {fmtMoney(item.value)}
-                        </span>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
-                </Section>
+                  {!collapsedAlloc && (
+                    <div className="p-5">
+                      <AllocationDonut
+                        items={rangeView.holdings.map((h) => ({
+                          symbol: h.symbol,
+                          name: h.name,
+                          sector: h.sector,
+                          weight: h.weight,
+                        }))}
+                      />
+                      <SectorBars sectors={analysis.sectors} />
+                    </div>
+                  )}
+                </section>
               )}
 
               {/* ---- analytics migrated from the retired "/" analyzer ---- */}
@@ -1231,28 +1338,12 @@ function PortfolioPageInner() {
 
                   <StatsRow metrics={rangeView.metrics} spy={spyStats} />
 
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    <section className="card p-5">
-                      <h3 className="mb-5 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
-                        Allocation
-                      </h3>
-                      <AllocationDonut
-                        items={rangeView.holdings.map((h) => ({
-                          symbol: h.symbol,
-                          name: h.name,
-                          sector: h.sector,
-                          weight: h.weight,
-                        }))}
-                      />
-                      <SectorBars sectors={analysis.sectors} />
-                    </section>
-                    <section className="card p-5">
-                      <h3 className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
-                        Monthly returns · portfolio
-                      </h3>
-                      <MonthlyHeatmap monthly={rangeView.monthly} />
-                    </section>
-                  </div>
+                  <section className="card p-5">
+                    <h3 className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
+                      Monthly returns · portfolio
+                    </h3>
+                    <MonthlyHeatmap monthly={rangeView.monthly} />
+                  </section>
                 </>
               )}
             </>

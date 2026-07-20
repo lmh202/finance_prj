@@ -1,0 +1,141 @@
+@startdot AURORA-layered-architecture
+' AURORA — Layered System Architecture.
+' PlantUML @startdot (raw GraphViz). Each layer is ONE node whose HTML-table
+' label lays out the layer's boxes — so the five bands have identical width and
+' a high-weight invisible center chain aligns their left/right edges exactly.
+' Cross-layer arrows attach to table-cell PORTs; in-layer calls are drawn as
+' glyphs inside the tables (↓ solid call, ⇢/⇣ dashed contract flow).
+' Render:  java -jar plantuml.jar -charset UTF-8 -tpng docs/architecture-layered.puml
+digraph aurora {
+  graph [rankdir=TB, splines=true, bgcolor=white, fontname="Segoe UI",
+         nodesep=0.3, ranksep=0.1, labelloc=t, fontsize=20,
+         label=<<B>AURORA — Layered System Architecture</B><BR/><FONT POINT-SIZE="12">FastAPI backend + two HTTP-only frontends · four owned engine workstreams</FONT>>];
+  node  [shape=plain, fontname="Segoe UI", fontsize=11];
+  edge  [fontname="Segoe UI", fontsize=10, color="#4A5568",
+         fontcolor="#334155", arrowsize=0.7];
+
+  /* ================= Layer 1 — Presentation ================= */
+  L1 [label=<
+  <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#4A5568" BGCOLOR="#EDF5FD" CELLBORDER="0" CELLSPACING="12" CELLPADDING="2" WIDTH="1560">
+    <TR><TD COLSPAN="2"><B>PRESENTATION LAYER — user interfaces (HTTP-only clients)</B></TD></TR>
+    <TR>
+      <TD WIDTH="550">
+        <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLBORDER="0" CELLSPACING="10" CELLPADDING="6" WIDTH="540">
+          <TR><TD><FONT POINT-SIZE="11">Next.js 16 UI — frontendjs/  (port 3000)</FONT></TD></TR>
+          <TR><TD BORDER="1" COLOR="#64748B"><B>App Router pages</B><BR/>/ · /portfolio · /health · /strategy<BR/>/news · /react · /performance</TD></TR>
+          <TR><TD><FONT COLOR="#4A5568">↓</FONT></TD></TR>
+          <TR><TD PORT="nj_client" BORDER="1" COLOR="#64748B"><B>src/lib/api-client.ts</B><BR/>typed fetch client · raises ApiMarkerError</TD></TR>
+        </TABLE>
+      </TD>
+      <TD WIDTH="940">
+        <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLBORDER="0" CELLSPACING="10" CELLPADDING="6" WIDTH="930">
+          <TR><TD COLSPAN="2"><FONT POINT-SIZE="11">Streamlit UI — frontend/  (port 8501)</FONT></TD></TR>
+          <TR>
+            <TD BORDER="1" COLOR="#64748B"><B>app.py — Home</B><BR/>portfolio builder (Dev 4)</TD>
+            <TD BORDER="1" COLOR="#64748B"><B>pages/ routing shims → views/</B><BR/>Health · Strategy · News · React · Performance</TD>
+          </TR>
+          <TR><TD COLSPAN="2"><FONT COLOR="#4A5568">↓</FONT></TD></TR>
+          <TR><TD COLSPAN="2" PORT="st_client" BORDER="1" COLOR="#64748B"><B>api_client.py</B><BR/>typed HTTP wrappers · raises ApiUnavailable · ApiMarker</TD></TR>
+        </TABLE>
+      </TD>
+    </TR>
+  </TABLE>>];
+
+  /* ================= Layer 2 — API ================= */
+  L2 [label=<
+  <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#4A5568" BGCOLOR="#EAF6EC" CELLBORDER="0" CELLSPACING="12" CELLPADDING="2" WIDTH="1560">
+    <TR><TD COLSPAN="3"><B>API LAYER — FastAPI service, backend/  (port 8000)</B></TD></TR>
+    <TR>
+      <TD PORT="ser" WIDTH="480" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>serialize.py</B><BR/>dataclass / DataFrame → JSON<BR/>df_records · df_split · as_dict</TD>
+      <TD PORT="main" WIDTH="480" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>main.py</B><BR/>CORS: allow http://localhost:3000</TD>
+      <TD WIDTH="480" BORDER="1" COLOR="#B7A657" BGCOLOR="#FEF8C5" CELLPADDING="6">HTTP-only split:<BR/>no streamlit import under backend/<BR/>no src.* import under frontend/</TD>
+    </TR>
+    <TR>
+      <TD><FONT COLOR="#334155" POINT-SIZE="10">↖ results → JSON</FONT></TD>
+      <TD><FONT COLOR="#334155" POINT-SIZE="10">↓ include_router</FONT></TD>
+      <TD></TD>
+    </TR>
+    <TR>
+      <TD COLSPAN="3">
+        <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLBORDER="0" CELLSPACING="10" CELLPADDING="6">
+          <TR><TD COLSPAN="4"><FONT POINT-SIZE="11">routers/ — one thin router per engine</FONT></TD></TR>
+          <TR>
+            <TD WIDTH="355" BORDER="1" COLOR="#64748B"><B>_common.py — request plumbing</B><BR/>holdings → 409 empty_portfolio · 502 no_history</TD>
+            <TD PORT="rt_kernel" WIDTH="355" BORDER="1" COLOR="#64748B"><B>market.py · portfolio.py</B><BR/>shared-kernel routers</TD>
+            <TD PORT="rt_analysis" WIDTH="355" BORDER="1" COLOR="#64748B"><B>analysis.py</B><BR/>POST /analysis/explore</TD>
+            <TD PORT="rt_engine" WIDTH="355" BORDER="1" COLOR="#64748B"><B>health.py · strategy.py</B><BR/>news.py · recommendation.py</TD>
+          </TR>
+        </TABLE>
+      </TD>
+    </TR>
+  </TABLE>>];
+
+  /* ================= Layer 3 — Domain (engines) ================= */
+  L3 [label=<
+  <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#4A5568" BGCOLOR="#FFF7E6" CELLBORDER="0" CELLSPACING="12" CELLPADDING="2" WIDTH="1560">
+    <TR><TD COLSPAN="8"><B>DOMAIN LAYER — engine library, backend/src/  (one owner per engine)</B></TD></TR>
+    <TR>
+      <TD></TD>
+      <TD COLSPAN="5"><FONT COLOR="#334155" POINT-SIZE="10">⇢ ⇢ ⇢  FAST: essential_news → reaction_risk(event)  ⇢ ⇢ ⇢</FONT></TD>
+      <TD></TD><TD></TD>
+    </TR>
+    <TR>
+      <TD PORT="analysis" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>analysis/ — auxiliary</B><BR/>calendar align · constant-mix<BR/>risk stats<BR/>(serves /analysis/explore)</TD>
+      <TD PORT="news" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>news_intelligence/ — Dev 3</B><BR/>fetch_headlines · essential_news<BR/>sentiment_features · collector.py<BR/>LLM live · FinBERT/VADER batch</TD>
+      <TD><FONT COLOR="#334155" POINT-SIZE="10">⇢ SLOW:<BR/>sentiment_features →<BR/>score_assets(sentiment)</FONT></TD>
+      <TD PORT="strat" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>daily_strategy/ — Dev 2</B><BR/>classify_regime · score_assets<BR/>backtest — walk-forward ML</TD>
+      <TD><FONT COLOR="#334155" POINT-SIZE="10">⇢ RegimeState ·<BR/>AssetSignal · priced_in<BR/>reconciliation</FONT></TD>
+      <TD PORT="reco" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>recommendation/ — Dev 4</B><BR/>reaction_risk · recommend_daily<BR/>recommend_event · apply_constraints</TD>
+      <TD><FONT COLOR="#334155" POINT-SIZE="10">⇢ what-if<BR/>trades →<BR/>health preview</FONT></TD>
+      <TD PORT="health" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>portfolio_health/ — Dev 1</B><BR/>compute_health · what_if_health<BR/>quant formulas + validation</TD>
+    </TR>
+    <TR>
+      <TD></TD><TD></TD><TD></TD>
+      <TD COLSPAN="5"><FONT COLOR="#334155" POINT-SIZE="10">⇢ ⇢ ⇢  backtest + ablation → rendered on Dev 1's Performance page  ⇢ ⇢ ⇢</FONT></TD>
+    </TR>
+  </TABLE>>];
+
+  /* ================= Layer 4 — Shared kernel ================= */
+  L4 [label=<
+  <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#4A5568" BGCOLOR="#F5EDFB" CELLBORDER="0" CELLSPACING="12" CELLPADDING="2" WIDTH="1560">
+    <TR><TD COLSPAN="4"><B>SHARED KERNEL — cross-cutting, read-only from engines</B></TD></TR>
+    <TR>
+      <TD PORT="if" WIDTH="430" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>interfaces.py — FROZEN CONTRACT</B><BR/>HealthReport · RegimeState · AssetSignal · NewsEvent<BR/>ReactionRisk · ProposedTrade · Recommendation</TD>
+      <TD PORT="pf" WIDTH="350" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>portfolio.py</B><BR/>holdings CSV persistence<BR/>build_view valuation</TD>
+      <TD PORT="cfg" WIDTH="350" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>config.py</B><BR/>DATA_DIR resolution<BR/>(AURORA_DATA_DIR override)</TD>
+      <TD PORT="dl" WIDTH="360" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="6"><B>data_loader.py</B><BR/>ticker universe (NASDAQ Trader)<BR/>get_latest_prices · get_history</TD>
+    </TR>
+  </TABLE>>];
+
+  /* ================= Layer 5 — Data & external ================= */
+  L5 [label=<
+  <TABLE BORDER="1" STYLE="ROUNDED" COLOR="#4A5568" BGCOLOR="#FDEEEE" CELLBORDER="0" CELLSPACING="12" CELLPADDING="2" WIDTH="1560">
+    <TR><TD COLSPAN="5"><B>DATA LAYER — runtime state &amp; external services</B></TD></TR>
+    <TR>
+      <TD PORT="rss" WIDTH="210" BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLPADDING="8"><B>RSS news feeds</B><BR/>(external)</TD>
+      <TD PORT="llm" WIDTH="310" BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLPADDING="8"><B>Anthropic API</B><BR/>live LLM classification<BR/>(keyword fallback if no key)</TD>
+      <TD PORT="data" WIDTH="390" BORDER="1" COLOR="#64748B" BGCOLOR="white" CELLPADDING="8"><B>data/  (AURORA_DATA_DIR)</B><BR/>portfolio.csv · settings.json · tickers.csv<BR/>news_raw.json · processed/ sentiment table</TD>
+      <TD PORT="yf" WIDTH="250" BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLPADDING="8"><B>Yahoo Finance</B><BR/>via yfinance (external)</TD>
+      <TD PORT="nasdaq" WIDTH="270" BORDER="1" STYLE="ROUNDED" COLOR="#64748B" BGCOLOR="white" CELLPADDING="8"><B>NASDAQ Trader</B><BR/>symbol directory (external)</TD>
+    </TR>
+  </TABLE>>];
+
+  /* ============ invisible center chain — equal-width bands stack aligned ============ */
+  edge [style=invis, weight=500];
+  L1 -> L2 -> L3 -> L4 -> L5;
+
+  /* ============ cross-layer edges (cell ports) ============ */
+ 
+
+  /* ============ legend ============   legend [shape=none, label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="4" BGCOLOR="#F8FAFC" COLOR="#CBD5E1">
+      <TR><TD ALIGN="LEFT"><B>solid arrow</B></TD><TD ALIGN="LEFT">HTTP request (UI → API) · in-process call across layers</TD></TR>
+      <TR><TD ALIGN="LEFT"><B>↓ / ↖ glyph</B></TD><TD ALIGN="LEFT">in-process call inside a layer</TD></TR>
+      <TR><TD ALIGN="LEFT"><B>⇢ / ⇣ glyph</B></TD><TD ALIGN="LEFT">cross-engine data flow, typed by the frozen contract</TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2">409 empty_portfolio → onboarding UI · 502 no_history → retry UI</TD></TR>
+      <TR><TD ALIGN="LEFT" COLSPAN="2">collector.py runs as a standalone process feeding news_raw.json</TD></TR>
+    </TABLE>>];
+  L5 -> legend [style=invis];*/
+
+}
+@enddot

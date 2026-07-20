@@ -25,8 +25,10 @@ export const ALLOC_COLORS = [
 ];
 
 const OTHER_COLOR = "#5b6560";
-const R = 74;
+const R = 64;
 const C = 2 * Math.PI * R;
+const LABEL_R = R + 24;
+const MIN_LABEL_WEIGHT = 0.03; // don't label slices smaller than 3%
 
 export function AllocationDonut({ items }: { items: AllocationItem[] }) {
   const [active, setActive] = useState<number | null>(null);
@@ -58,29 +60,65 @@ export function AllocationDonut({ items }: { items: AllocationItem[] }) {
 
   return (
     <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-      <div className="relative mx-auto shrink-0 sm:mx-0" style={{ width: 184, height: 184 }}>
+      <div className="relative mx-auto shrink-0 sm:mx-0" style={{ width: 220, height: 220 }}>
         <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90">
           {slices.map((s, i) => {
             const len = Math.max(s.weight * C - 2.5, 0.5);
+            const midAngle = (s.offset + s.weight / 2) * 2 * Math.PI;
+            const lx = 100 + LABEL_R * Math.sin(midAngle);
+            const ly = 100 - LABEL_R * Math.cos(midAngle);
+            const showLabel = s.weight >= MIN_LABEL_WEIGHT;
+            // text-anchor based on which side of center the label falls
+            const anchor = lx > 105 ? "start" : lx < 95 ? "end" : "middle";
+
             return (
-              <motion.circle
-                key={s.symbol}
-                cx="100"
-                cy="100"
-                r={R}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={active === i ? 30 : 22}
-                strokeDasharray={`${len} ${C - len}`}
-                strokeDashoffset={-s.offset * C}
-                strokeLinecap="butt"
-                initial={{ opacity: 0, scale: 0.92 }}
-                animate={{ opacity: active == null || active === i ? 1 : 0.35, scale: 1 }}
-                transition={{ duration: 0.35, delay: i * 0.03 }}
-                onMouseEnter={() => setActive(i)}
-                onMouseLeave={() => setActive(null)}
-                style={{ transformOrigin: "100px 100px", cursor: "pointer" }}
-              />
+              <g key={s.symbol}>
+                <motion.circle
+                  cx="100"
+                  cy="100"
+                  r={R}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={active === i ? 28 : 20}
+                  strokeDasharray={`${len} ${C - len}`}
+                  strokeDashoffset={-s.offset * C}
+                  strokeLinecap="butt"
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: active == null || active === i ? 1 : 0.35, scale: 1 }}
+                  transition={{ duration: 0.35, delay: i * 0.03 }}
+                  onMouseEnter={() => setActive(i)}
+                  onMouseLeave={() => setActive(null)}
+                  style={{ transformOrigin: "100px 100px", cursor: "pointer" }}
+                />
+                {showLabel && (
+                  <>
+                    {/* connector line */}
+                    <line
+                      x1={100 + (R + 10) * Math.sin(midAngle)}
+                      y1={100 - (R + 10) * Math.cos(midAngle)}
+                      x2={lx}
+                      y2={ly}
+                      stroke={s.color}
+                      strokeWidth={1}
+                      opacity={active == null || active === i ? 0.5 : 0.15}
+                    />
+                    {/* label text */}
+                    <text
+                      x={lx}
+                      y={ly}
+                      textAnchor={anchor}
+                      dominantBaseline="central"
+                      className="fill-ink/80 font-mono text-[10px] font-semibold pointer-events-none"
+                      style={{
+                        opacity: active == null || active === i ? 1 : 0.25,
+                        transition: "opacity 0.2s",
+                      }}
+                    >
+                      {s.symbol}
+                    </text>
+                  </>
+                )}
+              </g>
             );
           })}
         </svg>

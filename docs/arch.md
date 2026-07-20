@@ -1,0 +1,142 @@
+java -DPLANTUML_LIMIT_SIZE=16384 -jar "C:\Users\yh173\AppData\Local\Temp\claude\D--DocumentsNew-sws-project-prj0717\2ce41e53-595b-4c44-bc4a-470934db44b1\scratchpad\plantuml.jar" -charset UTF-8 -tpng .\docs\arch.puml -o output
+
+```plantuml
+@startuml AURORA-layered-architecture
+title <b>AURORA — Layered System Architecture</b>\nFastAPI backend + two HTTP-only frontends · four owned engine workstreams
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+skinparam TitleFontSize 16
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam ArrowColor #4A5568
+skinparam ArrowFontColor #334155
+skinparam ArrowFontSize 11
+skinparam rectangle {
+  BorderColor #4A5568
+  FontStyle bold
+  RoundCorner 10
+}
+skinparam component {
+  BackgroundColor #FFFFFF
+  BorderColor #64748B
+  FontStyle plain
+}
+skinparam package {
+  BorderColor #64748B
+  FontStyle plain
+}
+skinparam database {
+  BackgroundColor #FFFFFF
+  BorderColor #64748B
+}
+skinparam cloud {
+  BackgroundColor #FFFFFF
+  BorderColor #64748B
+}
+
+' ════════════════ Layer 1 — Presentation ════════════════
+rectangle "PRESENTATION LAYER — user interfaces (HTTP-only clients)" as L1 #EDF5FD {
+  package "Streamlit UI — frontend/  (port 8501)" as ST {
+    [app.py — Home\nportfolio builder (Dev 4)] as st_home
+    [pages/ routing shims → views/\nHealth · Strategy · News · React · Performance] as st_views
+    [api_client.py\ntyped HTTP wrappers\nraises ApiUnavailable · ApiMarker] as st_client
+  }
+  package "Next.js 16 UI — frontendjs/  (port 3000)" as NJ {
+    [App Router pages\n/ · /portfolio · /health · /strategy\n/news · /react · /performance] as nj_pages
+    [src/lib/api-client.ts\ntyped fetch client\nraises ApiMarkerError] as nj_client
+  }
+}
+
+' ════════════════ Layer 2 — API ════════════════
+rectangle "API LAYER — FastAPI service, backend/  (port 8000)" as L2 #EAF6EC {
+  [main.py\nCORS: allow http://localhost:3000] as api_main
+  note right of api_main
+    HTTP-only split:
+    no streamlit import under backend/
+    no src.* import under frontend/
+  end note
+  package "routers/ — one thin router per engine" as RT {
+    [market.py · portfolio.py\nshared-kernel routers] as rt_kernel
+    [health.py · strategy.py\nnews.py · recommendation.py] as rt_engine
+    [analysis.py\nPOST /analysis/explore] as rt_analysis
+    [_common.py — request plumbing\nholdings → 409 empty_portfolio · 502 no_history] as rt_common
+  }
+  [serialize.py\ndataclass / DataFrame → JSON\ndf_records · df_split · as_dict] as api_ser
+}
+
+' ════════════════ Layer 3 — Domain (engines) ════════════════
+rectangle "DOMAIN LAYER — engine library, backend/src/  (one owner per engine)" as L3 #FFF7E6 {
+  [news_intelligence/ — Dev 3\nfetch_headlines · essential_news\nsentiment_features · collector.py (RSS)\nLLM live · FinBERT/VADER batch] as en_news
+  [daily_strategy/ — Dev 2\nclassify_regime · score_assets\nbacktest — walk-forward ML] as en_strat
+  [recommendation/ — Dev 4\nreaction_risk · recommend_daily\nrecommend_event · apply_constraints] as en_reco
+  [portfolio_health/ — Dev 1\ncompute_health · what_if_health\nquant formulas + validation] as en_health
+  [analysis/ — auxiliary engine\ncalendar align · constant-mix\nrisk stats (serves /analysis/explore)] as en_analysis
+}
+
+' ════════════════ Layer 4 — Shared kernel ════════════════
+rectangle "SHARED KERNEL — cross-cutting, read-only from engines" as L4 #F5EDFB {
+  [interfaces.py — FROZEN CONTRACT\nHealthReport · RegimeState · AssetSignal · NewsEvent\nReactionRisk · ProposedTrade · Recommendation] as sk_if
+  [data_loader.py\nticker universe (NASDAQ Trader)\nget_latest_prices · get_history] as sk_dl
+  [portfolio.py\nholdings CSV persistence\nbuild_view valuation] as sk_pf
+  [config.py\nDATA_DIR resolution\n(AURORA_DATA_DIR override)] as sk_cfg
+}
+
+' ════════════════ Layer 5 — Data & external ════════════════
+rectangle "DATA LAYER — runtime state & external services" as L5 #FDEEEE {
+  database "data/  (AURORA_DATA_DIR)\nportfolio.csv · settings.json · tickers.csv\nnews_raw.json · processed/ sentiment table" as d_data
+  cloud "Yahoo Finance\nvia yfinance" as x_yf
+  cloud "NASDAQ Trader\nsymbol directory" as x_nasdaq
+  cloud "RSS news feeds" as x_rss
+  cloud "Anthropic API\nlive LLM classification\n(keyword fallback if no key)" as x_llm
+}
+
+' ── Layer dependencies ──
+L1 -[hidden]down-> L2
+L2 -[hidden]down-> L3
+L3 -[hidden]down-> L4
+L4 -[hidden]down-> L5
+
+' ── presentation internals ──
+st_home -down-> st_client
+st_views -down-> st_client
+nj_pages -down-> nj_client
+
+' ── HTTP boundary ──
+st_client -down-> api_main : HTTP / JSON
+
+' ── API internals ──
+api_main -down-> RT : include_router
+RT -right-> api_ser : results → JSON
+
+
+
+
+' ── layout only: keep analysis beside health, kernel strictly below domain ──
+en_reco -[hidden]-> en_analysis
+en_health -[hidden]-> sk_if
+en_health -[hidden]-> sk_dl
+en_health -[hidden]-> sk_pf
+en_health -[hidden]-> sk_cfg
+
+' ── cross-engine flows via the frozen contract (dashed) ──
+en_news .right.> en_strat : SLOW: sentiment_features →\nscore_assets(sentiment)
+en_news .right.> en_reco : FAST: essential_news → reaction_risk(event)
+en_strat .right.> en_reco : RegimeState · AssetSignal\npriced_in reconciliation
+en_reco ..> en_health : what-if trades →\nhealth preview
+en_strat ..> en_health : backtest + ablation →\nPerformance page
+
+
+
+
+@enduml
+```
+legend right
+  |= notation |= meaning |
+  | solid arrow | in-process call / import (below the API layer)\nor HTTP request (UI → API) |
+  | dashed arrow | cross-engine data flow, typed by the frozen contract |
+  409 empty_portfolio → onboarding UI · 502 no_history → retry UI
+  collector.py runs as a standalone process feeding news_raw.json
+endlegend

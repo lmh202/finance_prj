@@ -13,31 +13,63 @@ ownership model, and violating it breaks other developers' branches.
 ## Commands
 
 ```bash
-# Install all deps (backend + frontend)
-pip install -r requirements.txt
+# Install all deps
+pip install -r requirements.txt          # backend + Streamlit frontend
+cd frontendjs && npm install             # Next.js frontend
 
-# Start everything (one PowerShell command)
-.\scripts\dev.ps1
+# Start everything (one PowerShell command from repo root)
+.\scripts\dev.ps1                        # backend (port 8000) + Streamlit (port 8501)
 
-# Or run the two processes by hand:
-uvicorn main:app --app-dir backend --reload --port 8000   # terminal 1
-streamlit run frontend/app.py                             # terminal 2
+# Or run processes by hand:
+uvicorn main:app --app-dir backend --reload --port 8000   # terminal 1: backend
+streamlit run frontend/app.py                             # terminal 2: Streamlit UI
+cd frontendjs && npm run dev                              # terminal 3: Next.js UI (port 3000)
 
-# Standalone RSS collector (grows data/news_raw.json)
+# Standalone RSS collector (grows data/news_raw.json — run regularly)
 python backend/src/news_intelligence/collector.py
 
 # API docs (when backend is running)
 # http://localhost:8000/docs
 ```
 
-There is no test suite, linter, or CI config in this repo — don't assume
-`pytest`/`ruff`/etc. exist unless you add them yourself.
+### Sandbox testing (safe mutation tests)
+
+Set `AURORA_DATA_DIR` to a temporary directory so tests don't touch the
+user's live `data/portfolio.csv`:
+
+```powershell
+$env:AURORA_DATA_DIR = "$pwd\tests\sandbox_data"
+```
+
+The backend reads all runtime state from that directory — portfolio,
+settings, ticker cache, news cache. The Streamlit frontend honors
+`AURORA_API_URL` (default `http://localhost:8000`).
+
+There is no test suite, linter, or CI config in the Python half of this
+repo — don't assume `pytest`/`ruff`/etc. exist unless you add them yourself.
+The `frontendjs/` Next.js app **does** have `npm run lint` and `npm run
+typecheck`.
+
+## Environment variables
+
+| Variable | Set by | Purpose |
+|---|---|---|
+| `AURORA_DATA_DIR` | you (optional) | Override `data/` root (default: `<repo>/data`). Use a sandbox dir for mutation tests so live state isn't touched. |
+| `AURORA_API_URL` | `scripts/dev.ps1` | Backend URL the Streamlit frontend calls (default: `http://localhost:8000`). |
+| `ANTHROPIC_API_KEY` | you (Dev 3 only) | LLM API key for live news classification. **If missing, the news engine falls back to keyword-rule classification** — the demo still works. Store in env var or `.streamlit/secrets.toml` (gitignored); never commit it. |
+| `NEXT_PUBLIC_BACKEND_URL` | `.env.local` (tracked) | Backend URL the Next.js frontend calls (default: `http://localhost:8000`). |
 
 ## Architecture: FastAPI backend + Streamlit frontend (HTTP-only split)
 
-The repo is split into two processes that talk **only over HTTP**. No
+The repo is split into processes that talk **only over HTTP**. No
 `streamlit` import anywhere under `backend/`; no `src` import anywhere under
 `frontend/`.
+
+| Process | Port | Tech |
+|---|---|---|
+| Backend API | 8000 | FastAPI (uvicorn) |
+| Streamlit UI | 8501 | Streamlit |
+| Next.js UI | 3000 | Next.js 16 (Turbopack) |
 
 ```
 backend/                     FastAPI service
@@ -55,10 +87,12 @@ backend/                     FastAPI service
     daily_strategy/          Developer 2 — classify_regime, score_assets, backtest (walk-forward ML)
     news_intelligence/       Developer 3 — fetch_headlines, essential_news, sentiment_features
     recommendation/          Developer 4 — reaction_risk, recommend_daily, recommend_event, apply_constraints
-    analysis/                NOT one of the four contract engines — calendar alignment, constant-mix
-                              portfolio construction, and risk stats. Ported from frontendjs' old
-                              src/lib/metrics.ts; used only by routers/analysis.py's /analysis/explore,
-                              which serves frontendjs (see "Separate projects" below), not frontend/.
+    analysis/                Auxiliary engine (NOT one of the four contract engines) —
+                              calendar alignment, constant-mix portfolio construction,
+                              and risk stats. Ported from frontendjs' old
+                              src/lib/metrics.ts; used ONLY by routers/analysis.py's
+                              POST /analysis/explore, which serves the frontendjs
+                              /portfolio page's analytics — NOT the Streamlit frontend.
 
 frontend/                    Streamlit UI
   app.py                     Home — portfolio builder (Developer 4)
