@@ -63,11 +63,11 @@ const CARDS: CardDef[] = [
   },
   {
     label: "Sharpe",
-    hint: "Excess return per unit of risk (risk-free rate 4%). Above 1 is strong, above 2 is elite.",
+    hint: "Return per unit of risk, from the Portfolio Health report (trailing ~2y, no risk-free adjustment) — matches the Sharpe on the Health page. Above 1 is strong, above 2 is elite.",
     render: (m) => m.sharpe,
     format: (v) => fmtNum(v, 2),
     tone: (m) => (m.sharpe >= 1 ? "text-gain" : m.sharpe < 0 ? "text-loss" : "text-ink"),
-    sub: (_, spy) => (spy ? `SPY ${fmtNum(spy.sharpe, 2)} · rf 4%` : "rf 4%"),
+    sub: () => "from Health report",
   },
   {
     label: "Sortino",

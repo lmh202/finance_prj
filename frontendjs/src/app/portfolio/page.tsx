@@ -46,6 +46,8 @@ import {
   ThinBar,
 } from "@/components/EngineShell";
 import { AllocationDonut, SectorBars } from "@/components/AllocationDonut";
+import { BenchmarkPicker } from "@/components/BenchmarkPicker";
+import { CustomRangePicker } from "@/components/CustomRangePicker";
 import { MonthlyHeatmap } from "@/components/MonthlyHeatmap";
 import { PerformanceChart, type ChartSeries } from "@/components/PerformanceChart";
 import { SearchBox } from "@/components/SearchBox";
@@ -56,6 +58,7 @@ import {
   analyze,
   BackendDownError,
   fetchCash,
+  fetchHealthReport,
   fetchLatestPrices,
   fetchPortfolio,
   fetchPortfolioView,
@@ -72,11 +75,27 @@ import {
   type PortfolioTotals,
   type PortfolioViewRow,
   type RangeId,
+  type RangeSpec,
+  type RangeUnit,
   type StockInfo,
 } from "@/lib/types";
 import { deriveRangeView } from "@/lib/view";
 
 const ACCENT = "#B3F34C";
+
+const SIDEBAR_MIN_WIDTH = 260;
+const SIDEBAR_MAX_WIDTH = 560;
+const SIDEBAR_DEFAULT_WIDTH = 360;
+/** Dragging the divider below this width snaps the sidebar shut instead of
+ *  leaving it awkwardly narrow. */
+const SIDEBAR_COLLAPSE_AT = 170;
+
+/** Scrub gesture on the Shares input: px of vertical travel before a press
+ *  counts as a drag rather than a click, and px of travel per whole share
+ *  beyond that. Shares always move in integer steps of 1 while dragging —
+ *  never fractional — regardless of what was typed/imported before. */
+const SHARES_SCRUB_THRESHOLD_PX = 4;
+const SHARES_SCRUB_PX_PER_SHARE = 4;
 
 const INPUT =
   "w-full rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-accent/50";
@@ -193,6 +212,18 @@ function PortfolioPageInner() {
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedAlloc, setCollapsedAlloc] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [sidebarDragging, setSidebarDragging] = useState(false);
+  const [tabDragX, setTabDragX] = useState(0);
+  const resizeStart = useRef<{ x: number; width: number } | null>(null);
+  const tabDragStart = useRef<number | null>(null);
+  const sharesDrag = useRef<{
+    symbol: string;
+    pointerId: number;
+    startY: number;
+    startShares: number;
+    dragging: boolean;
+  } | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
   const [pending, setPending] = useState<PendingAdd | null>(null);
   const [confirmSample, setConfirmSample] = useState(false);
@@ -202,6 +233,25 @@ function PortfolioPageInner() {
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  /* A pointerup/pointercancel on the dragged element is what normally clears
+   * document.body.style.cursor/userSelect (see beginSharesDrag/beginResize/
+   * beginTabDrag below), but an SPA navigation that unmounts this component
+   * mid-drag (e.g. Alt+Left or a mouse back-button while the primary button
+   * is still held) never delivers that event. Without this, the override
+   * would stick to document.body forever — this is the only reset path for
+   * that case. */
+  useEffect(() => {
+    return () => {
+      if (sharesDrag.current || resizeStart.current || tabDragStart.current != null) {
+        sharesDrag.current = null;
+        resizeStart.current = null;
+        tabDragStart.current = null;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    };
+  }, []);
+
   /* ---- analytics (the retired analyzer, fed by the saved portfolio) ---- */
   const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
@@ -209,9 +259,20 @@ function PortfolioPageInner() {
   /** Bump to retry the analysis after a transient failure — the effect below
    *  re-runs whenever this changes, even if saved/boot stay the same. */
   const [analysisAttempt, setAnalysisAttempt] = useState(0);
-  const [range, setRange] = useState<RangeId>("5Y");
+  /** The Sharpe stat card mirrors GET /health/report — the same number the
+   *  Health page shows — instead of a client-side recompute over the
+   *  selected range; the two used to disagree (different risk-free/weighting/
+   *  window assumptions). Null while loading/unavailable; the card falls
+   *  back to the range-derived value in that case. */
+  const [healthSharpe, setHealthSharpe] = useState<number | null>(null);
+  const [range, setRange] = useState<RangeId | "custom">("5Y");
+  /** Draft values for the "Custom" range picker (days/months/years). */
+  const [customAmount, setCustomAmount] = useState(45);
+  const [customUnit, setCustomUnit] = useState<RangeUnit>("days");
   const [showSpy, setShowSpy] = useState(true);
   const [showQqq, setShowQqq] = useState(false);
+  /** Benchmarks beyond SPY/QQQ, picked from the "More" dropdown. */
+  const [extraBenchmarks, setExtraBenchmarks] = useState<Set<string>>(new Set());
 
   /* ---- symbol handed off from the home-page search (?add=NVDA) ---- */
   const consumedAdd = useRef(false);
@@ -325,6 +386,36 @@ function PortfolioPageInner() {
     };
   }, [boot, saved, analysisAttempt]);
 
+  /* Same trigger as the analyze effect above, but hitting the Health
+     engine's own endpoint so this page's Sharpe card matches /health
+     instead of recomputing it independently. */
+  useEffect(() => {
+    if (boot !== "ready") return;
+    const positions = saved.filter((h) => h.shares > 0);
+    const ctrl = new AbortController();
+    const t = setTimeout(
+      async () => {
+        if (positions.length === 0) {
+          setHealthSharpe(null);
+          return;
+        }
+        try {
+          const report = await fetchHealthReport(ctrl.signal);
+          if (ctrl.signal.aborted) return;
+          const v = report.metrics.sharpe;
+          setHealthSharpe(typeof v === "number" && Number.isFinite(v) ? v : null);
+        } catch {
+          if (!ctrl.signal.aborted) setHealthSharpe(null);
+        }
+      },
+      positions.length === 0 ? 0 : 300
+    );
+    return () => {
+      ctrl.abort();
+      clearTimeout(t);
+    };
+  }, [boot, saved, analysisAttempt]);
+
   async function run(name: string, fn: () => Promise<void>) {
     setBusy(name);
     setProblems([]);
@@ -348,6 +439,35 @@ function PortfolioPageInner() {
     [view]
   );
 
+  /* Position weight among the visible holdings — cash is deliberately left
+     out of the denominator (unlike the backend's build_view()/weight_pct,
+     which is cash-inclusive and feeds the Allocation donut + the
+     recommendation engine's concentration constraints). This is what lets
+     Weight sum to 100% across rows, so dragging one row up visibly takes
+     share from the others — the whole point of the drag-to-rebalance feel.
+     market_value still falls back to cost basis when a row has no live
+     price yet, same as build_view(). Lets the Weight column (typing and
+     dragging alike) update before Save, unlike Value/P&L/Sharpe/
+     Contribution/Trend which still read `view`. */
+  const liveWeightBySymbol = useMemo(() => {
+    const marketValues = new Map<string, number>();
+    let total = 0;
+    for (const r of rows) {
+      const price = viewBy.get(r.symbol)?.current_price ?? null;
+      const shares = Number.parseFloat(r.shares) || 0;
+      const buyPrice = Number.parseFloat(r.buy_price) || 0;
+      const costValue = shares * buyPrice;
+      const marketValue = price != null ? shares * price : costValue;
+      marketValues.set(r.symbol, marketValue);
+      total += marketValue;
+    }
+    const out = new Map<string, number>();
+    for (const [symbol, mv] of marketValues) {
+      out.set(symbol, total > 0 ? (mv / total) * 100 : 0);
+    }
+    return out;
+  }, [rows, viewBy]);
+
   const displayRows = useMemo(() => {
     const value = (r: EditRow) => viewBy.get(r.symbol)?.market_value ?? 0;
     return [...rows].sort((a, b) => value(b) - value(a));
@@ -370,10 +490,16 @@ function PortfolioPageInner() {
   }, [view, totals]);
 
   /* ---- analysis view (range-sliced client-side, no refetch) ---- */
-  const months = RANGES.find((r) => r.id === range)!.months;
+  const activeSpec: RangeSpec = useMemo(
+    () =>
+      range === "custom"
+        ? { unit: customUnit, amount: customAmount }
+        : RANGES.find((r) => r.id === range)!.spec,
+    [range, customAmount, customUnit]
+  );
   const rangeView = useMemo(
-    () => (analysis ? deriveRangeView(analysis, months) : null),
-    [analysis, months]
+    () => (analysis ? deriveRangeView(analysis, activeSpec) : null),
+    [analysis, activeSpec]
   );
   const analysisBy = useMemo(
     () => new Map((rangeView?.holdings ?? []).map((h) => [h.symbol, h])),
@@ -401,11 +527,16 @@ function PortfolioPageInner() {
       { id: "PF", label: "Portfolio", color: ACCENT, values: rangeView.portfolio, width: 2.5 },
     ];
     for (const b of rangeView.benchmarks) {
-      if (b.symbol === "SPY" && showSpy) out.push({ id: "SPY", label: b.name, color: b.color, values: b.values });
-      if (b.symbol === "QQQ" && showQqq) out.push({ id: "QQQ", label: b.name, color: b.color, values: b.values });
+      if (b.symbol === "SPY") {
+        if (showSpy) out.push({ id: "SPY", label: b.name, color: b.color, values: b.values });
+      } else if (b.symbol === "QQQ") {
+        if (showQqq) out.push({ id: "QQQ", label: b.name, color: b.color, values: b.values });
+      } else if (extraBenchmarks.has(b.symbol)) {
+        out.push({ id: b.symbol, label: b.name, color: b.color, values: b.values });
+      }
     }
     return out;
-  }, [rangeView, showSpy, showQqq]);
+  }, [rangeView, showSpy, showQqq, extraBenchmarks]);
   const spyStats = rangeView?.benchmarks.find((b) => b.symbol === "SPY")?.stats ?? null;
   const endReturn = rangeView
     ? rangeView.portfolio[rangeView.portfolio.length - 1] / 100 - 1
@@ -456,6 +587,46 @@ function PortfolioPageInner() {
 
   function removeRow(symbol: string) {
     setRows((rs) => rs.filter((r) => r.symbol !== symbol));
+  }
+
+  function beginSharesDrag(e: React.PointerEvent<HTMLInputElement>, r: EditRow) {
+    // sharesDrag is a single ref, not one slot per pointer — if a drag is
+    // already active, ignore a second pointer's pointerdown instead of
+    // overwriting the ref, which would redirect the first pointer's still-
+    // arriving moves onto this (wrong) row.
+    if (sharesDrag.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    sharesDrag.current = {
+      symbol: r.symbol,
+      pointerId: e.pointerId,
+      startY: e.clientY,
+      startShares: Math.round(Number.parseFloat(r.shares) || 0),
+      dragging: false,
+    };
+  }
+
+  function onSharesDragMove(e: React.PointerEvent<HTMLInputElement>) {
+    const drag = sharesDrag.current;
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const dy = e.clientY - drag.startY;
+    if (!drag.dragging) {
+      if (Math.abs(dy) < SHARES_SCRUB_THRESHOLD_PX) return;
+      drag.dragging = true;
+      e.currentTarget.blur();
+      document.body.style.cursor = "ns-resize";
+      document.body.style.userSelect = "none";
+    }
+    e.preventDefault();
+    const steps = Math.round(-dy / SHARES_SCRUB_PX_PER_SHARE);
+    const next = Math.max(0, drag.startShares + steps);
+    editRow(drag.symbol, "shares", String(next));
+  }
+
+  function endSharesDrag(e: React.PointerEvent<HTMLInputElement>) {
+    if (!sharesDrag.current || e.pointerId !== sharesDrag.current.pointerId) return;
+    sharesDrag.current = null;
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
   }
 
   async function saveRows() {
@@ -516,6 +687,70 @@ function PortfolioPageInner() {
       setImportPrev(null);
       await refreshView();
     });
+  }
+
+  /* ---- sidebar resize (drag the divider) + drag-to-reopen tab ---- */
+
+  function beginResize(e: React.PointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    resizeStart.current = { x: e.clientX, width: sidebarWidth };
+    setSidebarDragging(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  function onResizeMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!resizeStart.current) return;
+    const raw = resizeStart.current.width + (e.clientX - resizeStart.current.x);
+    if (raw < SIDEBAR_COLLAPSE_AT) {
+      resizeStart.current = null;
+      setSidebarDragging(false);
+      setSidebarOpen(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      return;
+    }
+    setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, raw)));
+  }
+
+  function endResize() {
+    if (!resizeStart.current) return;
+    resizeStart.current = null;
+    setSidebarDragging(false);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }
+
+  function beginTabDrag(e: React.PointerEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    tabDragStart.current = e.clientX;
+    setSidebarDragging(true);
+    setTabDragX(0);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }
+
+  function onTabDragMove(e: React.PointerEvent<HTMLButtonElement>) {
+    if (tabDragStart.current == null) return;
+    const delta = Math.max(0, e.clientX - tabDragStart.current);
+    setTabDragX(Math.min(delta, SIDEBAR_MAX_WIDTH - SIDEBAR_MIN_WIDTH));
+  }
+
+  function endTabDrag(e: React.PointerEvent<HTMLButtonElement>) {
+    if (tabDragStart.current == null) return;
+    const delta = Math.max(0, e.clientX - tabDragStart.current);
+    tabDragStart.current = null;
+    setSidebarDragging(false);
+    setTabDragX(0);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    // A deliberate drag (not just a click) also sets the reopened width.
+    if (delta > 6) {
+      setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, SIDEBAR_MIN_WIDTH + delta)));
+    }
+    setSidebarOpen(true);
   }
 
   /* ------------------------------- render -------------------------------- */
@@ -606,19 +841,44 @@ function PortfolioPageInner() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className={`grid gap-4 ${sidebarOpen ? "lg:grid-cols-[360px_minmax(0,1fr)]" : ""}`}
+        style={
+          sidebarOpen
+            ? ({ "--sbw": `${sidebarWidth}px` } as React.CSSProperties)
+            : undefined
+        }
+        className={`grid gap-4 ${sidebarOpen ? "lg:grid-cols-[var(--sbw)_minmax(0,1fr)]" : ""}`}
       >
         {/* ------------------------------ left rail ------------------------------ */}
         <AnimatePresence initial={false}>
-          {sidebarOpen ? (
+          {sidebarOpen && (
             <motion.aside
               key="sidebar-open"
               initial={{ x: -380, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -380, opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col gap-4 lg:sticky lg:top-[72px] lg:self-start"
+              transition={
+                sidebarDragging
+                  ? { duration: 0 }
+                  : { duration: 0.35, ease: [0.16, 1, 0.3, 1] }
+              }
+              className="relative flex flex-col gap-4 lg:sticky lg:top-[72px] lg:self-start"
             >
+              {/* drag handle — resizes the sidebar; drag past the collapse
+                  threshold to hide it entirely */}
+              <div
+                onPointerDown={beginResize}
+                onPointerMove={onResizeMove}
+                onPointerUp={endResize}
+                onPointerCancel={endResize}
+                className="group absolute -right-[10px] top-0 bottom-0 z-10 hidden w-5 cursor-col-resize touch-none lg:block"
+                title="Drag to resize · drag left to hide"
+              >
+                <div
+                  className={`mx-auto h-full w-px transition-colors ${
+                    sidebarDragging ? "bg-accent" : "bg-line group-hover:bg-accent/50"
+                  }`}
+                />
+              </div>
           <Section
             title="Add a holding"
             action={
@@ -840,19 +1100,6 @@ function PortfolioPageInner() {
             {confirmSample ? "Replace current portfolio?" : "Load sample portfolio"}
           </button>
             </motion.aside>
-          ) : (
-            <motion.button
-              key="sidebar-closed"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center gap-2 rounded-xl border border-line bg-white/[0.04] px-3 py-2 text-sm text-mut transition-colors hover:border-accent/40 hover:text-accent"
-              title="Show sidebar"
-            >
-              <PanelLeftOpen className="size-3.5" />
-              <span className="font-mono text-[10px] uppercase tracking-wider">Panel</span>
-            </motion.button>
           )}
         </AnimatePresence>
 
@@ -904,7 +1151,7 @@ function PortfolioPageInner() {
               {dirty && (
                 <div className="flex flex-wrap items-center gap-3 rounded-xl border border-accent/30 bg-accent-dim px-4 py-3">
                   <span className="text-sm text-ink/90">
-                    Unsaved changes — values and weights refresh after you save.
+                    Unsaved changes — weight updates live; other values refresh after you save.
                   </span>
                   <div className="ml-auto flex gap-2">
                     <button
@@ -966,7 +1213,8 @@ function PortfolioPageInner() {
                   </div>
                   {!collapsed && rangeView && (
                     <span className="shrink-0 font-mono text-[10px] uppercase tracking-wider text-mut/60">
-                      Sharpe · Contribution · Trend over {range}
+                      Sharpe · Contribution · Trend over{" "}
+                      {range === "custom" ? `${customAmount}${customUnit[0].toUpperCase()}` : range}
                     </span>
                   )}
                 </div>
@@ -1016,7 +1264,11 @@ function PortfolioPageInner() {
                                   step="any"
                                   value={r.shares}
                                   onChange={(e) => editRow(r.symbol, "shares", e.target.value)}
-                                  className={`${INPUT} w-24 text-right`}
+                                  onPointerDown={(e) => beginSharesDrag(e, r)}
+                                  onPointerMove={onSharesDragMove}
+                                  onPointerUp={endSharesDrag}
+                                  onPointerCancel={endSharesDrag}
+                                  className={`${INPUT} w-24 touch-none text-right cursor-ns-resize`}
                                   aria-label={`${r.symbol} shares`}
                                 />
                               </td>
@@ -1057,9 +1309,12 @@ function PortfolioPageInner() {
                               </td>
                               <td className="px-3 py-2.5">
                                 <div className="flex items-center justify-end gap-2">
-                                  <ThinBar fraction={(v?.weight_pct ?? 0) / 100} className="w-12" />
+                                  <ThinBar
+                                    fraction={(liveWeightBySymbol.get(r.symbol) ?? 0) / 100}
+                                    className="w-12"
+                                  />
                                   <span className="w-11 text-right font-mono text-xs tabular text-ink/85">
-                                    {v ? `${fmtNum(v.weight_pct, 1)}%` : "—"}
+                                    {fmtNum(liveWeightBySymbol.get(r.symbol) ?? 0, 1)}%
                                   </span>
                                 </div>
                               </td>
@@ -1256,32 +1511,48 @@ function PortfolioPageInner() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
-                        {rangeView.benchmarks.map((b) => {
-                          const on = b.symbol === "SPY" ? showSpy : showQqq;
-                          const toggle =
-                            b.symbol === "SPY"
-                              ? () => setShowSpy((x) => !x)
-                              : () => setShowQqq((x) => !x);
-                          return (
-                            <button
-                              key={b.symbol}
-                              onClick={toggle}
-                              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
-                                on
-                                  ? "border-line bg-white/[0.05] text-ink/85"
-                                  : "border-line/50 text-mut/45"
-                              }`}
-                            >
-                              <span
-                                className="size-1.5 rounded-full"
-                                style={{ backgroundColor: b.color, opacity: on ? 1 : 0.35 }}
-                              />
-                              {b.symbol}
-                              {on ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
-                            </button>
-                          );
-                        })}
-                        <div className="ml-1 flex rounded-xl border border-line bg-white/[0.03] p-0.5">
+                        {rangeView.benchmarks
+                          .filter((b) => b.symbol === "SPY" || b.symbol === "QQQ")
+                          .map((b) => {
+                            const on = b.symbol === "SPY" ? showSpy : showQqq;
+                            const toggle =
+                              b.symbol === "SPY"
+                                ? () => setShowSpy((x) => !x)
+                                : () => setShowQqq((x) => !x);
+                            return (
+                              <button
+                                key={b.symbol}
+                                onClick={toggle}
+                                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
+                                  on
+                                    ? "border-line bg-white/[0.05] text-ink/85"
+                                    : "border-line/50 text-mut/45"
+                                }`}
+                              >
+                                <span
+                                  className="size-1.5 rounded-full"
+                                  style={{ backgroundColor: b.color, opacity: on ? 1 : 0.35 }}
+                                />
+                                {b.symbol}
+                                {on ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
+                              </button>
+                            );
+                          })}
+                        <BenchmarkPicker
+                          options={rangeView.benchmarks.filter(
+                            (b) => b.symbol !== "SPY" && b.symbol !== "QQQ"
+                          )}
+                          selected={extraBenchmarks}
+                          onToggle={(symbol) =>
+                            setExtraBenchmarks((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(symbol)) next.delete(symbol);
+                              else next.add(symbol);
+                              return next;
+                            })
+                          }
+                        />
+                        <div className="ml-1 flex items-center rounded-xl border border-line bg-white/[0.03] p-0.5">
                           {RANGES.map((r) => (
                             <button
                               key={r.id}
@@ -1295,6 +1566,16 @@ function PortfolioPageInner() {
                               {r.id}
                             </button>
                           ))}
+                          <CustomRangePicker
+                            active={range === "custom"}
+                            amount={customAmount}
+                            unit={customUnit}
+                            onApply={(amount, unit) => {
+                              setCustomAmount(amount);
+                              setCustomUnit(unit);
+                              setRange("custom");
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -1336,7 +1617,13 @@ function PortfolioPageInner() {
                     </AnimatePresence>
                   </section>
 
-                  <StatsRow metrics={rangeView.metrics} spy={spyStats} />
+                  <StatsRow
+                    metrics={{
+                      ...rangeView.metrics,
+                      sharpe: healthSharpe ?? rangeView.metrics.sharpe,
+                    }}
+                    spy={spyStats}
+                  />
 
                   <section className="card p-5">
                     <h3 className="mb-4 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
@@ -1350,6 +1637,32 @@ function PortfolioPageInner() {
           )}
         </div>
       </motion.div>
+
+      {/* Floating reopen tab — pinned to the edge of the viewport (not just
+          the content column) so it stays reachable even when the sidebar,
+          and the toggle button inside it, are hidden. Also drag-resizable:
+          a deliberate drag reopens the sidebar at the dragged width, a
+          plain tap reopens it at the last width. */}
+      <AnimatePresence>
+        {!sidebarOpen && (
+          <motion.button
+            key="sidebar-reopen-tab"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onPointerDown={beginTabDrag}
+            onPointerMove={onTabDragMove}
+            onPointerUp={endTabDrag}
+            onPointerCancel={endTabDrag}
+            style={{ transform: `translateY(-50%) translateX(${tabDragX}px)` }}
+            className="fixed left-0 top-1/2 z-40 flex touch-none items-center gap-1.5 rounded-r-xl border border-l-0 border-line bg-white/[0.06] px-2.5 py-3 text-mut backdrop-blur-sm transition-colors hover:border-accent/40 hover:text-accent"
+            title="Drag right to reopen and size the sidebar"
+            aria-label="Show sidebar"
+          >
+            <PanelLeftOpen className="size-4" />
+          </motion.button>
+        )}
+      </AnimatePresence>
     </PageShell>
   );
 }

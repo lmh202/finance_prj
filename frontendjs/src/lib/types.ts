@@ -219,12 +219,19 @@ export interface PortfolioTotals {
 
 /* ---------- range slicing (client) ---------- */
 
+export type RangeUnit = "days" | "months" | "years";
+
+export interface RangeSpec {
+  unit: RangeUnit;
+  amount: number;
+}
+
 export const RANGES = [
-  { id: "6M", months: 6 },
-  { id: "1Y", months: 12 },
-  { id: "2Y", months: 24 },
-  { id: "3Y", months: 36 },
-  { id: "5Y", months: 63 },
+  { id: "1M", spec: { unit: "months", amount: 1 } },
+  { id: "6M", spec: { unit: "months", amount: 6 } },
+  { id: "1Y", spec: { unit: "months", amount: 12 } },
+  { id: "3Y", spec: { unit: "months", amount: 36 } },
+  { id: "5Y", spec: { unit: "months", amount: 63 } },
 ] as const;
 
 export type RangeId = (typeof RANGES)[number]["id"];

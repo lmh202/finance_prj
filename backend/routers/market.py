@@ -43,7 +43,7 @@ def _infer_sector(name: str, is_etf: bool) -> str:
     for pattern, sector in _INDUSTRY_SECTORS:
         if pattern.search(name):
             return sector
-    return "Other"
+    return "US Equity"
 
 
 def _rank_key(row, q: str):

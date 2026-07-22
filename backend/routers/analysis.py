@@ -20,6 +20,9 @@ MAX_HOLDINGS = 24
 BENCHMARKS = [
     {"symbol": "SPY", "name": "S&P 500", "color": "#8DA2FB"},
     {"symbol": "QQQ", "name": "NASDAQ 100", "color": "#CF9FFF"},
+    {"symbol": "IWM", "name": "Russell 2000", "color": "#FCD34D"},
+    {"symbol": "EFA", "name": "MSCI EAFE", "color": "#5EEAD4"},
+    {"symbol": "EEM", "name": "MSCI Emerging Mkts", "color": "#FB923C"},
 ]
 
 # Sector inference — same regex map as routers/market.py
@@ -60,7 +63,7 @@ def _infer_sector(name: str, is_etf: bool) -> str:
     for pattern, sector in _INDUSTRY_SECTORS:
         if pattern.search(name):
             return sector
-    return "Other"
+    return "US Equity"
 
 
 def _resolve_name(symbol: str) -> tuple[str, bool, str]:

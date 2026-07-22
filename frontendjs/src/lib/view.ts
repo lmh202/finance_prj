@@ -1,7 +1,8 @@
 /**
  * Client-side view derivation: slice the full ~5y analysis down to the
- * selected range (6M/1Y/…) and recompute every metric on that window so
- * charts, stats and tables always speak about the same period. No refetch.
+ * selected range (1M/6M/1Y/… or a custom days/months/years window) and
+ * recompute every metric on that window so charts, stats and tables always
+ * speak about the same period. No refetch.
  */
 import {
   computeStats,
@@ -14,6 +15,7 @@ import type {
   AnalyzeResponse,
   MonthCell,
   PortfolioMetrics,
+  RangeSpec,
   SeriesStats,
 } from "./types";
 
@@ -47,12 +49,18 @@ export interface RangeView {
   monthly: MonthCell[];
 }
 
-function addMonths(iso: string, delta: number): string {
+/** Subtract a {@link RangeSpec} window from an ISO date, calendar-correct
+ *  for months/years (variable month length) and calendar-day-exact for
+ *  the custom "days" unit. */
+function subtractSpec(iso: string, spec: RangeSpec): string {
   const y = Number(iso.slice(0, 4));
   const m = Number(iso.slice(5, 7)) - 1;
   const d = Number(iso.slice(8, 10));
-  const t = new Date(Date.UTC(y, m + delta, d));
-  return t.toISOString().slice(0, 10);
+  if (spec.unit === "days") {
+    return new Date(Date.UTC(y, m, d - spec.amount)).toISOString().slice(0, 10);
+  }
+  const months = spec.unit === "years" ? spec.amount * 12 : spec.amount;
+  return new Date(Date.UTC(y, m - months, d)).toISOString().slice(0, 10);
 }
 
 function slice(values: number[], from: number): number[] {
@@ -65,11 +73,11 @@ function rebase(values: number[]): number[] {
   return roundSeries(values.map((v) => (v / b) * 100));
 }
 
-export function deriveRangeView(a: AnalyzeResponse, months: number): RangeView {
+export function deriveRangeView(a: AnalyzeResponse, spec: RangeSpec): RangeView {
   const n = a.dates.length;
   let from = 0;
   if (n > 2) {
-    const cutoff = addMonths(a.dates[n - 1], -months);
+    const cutoff = subtractSpec(a.dates[n - 1], spec);
     let i = 0;
     while (i < n - 26 && a.dates[i] < cutoff) i++;
     from = Math.max(0, i);
