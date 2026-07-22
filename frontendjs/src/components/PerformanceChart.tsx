@@ -105,7 +105,7 @@ export function PerformanceChart({ dates, series, height = 380 }: Props) {
       {gridLines.map((g, i) => (
         <div
           key={i}
-          className="absolute left-0 right-0 border-t border-white/[0.05]"
+          className="absolute left-0 right-0 border-t border-overlay/[0.05]"
           style={{ top: `${yPct(g)}%` }}
         >
           <span className="absolute -top-2 left-1 font-mono text-[10px] tabular text-mut/70">
@@ -117,7 +117,7 @@ export function PerformanceChart({ dates, series, height = 380 }: Props) {
       {/* baseline = 100 */}
       {yMin < 100 && yMax > 100 && (
         <div
-          className="absolute left-0 right-0 border-t border-dashed border-white/[0.12]"
+          className="absolute left-0 right-0 border-t border-dashed border-overlay/[0.12]"
           style={{ top: `${yPct(100)}%` }}
         />
       )}
@@ -159,7 +159,7 @@ export function PerformanceChart({ dates, series, height = 380 }: Props) {
           vectorEffect="non-scaling-stroke"
           strokeLinejoin="round"
           strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 8px ${primary.color}55)` }}
+          style={{ filter: `drop-shadow(0 0 8px color-mix(in srgb, ${primary.color} 33%, transparent))` }}
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.4, ease: [0.65, 0, 0.15, 1] }}
@@ -181,7 +181,7 @@ export function PerformanceChart({ dates, series, height = 380 }: Props) {
       {hover != null && hover < n && (
         <>
           <div
-            className="pointer-events-none absolute bottom-0 top-0 w-px bg-white/15"
+            className="pointer-events-none absolute bottom-0 top-0 w-px bg-overlay/15"
             style={{ left: `${hoverX}%` }}
           />
           {series.map((s) => {
@@ -195,13 +195,13 @@ export function PerformanceChart({ dates, series, height = 380 }: Props) {
                   left: `${hoverX}%`,
                   top: `${yPct(v)}%`,
                   backgroundColor: s.color,
-                  borderColor: "rgba(6,9,12,0.9)",
+                  borderColor: "var(--color-bg0)",
                 }}
               />
             );
           })}
           <div
-            className="pointer-events-none absolute top-2 z-10 -translate-x-1/2 rounded-xl border border-line bg-[#0b1014]/95 px-3.5 py-2.5 shadow-2xl backdrop-blur-md"
+            className="pointer-events-none absolute top-2 z-10 -translate-x-1/2 rounded-xl border border-line bg-surface/95 px-3.5 py-2.5 shadow-2xl backdrop-blur-md"
             style={{
               left: `${clamp(hoverX, 12, 88)}%`,
             }}

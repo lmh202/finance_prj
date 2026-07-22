@@ -152,7 +152,7 @@ export function AllocationDonut({ items }: { items: AllocationItem[] }) {
             onMouseEnter={() => setActive(i)}
             onMouseLeave={() => setActive(null)}
             className={`flex cursor-default items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors ${
-              active === i ? "bg-white/[0.06]" : ""
+              active === i ? "bg-overlay/[0.06]" : ""
             }`}
           >
             <span
@@ -163,7 +163,7 @@ export function AllocationDonut({ items }: { items: AllocationItem[] }) {
               {s.symbol}
             </span>
             <span className="min-w-0 flex-1 truncate text-[11px] text-mut">{s.name}</span>
-            <div className="relative h-[3px] w-14 shrink-0 overflow-hidden rounded-full bg-white/[0.07]">
+            <div className="relative h-[3px] w-14 shrink-0 overflow-hidden rounded-full bg-overlay/[0.07]">
               <div
                 className="h-full rounded-full transition-all duration-300"
                 style={{ width: `${s.weight * 100}%`, backgroundColor: s.color }}
@@ -193,7 +193,7 @@ export function SectorBars({
       {sectors.slice(0, 8).map((s, i) => (
         <div key={s.sector} className="flex items-center gap-3">
           <span className="w-40 shrink-0 truncate text-[11px] text-mut">{s.sector}</span>
-          <div className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
+          <div className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-full bg-overlay/[0.05]">
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-accent/50 to-accent"
               initial={{ width: 0 }}

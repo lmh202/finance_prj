@@ -108,7 +108,7 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
   return (
     <div className="relative w-full">
       <div
-        className={`group flex items-center gap-3 rounded-2xl border border-line bg-white/[0.04] transition-all focus-within:border-accent/50 focus-within:bg-white/[0.06] focus-within:shadow-[0_0_0_4px_rgba(179,243,76,0.08),0_0_40px_-8px_rgba(179,243,76,0.25)] ${
+        className={`group flex items-center gap-3 rounded-2xl border border-line bg-overlay/[0.04] transition-all focus-within:border-accent/50 focus-within:bg-overlay/[0.06] focus-within:shadow-[0_0_0_4px_rgba(179,243,76,0.08),0_0_40px_-8px_rgba(179,243,76,0.25)] ${
           big ? "px-5 py-4" : "px-3.5 py-2.5"
         }`}
       >
@@ -131,7 +131,7 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
           aria-label="Search stocks"
         />
         {open && rows > 0 && (
-          <kbd className="hidden items-center gap-1 rounded-md border border-line bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-mut sm:flex">
+          <kbd className="hidden items-center gap-1 rounded-md border border-line bg-overlay/5 px-1.5 py-0.5 font-mono text-[10px] text-mut sm:flex">
             <CornerDownLeft className="size-3" />
           </kbd>
         )}
@@ -144,7 +144,7 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.99 }}
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="scroll-slim absolute left-0 right-0 top-full z-50 mt-2 max-h-[340px] overflow-y-auto rounded-2xl border border-line bg-[#0b1014]/95 p-1.5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            className="scroll-slim absolute left-0 right-0 top-full z-50 mt-2 max-h-[340px] overflow-y-auto rounded-2xl border border-line bg-surface/95 p-1.5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           >
             {results.map((r, i) => {
               const added = existing.has(r.symbol);
@@ -157,7 +157,7 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
                     onClick={() => pick(r)}
                     onMouseEnter={() => setActive(i)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                      active === i ? "bg-white/[0.07]" : ""
+                      active === i ? "bg-overlay/[0.07]" : ""
                     } ${added ? "cursor-default opacity-45" : "cursor-pointer"}`}
                   >
                     <span className="w-[76px] shrink-0 font-mono text-sm font-semibold tracking-wide text-accent">
@@ -167,7 +167,7 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
                       {r.name}
                     </span>
                     {r.quoteType === "ETF" && (
-                      <span className="rounded-md border border-amber-300/25 bg-amber-300/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-amber-200">
+                      <span className="rounded-md border border-warn/25 bg-warn/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-warn">
                         ETF
                       </span>
                     )}
@@ -191,7 +191,7 @@ export function SearchBox({ onAdd, existing, big, placeholder }: Props) {
                   onClick={customAdd}
                   onMouseEnter={() => setActive(results.length)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                    active === results.length ? "bg-white/[0.07]" : ""
+                    active === results.length ? "bg-overlay/[0.07]" : ""
                   }`}
                 >
                   <span className="w-[76px] shrink-0 font-mono text-sm font-semibold text-accent">

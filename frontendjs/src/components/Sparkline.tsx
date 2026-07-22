@@ -18,7 +18,7 @@ export function Sparkline({ values, positive }: { values: number[]; positive: bo
       return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join("");
-  const color = positive ? "#3fd9a4" : "#ff7a7a";
+  const color = positive ? "var(--color-gain)" : "var(--color-loss)";
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-[26px] w-24 overflow-visible">
       <path

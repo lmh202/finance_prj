@@ -70,7 +70,7 @@ function EventCard({ event, index }: { event: NewsEvent; index: number }) {
           {event.affected_symbols.map((s) => (
             <span
               key={s}
-              className="rounded-md border border-line bg-white/[0.04] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-accent"
+              className="rounded-md border border-line bg-overlay/[0.04] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-accent"
             >
               {s}
             </span>
@@ -106,7 +106,7 @@ export default function NewsPage() {
             <p className="text-sm leading-relaxed text-mut">
               The news engine is not implemented yet — this page comes alive when
               Developer 3 ships{" "}
-              <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+              <code className="rounded bg-overlay/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
                 backend/src/news_intelligence/engine.py
               </code>
               . These are the planned RSS sources:
@@ -114,7 +114,7 @@ export default function NewsPage() {
             <ul className="mt-4 space-y-2">
               {data.feeds.map((feed) => (
                 <li key={feed} className="flex items-center gap-2.5 font-mono text-xs text-ink/80">
-                  <Rss className="size-3 shrink-0 text-amber-200/80" />
+                  <Rss className="size-3 shrink-0 text-warn/80" />
                   <span className="truncate">{feed}</span>
                 </li>
               ))}

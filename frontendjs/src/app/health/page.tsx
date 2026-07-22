@@ -31,9 +31,9 @@ function metricValue(key: string, v: number | null): string {
 }
 
 function scoreColor(score: number): string {
-  if (score >= 70) return "#3fd9a4";
-  if (score >= 45) return "#fcd34d";
-  return "#ff7a7a";
+  if (score >= 70) return "var(--color-gain)";
+  if (score >= 45) return "var(--color-warn)";
+  return "var(--color-loss)";
 }
 
 function CorrelationTable({ corr }: { corr: SplitFrame }) {
@@ -65,8 +65,8 @@ function CorrelationTable({ corr }: { corr: SplitFrame }) {
                   alpha === 0
                     ? undefined
                     : v! >= 0
-                      ? `rgba(179,243,76,${alpha})`
-                      : `rgba(141,162,251,${alpha})`;
+                      ? `color-mix(in srgb, var(--color-accent) ${alpha * 100}%, transparent)`
+                      : `color-mix(in srgb, var(--color-spy) ${alpha * 100}%, transparent)`;
                 return (
                   <td
                     key={col}
@@ -181,7 +181,7 @@ export default function HealthPage() {
                 <ul className="space-y-2.5">
                   {report.weaknesses.map((w) => (
                     <li key={w} className="flex items-start gap-2.5 text-sm leading-relaxed text-ink/90">
-                      <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-amber-200" />
+                      <TriangleAlert className="mt-0.5 size-3.5 shrink-0 text-warn" />
                       {w}
                     </li>
                   ))}
