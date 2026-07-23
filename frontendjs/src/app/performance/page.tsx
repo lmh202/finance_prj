@@ -12,11 +12,11 @@ import { useEngine } from "@/lib/use-engine";
 import { fmtDate, fmtNum, fmtPct, signClass } from "@/lib/format";
 
 const SERIES_META: Record<string, { label: string; color: string }> = {
-  buy_hold: { label: "Buy & hold", color: "#B3F34C" },
-  equal_weight: { label: "Equal weight", color: "#8DA2FB" },
+  buy_hold: { label: "Buy & hold", color: "var(--color-accent)" },
+  equal_weight: { label: "Equal weight", color: "var(--color-spy)" },
 };
 
-const EXTRA_COLORS = ["#CFA3FF", "#3FD9A4", "#FCD34D", "#FF7A7A"];
+const EXTRA_COLORS = ["var(--color-qqq)", "var(--color-gain)", "var(--color-warn)", "var(--color-loss)"];
 
 function seriesMeta(column: string, i: number): { label: string; color: string } {
   return (
@@ -147,7 +147,7 @@ export default function PerformancePage() {
                   </thead>
                   <tbody>
                     {tail.map((row) => (
-                      <tr key={row.date} className="border-b border-white/[0.04] last:border-0">
+                      <tr key={row.date} className="border-b border-overlay/[0.04] last:border-0">
                         <td className="px-3 py-2 font-mono text-xs tabular text-mut">
                           {fmtDate(row.date, true)}
                         </td>

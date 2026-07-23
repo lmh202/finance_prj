@@ -7,8 +7,10 @@ const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "
 
 function cellBg(r: number): string {
   const t = Math.min(Math.abs(r) / 0.08, 1);
-  const a = 0.07 + t * 0.55;
-  return r >= 0 ? `rgba(63,217,164,${a.toFixed(3)})` : `rgba(255,122,122,${a.toFixed(3)})`;
+  const pct = (0.07 + t * 0.55) * 100;
+  return r >= 0
+    ? `color-mix(in srgb, var(--color-gain) ${pct.toFixed(1)}%, transparent)`
+    : `color-mix(in srgb, var(--color-loss) ${pct.toFixed(1)}%, transparent)`;
 }
 
 export function MonthlyHeatmap({ monthly }: { monthly: MonthCell[] }) {
@@ -53,7 +55,7 @@ export function MonthlyHeatmap({ monthly }: { monthly: MonthCell[] }) {
                 {MONTHS.map((_, mi) => {
                   const r = monthsMap.get(mi + 1);
                   if (r == null) {
-                    return <td key={mi} className="h-8 rounded-md bg-white/[0.015]" />;
+                    return <td key={mi} className="h-8 rounded-md bg-overlay/[0.015]" />;
                   }
                   const strong = Math.abs(r) >= 0.04;
                   return (
@@ -63,7 +65,7 @@ export function MonthlyHeatmap({ monthly }: { monthly: MonthCell[] }) {
                       className="h-8 rounded-md text-center font-mono text-[10px] tabular transition-transform hover:scale-[1.08]"
                       style={{
                         backgroundColor: cellBg(r),
-                        color: strong ? "#0a0f07" : "rgba(236,243,238,0.72)",
+                        color: strong ? "#0a0f07" : "var(--ink-soft)",
                       }}
                     >
                       {(r * 100).toFixed(1)}
@@ -84,7 +86,13 @@ export function MonthlyHeatmap({ monthly }: { monthly: MonthCell[] }) {
       </table>
       <div className="mt-2 flex items-center justify-end gap-2 font-mono text-[9px] text-mut/70">
         <span>monthly return</span>
-        <span className="inline-block h-2 w-16 rounded-full bg-gradient-to-r from-[rgba(255,122,122,0.55)] via-white/[0.06] to-[rgba(63,217,164,0.55)]" />
+        <span
+          className="inline-block h-2 w-16 rounded-full"
+          style={{
+            background:
+              "linear-gradient(to right, color-mix(in srgb, var(--color-loss) 55%, transparent), color-mix(in srgb, var(--overlay-base) 6%, transparent), color-mix(in srgb, var(--color-gain) 55%, transparent))",
+          }}
+        />
         <span>−8% · +8%</span>
       </div>
     </div>

@@ -83,7 +83,7 @@ export function CustomRangePicker({ active, amount, unit, onApply }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-line bg-[#0b1014]/95 p-3 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-line bg-surface/95 p-3 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           >
             <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-mut/70">
               Custom range
@@ -96,15 +96,15 @@ export function CustomRangePicker({ active, amount, unit, onApply }: Props) {
                 value={draftAmount}
                 onChange={(e) => setDraftAmount(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && submit()}
-                className="w-16 rounded-lg border border-line bg-white/[0.04] px-2 py-1.5 font-mono text-sm tabular text-ink outline-none focus:border-accent/50"
+                className="w-16 rounded-lg border border-line bg-overlay/[0.04] px-2 py-1.5 font-mono text-sm tabular text-ink outline-none focus:border-accent/50"
               />
               <select
                 value={draftUnit}
                 onChange={(e) => setDraftUnit(e.target.value as RangeUnit)}
-                className="flex-1 rounded-lg border border-line bg-white/[0.04] px-2 py-1.5 font-mono text-xs uppercase tracking-wider text-ink outline-none focus:border-accent/50"
+                className="flex-1 rounded-lg border border-line bg-overlay/[0.04] px-2 py-1.5 font-mono text-xs uppercase tracking-wider text-ink outline-none focus:border-accent/50"
               >
                 {UNIT_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id} className="bg-[#0b1014] text-ink">
+                  <option key={o.id} value={o.id} className="bg-surface text-ink">
                     {o.label}
                   </option>
                 ))}

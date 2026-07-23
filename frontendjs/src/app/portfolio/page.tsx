@@ -81,7 +81,7 @@ import {
 } from "@/lib/types";
 import { deriveRangeView } from "@/lib/view";
 
-const ACCENT = "#B3F34C";
+const ACCENT = "var(--color-accent)";
 
 const SIDEBAR_MIN_WIDTH = 260;
 const SIDEBAR_MAX_WIDTH = 560;
@@ -98,7 +98,7 @@ const SHARES_SCRUB_THRESHOLD_PX = 4;
 const SHARES_SCRUB_PX_PER_SHARE = 4;
 
 const INPUT =
-  "w-full rounded-lg border border-line bg-white/[0.04] px-2.5 py-1.5 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-accent/50";
+  "w-full rounded-lg border border-line bg-overlay/[0.04] px-2.5 py-1.5 font-mono text-sm tabular text-ink outline-none transition-colors focus:border-accent/50";
 const LABEL = "font-mono text-[10px] uppercase tracking-wider text-mut";
 
 function fmtMoney(v: number): string {
@@ -265,7 +265,7 @@ function PortfolioPageInner() {
    *  window assumptions). Null while loading/unavailable; the card falls
    *  back to the range-derived value in that case. */
   const [healthSharpe, setHealthSharpe] = useState<number | null>(null);
-  const [range, setRange] = useState<RangeId | "custom">("5Y");
+  const [range, setRange] = useState<RangeId | "custom">("1Y");
   /** Draft values for the "Custom" range picker (days/months/years). */
   const [customAmount, setCustomAmount] = useState(45);
   const [customUnit, setCustomUnit] = useState<RangeUnit>("days");
@@ -783,11 +783,11 @@ function PortfolioPageInner() {
               boot === "down" ? (
                 <>
                   Start it with{" "}
-                  <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+                  <code className="rounded bg-overlay/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
                     scripts\dev.ps1
                   </code>{" "}
                   or{" "}
-                  <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+                  <code className="rounded bg-overlay/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
                     uvicorn main:app --app-dir backend --port 8000
                   </code>
                   , then retry.
@@ -899,7 +899,7 @@ function PortfolioPageInner() {
             <SearchBox onAdd={startAdd} existing={existing} />
             {pending ? (
               <div
-                className={`mt-3 rounded-xl border bg-white/[0.03] p-3 ${
+                className={`mt-3 rounded-xl border bg-overlay/[0.03] p-3 ${
                   pending.fromSearch ? "border-accent/40" : "border-line"
                 }`}
               >
@@ -925,7 +925,7 @@ function PortfolioPageInner() {
                   </p>
                 )}
                 {existing.has(pending.info.symbol) && (
-                  <p className="mt-2 text-[11px] leading-relaxed text-amber-200/80">
+                  <p className="mt-2 text-[11px] leading-relaxed text-warn/80">
                     You already hold {pending.info.symbol} — adding merges into the
                     existing position at weighted-average cost.
                   </p>
@@ -1055,12 +1055,12 @@ function PortfolioPageInner() {
             </p>
 
             {importPrev && (
-              <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-300/[0.06] p-3">
-                <div className="text-xs text-amber-200/90">
+              <div className="mt-3 rounded-xl border border-warn/25 bg-warn/[0.06] p-3">
+                <div className="text-xs text-warn/90">
                   {importPrev.holdings.length} holdings found in file.
                 </div>
                 {importPrev.problems.map((p) => (
-                  <div key={p} className="mt-1.5 text-[11px] leading-relaxed text-amber-200/70">
+                  <div key={p} className="mt-1.5 text-[11px] leading-relaxed text-warn/70">
                     {p}
                   </div>
                 ))}
@@ -1245,7 +1245,7 @@ function PortfolioPageInner() {
                           return (
                             <tr
                               key={r.symbol}
-                              className="border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.02]"
+                              className="border-b border-overlay/[0.04] transition-colors last:border-0 hover:bg-overlay/[0.02]"
                             >
                               <td className="px-3 py-2.5">
                                 <div className="flex items-center gap-2.5">
@@ -1324,7 +1324,7 @@ function PortfolioPageInner() {
                               <td className="px-3 py-2.5">
                                 {a ? (
                                   <div className="flex items-center justify-end gap-2">
-                                    <div className="h-[3px] w-12 overflow-hidden rounded-full bg-white/[0.07]">
+                                    <div className="h-[3px] w-12 overflow-hidden rounded-full bg-overlay/[0.07]">
                                       <div
                                         className={`h-full rounded-full ${
                                           a.contribution >= 0 ? "bg-gain/80" : "bg-loss/80"
@@ -1447,7 +1447,7 @@ function PortfolioPageInner() {
                     <button
                       onClick={() => setAnalysisAttempt((n) => n + 1)}
                       disabled={analyzing}
-                      className="shrink-0 rounded-lg border border-line bg-white/[0.05] px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-accent transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-50"
+                      className="shrink-0 rounded-lg border border-line bg-overlay/[0.05] px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-accent transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-50"
                     >
                       {analyzing ? (
                         <>
@@ -1525,7 +1525,7 @@ function PortfolioPageInner() {
                                 onClick={toggle}
                                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
                                   on
-                                    ? "border-line bg-white/[0.05] text-ink/85"
+                                    ? "border-line bg-overlay/[0.05] text-ink/85"
                                     : "border-line/50 text-mut/45"
                                 }`}
                               >
@@ -1552,7 +1552,7 @@ function PortfolioPageInner() {
                             })
                           }
                         />
-                        <div className="ml-1 flex items-center rounded-xl border border-line bg-white/[0.03] p-0.5">
+                        <div className="ml-1 flex items-center rounded-xl border border-line bg-overlay/[0.03] p-0.5">
                           {RANGES.map((r) => (
                             <button
                               key={r.id}
@@ -1589,13 +1589,13 @@ function PortfolioPageInner() {
                     </div>
 
                     {analysis.range.truncatedNote && (
-                      <div className="mt-5 flex items-center gap-2 text-[11px] text-amber-200/80">
+                      <div className="mt-5 flex items-center gap-2 text-[11px] text-warn/80">
                         <TriangleAlert className="size-3.5 shrink-0" />
                         {analysis.range.truncatedNote}
                       </div>
                     )}
                     {analysis.source !== "live" && (
-                      <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-200/80">
+                      <div className="mt-2 flex items-center gap-2 text-[11px] text-warn/80">
                         <TriangleAlert className="size-3.5 shrink-0" />
                         Live market feed partially unreachable — some series are
                         deterministic simulations so the analysis remains explorable.
@@ -1655,7 +1655,7 @@ function PortfolioPageInner() {
             onPointerUp={endTabDrag}
             onPointerCancel={endTabDrag}
             style={{ transform: `translateY(-50%) translateX(${tabDragX}px)` }}
-            className="fixed left-0 top-1/2 z-40 flex touch-none items-center gap-1.5 rounded-r-xl border border-l-0 border-line bg-white/[0.06] px-2.5 py-3 text-mut backdrop-blur-sm transition-colors hover:border-accent/40 hover:text-accent"
+            className="fixed left-0 top-1/2 z-40 flex touch-none items-center gap-1.5 rounded-r-xl border border-l-0 border-line bg-overlay/[0.06] px-2.5 py-3 text-mut backdrop-blur-sm transition-colors hover:border-accent/40 hover:text-accent"
             title="Drag right to reopen and size the sidebar"
             aria-label="Show sidebar"
           >

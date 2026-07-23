@@ -27,7 +27,7 @@ import { clamp } from "@/lib/format";
 export const BTN_PRIMARY =
   "inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-[#0a0f07] transition-all hover:brightness-110 disabled:pointer-events-none disabled:opacity-50";
 export const BTN_GHOST =
-  "inline-flex items-center gap-2 rounded-xl border border-line bg-white/[0.04] px-4 py-2 text-sm text-ink/85 transition-colors hover:border-accent/40 hover:text-accent disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center gap-2 rounded-xl border border-line bg-overlay/[0.04] px-4 py-2 text-sm text-ink/85 transition-colors hover:border-accent/40 hover:text-accent disabled:pointer-events-none disabled:opacity-50";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -126,7 +126,7 @@ export function EngineShell({
       ) : (
         <StateCard
           icon={TriangleAlert}
-          iconTone="text-amber-200"
+          iconTone="text-warn"
           title="Price history unavailable"
           body="Could not load market history — check your connection and retry."
           actions={
@@ -146,11 +146,11 @@ export function EngineShell({
         body={
           <>
             Start it with{" "}
-            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+            <code className="rounded bg-overlay/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
               scripts\dev.ps1
             </code>{" "}
             or{" "}
-            <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+            <code className="rounded bg-overlay/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
               uvicorn main:app --app-dir backend --port 8000
             </code>
             , then retry.
@@ -247,7 +247,7 @@ export function StateCard({
       transition={{ duration: 0.4, ease: EASE }}
       className="card mx-auto max-w-xl px-6 py-12 text-center"
     >
-      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-line bg-white/[0.04]">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-2xl border border-line bg-overlay/[0.04]">
         <Icon className={`size-5 ${iconTone}`} />
       </div>
       <h2 className="mt-4 text-lg font-semibold tracking-tight">{title}</h2>
@@ -360,7 +360,7 @@ export function ThinBar({
   className?: string;
 }) {
   return (
-    <div className={`h-[3px] overflow-hidden rounded-full bg-white/[0.07] ${className}`}>
+    <div className={`h-[3px] overflow-hidden rounded-full bg-overlay/[0.07] ${className}`}>
       <div
         className="h-full rounded-full transition-all duration-500"
         style={{ width: `${clamp(fraction, 0, 1) * 100}%`, backgroundColor: color, opacity: 0.85 }}
@@ -373,8 +373,8 @@ const CHIP_TONES = {
   accent: "border-accent/30 bg-accent-dim text-accent",
   gain: "border-gain/25 bg-gain/10 text-gain",
   loss: "border-loss/30 bg-loss/10 text-loss",
-  amber: "border-amber-300/25 bg-amber-300/10 text-amber-200",
-  mut: "border-line bg-white/[0.04] text-mut",
+  amber: "border-warn/25 bg-warn/10 text-warn",
+  mut: "border-line bg-overlay/[0.04] text-mut",
 } as const;
 
 export type ChipTone = keyof typeof CHIP_TONES;
@@ -408,7 +408,7 @@ export function ArcGauge({
         <path
           d="M8 52 A 42 42 0 0 1 92 52"
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
+          stroke="var(--color-line)"
           strokeWidth={7}
           strokeLinecap="round"
         />
@@ -422,7 +422,7 @@ export function ArcGauge({
           initial={{ strokeDasharray: "0 100" }}
           animate={{ strokeDasharray: `${frac * 100} 100` }}
           transition={{ duration: 1.1, ease: [0.65, 0, 0.15, 1] }}
-          style={{ filter: `drop-shadow(0 0 10px ${color}55)` }}
+          style={{ filter: `drop-shadow(0 0 10px color-mix(in srgb, ${color} 33%, transparent))` }}
         />
       </svg>
       <div className="absolute inset-x-0 bottom-0 text-center">
@@ -445,8 +445,8 @@ export function Note({ tone = "amber", children }: { tone?: "amber" | "mut"; chi
     <div
       className={`flex items-start gap-2 rounded-xl border px-4 py-3 text-[12.5px] leading-relaxed ${
         tone === "amber"
-          ? "border-amber-300/25 bg-amber-300/[0.07] text-amber-200/90"
-          : "border-line bg-white/[0.03] text-mut"
+          ? "border-warn/25 bg-warn/[0.07] text-warn/90"
+          : "border-line bg-overlay/[0.03] text-mut"
       }`}
     >
       <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />

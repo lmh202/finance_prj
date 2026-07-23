@@ -12,10 +12,10 @@ import { fmtDate, fmtNum, fmtPct, fmtPrice } from "@/lib/format";
 import type { AssetSignal, RegimeState } from "@/lib/types";
 
 const REGIME_META: Record<string, { label: string; dot: string; tone: string }> = {
-  bullish: { label: "Bullish", dot: "#3fd9a4", tone: "text-gain" },
-  bearish: { label: "Bearish", dot: "#ff7a7a", tone: "text-loss" },
-  high_volatility: { label: "High volatility", dot: "#fcd34d", tone: "text-amber-200" },
-  sideways: { label: "Sideways / uncertain", dot: "#86938a", tone: "text-ink/85" },
+  bullish: { label: "Bullish", dot: "var(--color-gain)", tone: "text-gain" },
+  bearish: { label: "Bearish", dot: "var(--color-loss)", tone: "text-loss" },
+  high_volatility: { label: "High volatility", dot: "var(--color-warn)", tone: "text-warn" },
+  sideways: { label: "Sideways / uncertain", dot: "var(--color-mut)", tone: "text-ink/85" },
 };
 
 const INDICATOR_DEFS: Record<string, { label: string; fmt: (v: number) => string }> = {
@@ -36,7 +36,7 @@ const ACTION_TONES: Record<string, ChipTone> = {
 function RegimeCard({ regime }: { regime: RegimeState }) {
   const meta = REGIME_META[regime.regime] ?? {
     label: regime.regime,
-    dot: "#86938a",
+    dot: "var(--color-mut)",
     tone: "text-ink/85",
   };
   return (
@@ -90,7 +90,7 @@ function SignalsTable({ signals }: { signals: AssetSignal[] }) {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.03 * i }}
-              className="border-b border-white/[0.04] transition-colors last:border-0 hover:bg-white/[0.025]"
+              className="border-b border-overlay/[0.04] transition-colors last:border-0 hover:bg-overlay/[0.025]"
             >
               <td className="px-4 py-3 font-mono text-sm font-semibold text-accent">{s.symbol}</td>
               <td className="px-4 py-3">

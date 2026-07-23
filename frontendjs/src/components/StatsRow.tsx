@@ -153,9 +153,9 @@ export function StatsRow({
             </div>
             {sub && <div className="mt-1.5 font-mono text-[10px] tabular text-mut">{sub}</div>}
 
-            <div className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-52 -translate-x-1/2 rounded-xl border border-line bg-[#0d1317]/97 p-3 text-[11px] leading-relaxed text-ink/80 opacity-0 shadow-2xl backdrop-blur-md transition-all duration-200 group-hover:opacity-100">
+            <div className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-52 -translate-x-1/2 rounded-xl border border-line bg-surface/97 p-3 text-[11px] leading-relaxed text-ink/80 opacity-0 shadow-2xl backdrop-blur-md transition-all duration-200 group-hover:opacity-100">
               {c.hint}
-              <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 border-b border-r border-line bg-[#0d1317]" />
+              <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 border-b border-r border-line bg-surface" />
             </div>
           </motion.div>
         );

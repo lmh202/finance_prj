@@ -24,9 +24,9 @@ import { fmtNum, signClass } from "@/lib/format";
 import type { NewsEvent, ProposedTrade } from "@/lib/types";
 
 const SUGGESTIONS: Record<string, { label: string; color: string; tone: ChipTone }> = {
-  do_nothing: { label: "Wait — do nothing for now", color: "#ff7a7a", tone: "loss" },
-  moderate: { label: "A moderate adjustment may be considered", color: "#fcd34d", tone: "amber" },
-  aggressive: { label: "Acting now carries relatively low risk", color: "#3fd9a4", tone: "gain" },
+  do_nothing: { label: "Wait — do nothing for now", color: "var(--color-loss)", tone: "loss" },
+  moderate: { label: "A moderate adjustment may be considered", color: "var(--color-warn)", tone: "amber" },
+  aggressive: { label: "Acting now carries relatively low risk", color: "var(--color-gain)", tone: "gain" },
 };
 
 const FACTOR_LABELS: Record<string, string> = {
@@ -39,9 +39,9 @@ const FACTOR_LABELS: Record<string, string> = {
 };
 
 function factorColor(v: number): string {
-  if (v < 1 / 3) return "#3fd9a4";
-  if (v < 2 / 3) return "#fcd34d";
-  return "#ff7a7a";
+  if (v < 1 / 3) return "var(--color-gain)";
+  if (v < 2 / 3) return "var(--color-warn)";
+  return "var(--color-loss)";
 }
 
 function TradesTable({ trades }: { trades: ProposedTrade[] }) {
@@ -59,7 +59,7 @@ function TradesTable({ trades }: { trades: ProposedTrade[] }) {
           {trades.map((t) => (
             <tr
               key={`${t.symbol}-${t.weight_change_pct}`}
-              className="border-b border-white/[0.04] last:border-0"
+              className="border-b border-overlay/[0.04] last:border-0"
             >
               <td className="px-3 py-2.5 font-mono text-sm font-semibold text-accent">
                 {t.symbol}
@@ -107,7 +107,7 @@ function EventReaction({ events, demo }: { events: NewsEvent[]; demo: boolean })
           value={picked}
           onChange={(e) => setPicked(Number(e.target.value))}
           aria-label="Event to react to"
-          className="w-full cursor-pointer appearance-none rounded-xl border border-line bg-white/[0.04] py-2.5 pl-3.5 pr-10 text-sm text-ink outline-none transition-colors focus:border-accent/50 [&>option]:bg-panel"
+          className="w-full cursor-pointer appearance-none rounded-xl border border-line bg-overlay/[0.04] py-2.5 pl-3.5 pr-10 text-sm text-ink outline-none transition-colors focus:border-accent/50 [&>option]:bg-panel"
         >
           {events.map((ev, i) => (
             <option key={`${ev.title}-${i}`} value={i}>
@@ -148,7 +148,7 @@ function EventReaction({ events, demo }: { events: NewsEvent[]; demo: boolean })
               <div className="flex flex-1 flex-col items-center justify-center gap-4 py-2">
                 <ArcGauge
                   value={data.risk.risk_pct}
-                  color={suggestion?.color ?? "#fcd34d"}
+                  color={suggestion?.color ?? "var(--color-warn)"}
                   display={`${Math.round(data.risk.risk_pct)}%`}
                   caption="0 = safe · 100 = risky"
                 />

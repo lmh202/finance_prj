@@ -11,12 +11,15 @@ import {
   HeartPulse,
   Home,
   LineChart,
+  Moon,
   Rss,
   Scale,
   Search,
+  Sun,
   TrendingUp,
   type LucideIcon,
 } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
 
 /* ------------------------------------------------------------------ */
 /* Logo                                                                */
@@ -75,12 +78,28 @@ function NavLink({
       className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
         active
           ? "border-accent/30 bg-accent-dim font-medium text-accent"
-          : "border-transparent text-mut hover:bg-white/[0.04] hover:text-ink"
+          : "border-transparent text-mut hover:bg-overlay/[0.04] hover:text-ink"
       }`}
     >
       <Icon className="size-3" />
       <span className={alwaysLabel ? "" : "hidden xl:block"}>{label}</span>
     </Link>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  const toLight = theme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      title={toLight ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={toLight ? "Switch to light mode" : "Switch to dark mode"}
+      className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line text-mut transition-colors hover:border-accent/40 hover:text-accent"
+    >
+      {toLight ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+    </button>
   );
 }
 
@@ -99,9 +118,9 @@ export function Header({
     source === "live"
       ? { dot: "bg-gain", text: `Live feed · ${asOf ?? ""}`, cls: "border-gain/25 bg-gain/10 text-gain" }
       : source === "mixed"
-        ? { dot: "bg-amber-300", text: "Partial live feed", cls: "border-amber-300/25 bg-amber-300/10 text-amber-200" }
+        ? { dot: "bg-warn", text: "Partial live feed", cls: "border-warn/25 bg-warn/10 text-warn" }
         : source === "simulated"
-          ? { dot: "bg-amber-300", text: "Simulated feed · offline", cls: "border-amber-300/25 bg-amber-300/10 text-amber-200" }
+          ? { dot: "bg-warn", text: "Simulated feed · offline", cls: "border-warn/25 bg-warn/10 text-warn" }
           : null;
 
   return (
@@ -122,13 +141,14 @@ export function Header({
             ))}
           </nav>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2.5">
             {chip && (
               <div className={`flex items-center gap-2 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-wider ${chip.cls}`}>
                 <span className={`pulse-dot size-1.5 rounded-full ${chip.dot}`} />
                 {chip.text}
               </div>
             )}
+            <ThemeToggle />
           </div>
         </div>
 
@@ -182,7 +202,7 @@ export function Hero({
         className="absolute inset-0 opacity-[0.55]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+            "linear-gradient(color-mix(in srgb, var(--overlay-base) 2.5%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--overlay-base) 2.5%, transparent) 1px, transparent 1px)",
           backgroundSize: "72px 72px",
           maskImage: "radial-gradient(ellipse 80% 60% at 50% 30%, black 30%, transparent 75%)",
           WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 30%, black 30%, transparent 75%)",
@@ -196,14 +216,14 @@ export function Hero({
       >
         <path
           d="M0 320 L80 300 L160 310 L240 260 L320 280 L400 220 L480 250 L560 190 L640 220 L720 160 L800 190 L880 140 L960 170 L1040 110 L1120 140 L1200 90"
-          stroke="#B3F34C"
+          stroke="var(--color-accent)"
           strokeWidth="1.5"
           strokeDasharray="6 8"
           style={{ animation: "dash-drift 30s linear infinite" }}
         />
         <path
           d="M0 350 L100 340 L200 345 L300 320 L400 330 L500 300 L600 315 L700 285 L800 300 L900 270 L1000 285 L1100 255 L1200 265"
-          stroke="#8DA2FB"
+          stroke="var(--color-spy)"
           strokeWidth="1.2"
           strokeDasharray="3 10"
           style={{ animation: "dash-drift 40s linear infinite" }}
@@ -230,7 +250,7 @@ export function Hero({
           See your portfolio
           <br />
           in a{" "}
-          <span className="bg-gradient-to-r from-accent via-[#5eead4] to-[#8da2fb] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-accent via-gain to-spy bg-clip-text text-transparent">
             new light
           </span>
           .

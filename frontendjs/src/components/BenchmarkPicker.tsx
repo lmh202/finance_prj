@@ -45,7 +45,7 @@ export function BenchmarkPicker({ options, selected, onToggle }: Props) {
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-all ${
           count > 0
-            ? "border-line bg-white/[0.05] text-ink/85"
+            ? "border-line bg-overlay/[0.05] text-ink/85"
             : "border-line/50 text-mut/45"
         }`}
       >
@@ -63,14 +63,14 @@ export function BenchmarkPicker({ options, selected, onToggle }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-line bg-[#0b1014]/95 p-1.5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+            className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-line bg-surface/95 p-1.5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           >
             {options.map((b) => {
               const on = selected.has(b.symbol);
               return (
                 <label
                   key={b.symbol}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-colors hover:bg-white/[0.06]"
+                  className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-left transition-colors hover:bg-overlay/[0.06]"
                 >
                   <input
                     type="checkbox"
