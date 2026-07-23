@@ -205,3 +205,45 @@ def get_history(symbols: Iterable[str], period: str = "2y") -> pd.DataFrame:
     if isinstance(close, pd.Series):
         close = close.to_frame(name=list(yahoo_map.keys())[0])
     return close.rename(columns=yahoo_map).dropna(how="all")
+
+
+def get_ohlc_history(symbols: Iterable[str], period: str = "2y") -> Dict[str, pd.DataFrame]:
+    """Daily adjusted OHLC history via yfinance, per symbol — for the risk engine's
+    HAR features (the Parkinson range estimator needs high/low, which the close-only
+    get_history() does not provide).
+
+    Returns {original_symbol: DataFrame[close, high, low]} indexed by date. Symbols
+    that could not be fetched are simply absent — callers must tolerate that.
+    """
+    import yfinance as yf
+
+    symbols = [s for s in dict.fromkeys(symbols) if s]
+    if not symbols:
+        return {}
+
+    yahoo_map = {to_yahoo_symbol(s): s for s in symbols}
+    try:
+        data = yf.download(
+            list(yahoo_map.keys()),
+            period=period,
+            progress=False,
+            auto_adjust=True,
+            group_by="ticker",
+        )
+    except Exception:
+        return {}
+    if data is None or data.empty:
+        return {}
+
+    multi = isinstance(data.columns, pd.MultiIndex)
+    out: Dict[str, pd.DataFrame] = {}
+    for ysym, original in yahoo_map.items():
+        try:
+            sub = data[ysym] if multi else data
+            df = sub[["Close", "High", "Low"]]
+        except (KeyError, IndexError):
+            continue
+        df = df.rename(columns={"Close": "close", "High": "high", "Low": "low"}).dropna(how="all")
+        if not df.empty:
+            out[original] = df
+    return out

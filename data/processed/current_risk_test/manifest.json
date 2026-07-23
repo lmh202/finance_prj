@@ -1,0 +1,45 @@
+{
+  "created_utc": "2026-07-23T05:42:41.755098+00:00",
+  "test_start": "2024-01-01",
+  "latest_market_date": "2026-07-22",
+  "model_created": "2026-07-23",
+  "model_name": "HAR-X (HAR point forecast + empirically calibrated band)",
+  "universe_requested": 40,
+  "universe_downloaded": 40,
+  "failed_symbols": [],
+  "ohlc_rows": 45640,
+  "risk_panel_rows": 25600,
+  "mature_5d_rows": 25400,
+  "mature_20d_rows": 24800,
+  "rss_event_rows": 40,
+  "rss_stats": {
+    "feeds_ok": 43,
+    "feeds_failed": 0,
+    "entries_seen": 863,
+    "new": 665,
+    "updated_tags": 198,
+    "total_in_store": 665,
+    "new_ids_this_run": 665
+  },
+  "sources": {
+    "prices": "Yahoo Finance via yfinance (adjusted OHLC)",
+    "rss_general": [
+      "https://finance.yahoo.com/news/rssindex",
+      "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+      "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+    ],
+    "rss_ticker_template": "https://feeds.finance.yahoo.com/rss/2.0/headline?s={sym}&region=US&lang=en-US"
+  },
+  "caveats": [
+    "RSS has no historical archive; event observations begin with the first local fetch.",
+    "Current ETF constituents were not used; stable ETF tickers avoid constituent survivorship bias.",
+    "External-generalization symbols were not part of model development.",
+    "Daily 5/20-day outcomes overlap; use block-aware inference for formal tests."
+  ],
+  "rss_baseline": {
+    "eligible_for_rate_analysis": false,
+    "fresh_records": 445,
+    "stale_or_undated_records": 220,
+    "note": "Initial feed windows are archived but excluded from arrival-rate analysis."
+  }
+}

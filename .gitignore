@@ -33,6 +33,12 @@ ui_design/package-lock.json
 # Dataset
 FNSPID/
 
+# Deployable inference artifact (small; required by backend/src/risk_engine)
+!data/processed/risk_model.json
+
 # Local
 .claude/
 rdhrp-priority-setting_v06/
+
+# Useless report
+Red Black and White Bold Gradient Geometric Icons Understanding the Stock Market Presentation.pdf

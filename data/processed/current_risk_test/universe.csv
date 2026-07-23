@@ -1,0 +1,41 @@
+symbol,groups,broad_etf_role
+AAA,current_portfolio,
+AAPL,original_research,
+ADBE,original_research,
+AMD,original_research,
+AMZN,original_research,
+ASML,original_research,
+AVGO,original_research,
+COST,original_research,
+CSCO,original_research,
+DIA,broad_etf,US blue-chip equity
+EEM,broad_etf,emerging-market equity
+GLD,original_research|current_portfolio|broad_etf,gold commodity
+GOOGL,original_research,
+HYG,broad_etf,high-yield credit
+INTC,original_research,
+INTU,original_research,
+IWM,broad_etf,US small-cap equity
+LQD,broad_etf,investment-grade credit
+MSFT,original_research|current_portfolio,
+MU,original_research,
+NFLX,original_research,
+NVDA,original_research,
+PEP,original_research,
+QCOM,original_research,
+QQQ,broad_etf,US growth/technology equity
+SLV,original_research|current_portfolio|broad_etf,silver commodity
+SPY,current_portfolio|broad_etf,US large-cap equity
+TLT,broad_etf,long-duration US Treasury
+TSLA,original_research,
+TXN,original_research,
+USO,broad_etf,oil commodity
+VNQ,broad_etf,US real estate
+XLE,broad_etf,energy sector
+XLF,broad_etf,financial sector
+XLI,broad_etf,industrial sector
+XLK,broad_etf,technology sector
+XLP,broad_etf,consumer staples sector
+XLU,broad_etf,utilities sector
+XLV,current_portfolio|broad_etf,health-care sector
+XLY,broad_etf,consumer discretionary sector

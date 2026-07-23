@@ -22,6 +22,7 @@ HOLDING_COLUMNS = ["symbol", "name", "shares", "buy_price"]
 # Marker details the backend uses for expected conditions (routers/_common.py)
 EMPTY_PORTFOLIO = "empty_portfolio"
 NO_HISTORY = "no_history"
+NO_MODEL = "no_model"           # risk model artifact not built yet (routers/risk.py)
 
 _session = requests.Session()
 
@@ -43,9 +44,9 @@ def _request(method: str, path: str, **kwargs):
         resp = _session.request(method, BASE_URL + path, timeout=TIMEOUT, **kwargs)
     except requests.ConnectionError as exc:
         raise ApiUnavailable(str(exc)) from exc
-    if resp.status_code in (409, 502):
+    if resp.status_code in (409, 502, 503):
         detail = resp.json().get("detail", "")
-        if detail in (EMPTY_PORTFOLIO, NO_HISTORY):
+        if detail in (EMPTY_PORTFOLIO, NO_HISTORY, NO_MODEL):
             raise ApiMarker(detail)
     resp.raise_for_status()
     return resp.json()
@@ -170,6 +171,11 @@ def backtest() -> pd.DataFrame:
     return _split_df(_get("/strategy/backtest"), datetime_index=True)
 
 
+def strategy_recommendations(universe: Optional[List[str]] = None) -> List[dict]:
+    params = {"universe": ",".join(universe)} if universe else {}
+    return _get("/strategy/recommendations", **params)
+
+
 def essential_news(max_events: int = 5) -> List[dict]:
     return _get("/news/essential", max_events=max_events)
 
@@ -188,3 +194,11 @@ def recommendation_events(max_events: int = 5) -> dict:
 
 def react(event: dict) -> dict:
     return _post("/recommendation/react", {"event": event})
+
+
+def risk_estimates(horizon: int = 5) -> List[dict]:
+    return _get("/risk/estimates", horizon=horizon)
+
+
+def risk_portfolio(horizon: int = 5) -> dict:
+    return _get("/risk/portfolio", horizon=horizon)

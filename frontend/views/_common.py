@@ -21,6 +21,8 @@ def call(fn, *args, **kwargs):
     except api.ApiMarker as marker:
         if marker.detail == api.EMPTY_PORTFOLIO:
             st.info("Your portfolio is empty — build it on the Home page first.")
+        elif marker.detail == api.NO_MODEL:
+            st.warning("Risk model not built yet — run `python scripts/risk_measures.py` first.")
         else:
             st.error("Could not load price history — check your connection and retry.")
     return None
