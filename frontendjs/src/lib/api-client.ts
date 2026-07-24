@@ -3,13 +3,12 @@
  *
  * Every data operation that used to hit a local Next.js API route or
  * PostgreSQL now calls the backend at NEXT_PUBLIC_BACKEND_URL instead.
- * The engine pages (/health, /strategy, /news, /react, /performance)
- * consume the four engine routers; the home page consumes /market/search
+ * The engine pages (/health, /strategy, /news, /react, /performance, /risk)
+ * consume the backend routers; the home page consumes /market/search
  * and /portfolio consumes /analysis/explore for its analytics.
  */
 import type {
   AnalyzeResponse,
-  AssetSignal,
   BackendHolding,
   DailyRecommendation,
   EventsPayload,
@@ -17,12 +16,14 @@ import type {
   HoldingInput,
   InputMode,
   NewsEvent,
+  PortfolioRisk,
   PortfolioTotals,
   PortfolioViewRow,
   ReactResponse,
-  RegimeState,
+  RiskEstimate,
   SplitFrame,
   StockInfo,
+  StrategyRecommendation,
 } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
@@ -31,10 +32,12 @@ const BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
 /* Errors                                                              */
 /* ------------------------------------------------------------------ */
 
-/** Expected backend conditions signalled via 409/502 marker details. */
+/** Expected backend conditions signalled via 409/502/503 marker details. */
 export const EMPTY_PORTFOLIO = "empty_portfolio";
 export const NO_HISTORY = "no_history";
-export type ApiMarker = typeof EMPTY_PORTFOLIO | typeof NO_HISTORY;
+/** Risk engine artifact (data/processed/risk_model.json) not built yet. */
+export const NO_MODEL = "no_model";
+export type ApiMarker = typeof EMPTY_PORTFOLIO | typeof NO_HISTORY | typeof NO_MODEL;
 
 export class ApiMarkerError extends Error {
   constructor(public readonly marker: ApiMarker) {
@@ -66,8 +69,9 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { detail?: string };
     if (
-      (res.status === 409 || res.status === 502) &&
-      (body.detail === EMPTY_PORTFOLIO || body.detail === NO_HISTORY)
+      (res.status === 409 && body.detail === EMPTY_PORTFOLIO) ||
+      (res.status === 502 && body.detail === NO_HISTORY) ||
+      (res.status === 503 && body.detail === NO_MODEL)
     ) {
       throw new ApiMarkerError(body.detail);
     }
@@ -247,14 +251,11 @@ export async function fetchHealthReport(
 /* Engine 2 — Daily Strategy                                           */
 /* ------------------------------------------------------------------ */
 
-export async function fetchRegime(signal?: AbortSignal): Promise<RegimeState> {
-  return (await get("/strategy/regime", signal)) as RegimeState;
-}
-
-export async function fetchSignals(
+/** Per-stock confluence (EMA/MACD/RSI) action, cross-referenced with holdings. */
+export async function fetchStrategyRecommendations(
   signal?: AbortSignal
-): Promise<AssetSignal[]> {
-  return (await get("/strategy/signals", signal)) as AssetSignal[];
+): Promise<StrategyRecommendation[]> {
+  return (await get("/strategy/recommendations", signal)) as StrategyRecommendation[];
 }
 
 /** Walk-forward backtest curves — growth of $1 per strategy column. */
@@ -279,11 +280,20 @@ export async function fetchBacktest(
 /* Engine 3 — Essential News                                           */
 /* ------------------------------------------------------------------ */
 
+/**
+ * `symbols`, if given, OVERRIDES the saved portfolio as the tracked-ticker
+ * list — including `[]`, which means "no tickers selected" (general market
+ * news only), not "fall back to the portfolio". Omit it to keep the old
+ * default of deriving tickers from the saved portfolio server-side.
+ */
 export async function fetchEssentialNews(
   maxEvents = 5,
+  symbols?: string[],
   signal?: AbortSignal
 ): Promise<NewsEvent[]> {
-  return (await get(`/news/essential?max_events=${maxEvents}`, signal)) as NewsEvent[];
+  const params = new URLSearchParams({ max_events: String(maxEvents) });
+  if (symbols !== undefined) params.set("symbols", symbols.join(","));
+  return (await get(`/news/essential?${params.toString()}`, signal)) as NewsEvent[];
 }
 
 export async function fetchNewsFeeds(signal?: AbortSignal): Promise<string[]> {
@@ -315,4 +325,25 @@ export async function reactToEvent(
   signal?: AbortSignal
 ): Promise<ReactResponse> {
   return (await send("POST", "/recommendation/react", { event }, signal)) as ReactResponse;
+}
+
+/* ------------------------------------------------------------------ */
+/* Risk Engine — HAR volatility forecast + Filtered Historical         */
+/* Simulation (backend/src/risk_engine)                                */
+/* ------------------------------------------------------------------ */
+
+/** Per-held-symbol downside risk at one horizon (5 or 20 trading days). */
+export async function fetchRiskEstimates(
+  horizon: 5 | 20,
+  signal?: AbortSignal
+): Promise<RiskEstimate[]> {
+  return (await get(`/risk/estimates?horizon=${horizon}`, signal)) as RiskEstimate[];
+}
+
+/** Aggregate portfolio downside risk (EWMA-correlation VaR/ES) at one horizon. */
+export async function fetchPortfolioRisk(
+  horizon: 5 | 20,
+  signal?: AbortSignal
+): Promise<PortfolioRisk> {
+  return (await get(`/risk/portfolio?horizon=${horizon}`, signal)) as PortfolioRisk;
 }

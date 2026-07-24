@@ -42,3 +42,14 @@ rdhrp-priority-setting_v06/
 
 # Useless report
 Red Black and White Bold Gradient Geometric Icons Understanding the Stock Market Presentation.pdf
+
+data/processed/fnspid_top20_2013_2023.csv
+data/processed/model_price_news.joblib
+data/processed/model_price_only.joblib
+data/processed/news_sentiment_scored.csv
+data/processed/price_features.csv
+data/processed/sentiment_features.csv
+data/processed/walkforward_report_label_up_20d.csv
+data/processed/walkforward_report_label_up_5d.csv
+scripts/train_model.py
+backend/t1/

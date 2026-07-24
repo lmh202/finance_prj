@@ -47,13 +47,18 @@ with two kinds of pages:
     engine is a stub)
   - `/react` — Engine 4 daily recommendation + event reaction risk
   - `/performance` — Dev 2's backtest curves rendered with PerformanceChart
+  - `/risk` — per-stock + portfolio downside risk (HAR volatility forecast +
+    Filtered Historical Simulation) via `/risk/{estimates,portfolio}`; a
+    5d/20d horizon toggle, a whole-portfolio VaR/ES card and a per-holding
+    danger table — distinct from Engine 4's reaction-risk proxy
 
 Engine pages share scaffolding: `useEngine` (src/lib/use-engine.ts) fetches
 with abort + classifies errors; `EngineShell` (src/components/EngineShell.tsx)
-renders chrome, loading skeletons and the three expected non-ready states —
-backend down, `empty_portfolio` (409 → onboarding card with sample-load) and
-`no_history` (502 → retry). Small primitives (Section, Metric, Chip, ThinBar,
-ArcGauge, Note, StateCard) live in EngineShell.tsx too.
+renders chrome, loading skeletons and the four expected non-ready states —
+backend down, `empty_portfolio` (409 → onboarding card with sample-load),
+`no_history` (502 → retry) and `no_model` (503 → the risk engine's offline
+artifact hasn't been built). Small primitives (Section, Metric, Chip,
+ThinBar, ArcGauge, Note, StateCard) live in EngineShell.tsx too.
 
 This app used to be fully self-contained (its own PostgreSQL database,
 Drizzle schema, and Next.js API routes doing price fetching and analytics
@@ -82,9 +87,11 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
   - `/health/report`, `/strategy/{regime,signals,backtest}`,
     `/news/{essential,feeds}`, `/recommendation/{daily,events,react}` —
     the four engine routers consumed by the engine pages
+  - `/risk/{estimates,portfolio}` — the risk engine (HAR volatility +
+    Filtered Historical Simulation), consumed by `/risk`
   Expected conditions arrive as marker details (`empty_portfolio` 409,
-  `no_history` 502) and are thrown as `ApiMarkerError`; an unreachable
-  backend throws `BackendDownError`.
+  `no_history` 502, `no_model` 503) and are thrown as `ApiMarkerError`; an
+  unreachable backend throws `BackendDownError`.
   Backend CORS (`backend/main.py`) allow-lists `http://localhost:3000`
   specifically so this app can call it directly from the browser.
 - **No auth. One portfolio store** — every page reads/writes the backend's
@@ -134,6 +141,7 @@ src/
 │   ├── news/page.tsx           # Engine 3 — essential news
 │   ├── react/page.tsx          # Engine 4 — should-I-react flow
 │   ├── performance/page.tsx    # Backtest curves (Dev 2 engine, Dev 1 page)
+│   ├── risk/page.tsx           # Risk engine — HAR + FHS downside risk
 │   └── globals.css             # Tailwind theme tokens + utility classes
 ├── components/
 │   ├── chrome.tsx              # Header (real nav, active route), Footer, Hero

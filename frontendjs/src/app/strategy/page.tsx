@@ -4,117 +4,93 @@
 
 import { useCallback } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp } from "lucide-react";
+import { Check, TrendingUp } from "lucide-react";
 import { Chip, EngineShell, Note, Section, ThinBar, type ChipTone } from "@/components/EngineShell";
-import { fetchRegime, fetchSignals } from "@/lib/api-client";
+import { fetchStrategyRecommendations } from "@/lib/api-client";
 import { useEngine } from "@/lib/use-engine";
-import { fmtDate, fmtNum, fmtPct, fmtPrice } from "@/lib/format";
-import type { AssetSignal, RegimeState } from "@/lib/types";
-
-const REGIME_META: Record<string, { label: string; dot: string; tone: string }> = {
-  bullish: { label: "Bullish", dot: "var(--color-gain)", tone: "text-gain" },
-  bearish: { label: "Bearish", dot: "var(--color-loss)", tone: "text-loss" },
-  high_volatility: { label: "High volatility", dot: "var(--color-warn)", tone: "text-warn" },
-  sideways: { label: "Sideways / uncertain", dot: "var(--color-mut)", tone: "text-ink/85" },
-};
-
-const INDICATOR_DEFS: Record<string, { label: string; fmt: (v: number) => string }> = {
-  price: { label: "SPY price", fmt: (v) => `$${fmtPrice(v)}` },
-  sma50: { label: "SMA 50", fmt: (v) => `$${fmtPrice(v)}` },
-  sma200: { label: "SMA 200", fmt: (v) => `$${fmtPrice(v)}` },
-  momentum_20d: { label: "Momentum 20d", fmt: (v) => fmtPct(v) },
-  volatility_20d: { label: "Volatility 20d", fmt: (v) => fmtPct(v, 1, false) },
-  volatility_median: { label: "Median volatility", fmt: (v) => fmtPct(v, 1, false) },
-};
+import { fmtNum, fmtPrice, signClass } from "@/lib/format";
+import type { StrategyRecommendation } from "@/lib/types";
 
 const ACTION_TONES: Record<string, ChipTone> = {
-  increase: "gain",
-  hold: "mut",
-  reduce: "loss",
+  BUY: "gain",
+  ADD: "gain",
+  TRIM: "amber",
+  SELL: "loss",
+  HOLD: "mut",
 };
 
-function RegimeCard({ regime }: { regime: RegimeState }) {
-  const meta = REGIME_META[regime.regime] ?? {
-    label: regime.regime,
-    dot: "var(--color-mut)",
-    tone: "text-ink/85",
-  };
-  return (
-    <Section title="Market regime" className="flex flex-col">
-      <div className="flex flex-1 flex-col justify-center gap-4 py-1">
-        <div className="flex items-center gap-3">
-          <span
-            className="pulse-dot size-2.5 rounded-full"
-            style={{ backgroundColor: meta.dot }}
-          />
-          <span className={`text-2xl font-bold tracking-tight ${meta.tone}`}>{meta.label}</span>
-        </div>
-        <div>
-          <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider text-mut">
-            <span>Confidence</span>
-            <span className="tabular text-ink/85">{fmtPct(regime.confidence, 0, false)}</span>
-          </div>
-          <div className="mt-1.5">
-            <ThinBar fraction={regime.confidence} color={meta.dot} className="w-full" />
-          </div>
-        </div>
-        {regime.as_of && (
-          <div className="font-mono text-[10px] uppercase tracking-wider text-mut/70">
-            as of {fmtDate(regime.as_of.slice(0, 10), true)}
-          </div>
-        )}
-      </div>
-    </Section>
-  );
+// |score| <= W_EMA + W_MACD + W_RSI = 1.5 + 1.0 + 1.0 (backend/src/daily_strategy/engine.py)
+const MAX_SCORE = 3.5;
+
+function scoreColor(score: number): string {
+  if (Math.abs(score) < 1e-9) return "var(--color-mut)";
+  return score > 0 ? "var(--color-gain)" : "var(--color-loss)";
 }
 
-function SignalsTable({ signals }: { signals: AssetSignal[] }) {
+function RecommendationsTable({ recs }: { recs: StrategyRecommendation[] }) {
   return (
     <div className="scroll-slim overflow-x-auto">
-      <table className="w-full min-w-[820px] border-collapse">
+      <table className="w-full min-w-[860px] border-collapse">
         <thead>
           <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
             <th className="px-4 py-3 font-medium">Ticker</th>
+            <th className="px-4 py-3 font-medium">Action</th>
+            <th className="px-4 py-3 text-center font-medium">Held</th>
             <th className="px-4 py-3 text-right font-medium">Score</th>
-            <th className="px-4 py-3 text-center font-medium">Signal</th>
-            <th className="px-4 py-3 text-right font-medium">Momentum</th>
-            <th className="px-4 py-3 text-right font-medium">Sharpe</th>
-            <th className="px-4 py-3 text-right font-medium">Volatility</th>
+            <th className="px-4 py-3 text-right font-medium">P&L %</th>
+            <th className="px-4 py-3 text-right font-medium">Price</th>
             <th className="px-4 py-3 font-medium">Why</th>
           </tr>
         </thead>
         <tbody>
-          {signals.map((s, i) => (
+          {recs.map((r, i) => (
             <motion.tr
-              key={s.symbol}
+              key={r.symbol}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: 0.03 * i }}
               className="border-b border-overlay/[0.04] transition-colors last:border-0 hover:bg-overlay/[0.025]"
             >
-              <td className="px-4 py-3 font-mono text-sm font-semibold text-accent">{s.symbol}</td>
+              <td className="px-4 py-3 font-mono text-sm font-semibold text-accent">{r.symbol}</td>
+              <td className="px-4 py-3">
+                <Chip tone={ACTION_TONES[r.recommendation] ?? "mut"}>{r.recommendation}</Chip>
+              </td>
+              <td className="px-4 py-3 text-center">
+                {r.held ? (
+                  <Check className="mx-auto size-3.5 text-accent" />
+                ) : (
+                  <span className="text-mut/40">—</span>
+                )}
+              </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-2">
-                  <ThinBar fraction={s.score / 100} className="w-16" />
-                  <span className="w-8 text-right font-mono text-xs font-medium tabular text-ink/90">
-                    {Math.round(s.score)}
+                  <ThinBar
+                    fraction={Math.abs(r.score) / MAX_SCORE}
+                    color={scoreColor(r.score)}
+                    className="w-16"
+                  />
+                  <span
+                    className={`w-10 text-right font-mono text-xs font-medium tabular ${signClass(r.score)}`}
+                  >
+                    {r.score >= 0 ? "+" : ""}
+                    {r.score.toFixed(1)}
                   </span>
                 </div>
               </td>
-              <td className="px-4 py-3 text-center">
-                <Chip tone={ACTION_TONES[s.action] ?? "mut"}>{s.action}</Chip>
+              <td
+                className={`px-4 py-3 text-right font-mono text-xs tabular ${signClass(
+                  r.unrealized_pnl_pct
+                )}`}
+              >
+                {r.unrealized_pnl_pct == null
+                  ? "—"
+                  : `${r.unrealized_pnl_pct >= 0 ? "+" : ""}${fmtNum(r.unrealized_pnl_pct, 1)}%`}
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs tabular text-ink/85">
-                {s.indicators.momentum != null ? fmtPct(s.indicators.momentum) : "—"}
+                {r.current_price != null ? `$${fmtPrice(r.current_price)}` : "—"}
               </td>
-              <td className="px-4 py-3 text-right font-mono text-xs tabular text-ink/85">
-                {s.indicators.sharpe != null ? fmtNum(s.indicators.sharpe, 2) : "—"}
-              </td>
-              <td className="px-4 py-3 text-right font-mono text-xs tabular text-mut">
-                {s.indicators.volatility != null ? fmtPct(s.indicators.volatility, 1, false) : "—"}
-              </td>
-              <td className="max-w-[340px] px-4 py-3 text-xs leading-relaxed text-mut">
-                {s.rationale}
+              <td className="max-w-[360px] px-4 py-3 text-xs leading-relaxed text-mut">
+                {r.reasons.join(" · ")}
               </td>
             </motion.tr>
           ))}
@@ -125,55 +101,33 @@ function SignalsTable({ signals }: { signals: AssetSignal[] }) {
 }
 
 export default function StrategyPage() {
-  const fetcher = useCallback(async (signal: AbortSignal) => {
-    const [regime, signals] = await Promise.all([fetchRegime(signal), fetchSignals(signal)]);
-    return { regime, signals };
-  }, []);
+  const fetcher = useCallback((signal: AbortSignal) => fetchStrategyRecommendations(signal), []);
   const engine = useEngine(fetcher);
-  const data = engine.data;
+  const recs = engine.data;
 
   return (
     <EngineShell
       title="Daily Strategy"
       icon={TrendingUp}
-      caption="Engine 2 — Regime-Aware Momentum · Developer 2"
+      caption="Engine 2 — EMA/RSI/MACD confluence signals · Developer 2"
       engine={engine}
-      hasData={data != null}
+      hasData={recs != null}
     >
-      {data && (
+      {recs && (
         <>
-          <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-            <RegimeCard regime={data.regime} />
-            <Section title="Benchmark indicators (SPY)">
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
-                {Object.entries(data.regime.indicators).map(([key, v]) => (
-                  <div key={key}>
-                    <div className="font-mono text-[10px] uppercase tracking-wider text-mut/80">
-                      {INDICATOR_DEFS[key]?.label ?? key.replace(/_/g, " ")}
-                    </div>
-                    <div className="mt-1 font-mono text-lg font-semibold tabular text-ink/90">
-                      {v == null || !Number.isFinite(v)
-                        ? "—"
-                        : INDICATOR_DEFS[key]?.fmt(v) ?? fmtNum(v, 4)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          </div>
+          <p className="max-w-2xl text-sm leading-relaxed text-mut">
+            Confluence score = EMA20/50 (±1.5) + fresh MACD crossover (±1.0) + RSI (±1.0). Raw
+            BUY at score ≥ 2, SELL at ≤ −2. The portfolio layer then maps (what you hold + P&L)
+            into BUY / ADD / TRIM / SELL / HOLD.
+          </p>
 
-          <section className="card px-2 py-2">
-            <h3 className="px-3 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-mut">
-              Daily asset ranking
-            </h3>
-            {data.signals.length === 0 ? (
-              <div className="px-3 py-3">
-                <Note>No asset has enough history to score yet.</Note>
-              </div>
+          <Section title="Per-stock recommendations">
+            {recs.length === 0 ? (
+              <Note>No symbol has enough history to score yet.</Note>
             ) : (
-              <SignalsTable signals={data.signals} />
+              <RecommendationsTable recs={recs} />
             )}
-          </section>
+          </Section>
         </>
       )}
     </EngineShell>

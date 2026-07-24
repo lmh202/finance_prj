@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import {
   Activity,
   Briefcase,
-  Flag,
   HeartPulse,
   Home,
   LineChart,
@@ -15,6 +14,7 @@ import {
   Rss,
   Scale,
   Search,
+  Shield,
   Sun,
   TrendingUp,
   type LucideIcon,
@@ -55,7 +55,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/strategy", label: "Strategy", icon: TrendingUp },
   { href: "/news", label: "News", icon: Rss },
   { href: "/react", label: "React?", icon: Scale },
-  { href: "/performance", label: "Performance", icon: Flag },
+  { href: "/risk", label: "Risk", icon: Shield },
 ];
 
 function NavLink({
@@ -63,13 +63,11 @@ function NavLink({
   label,
   icon: Icon,
   active,
-  alwaysLabel,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   active: boolean;
-  alwaysLabel?: boolean;
 }) {
   return (
     <Link
@@ -82,7 +80,7 @@ function NavLink({
       }`}
     >
       <Icon className="size-3" />
-      <span className={alwaysLabel ? "" : "hidden xl:block"}>{label}</span>
+      <span>{label}</span>
     </Link>
   );
 }
@@ -155,7 +153,7 @@ export function Header({
         {/* small screens: scrollable nav row */}
         <nav className="scroll-slim -mx-1 flex items-center gap-0.5 overflow-x-auto px-1 pb-2 md:hidden">
           {NAV.map((item) => (
-            <NavLink key={item.href} {...item} active={isActive(item.href)} alwaysLabel />
+            <NavLink key={item.href} {...item} active={isActive(item.href)} />
           ))}
         </nav>
       </div>

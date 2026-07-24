@@ -117,21 +117,21 @@ export interface HealthReport {
   correlation: SplitFrame | null; // symbols × symbols
 }
 
-/** GET /strategy/regime — Engine 2, daily_strategy.classify_regime(). */
-export interface RegimeState {
-  regime: "bullish" | "bearish" | "high_volatility" | "sideways" | string;
-  confidence: number; // 0..1
-  indicators: Record<string, number | null>;
-  as_of: string | null; // ISO datetime
-}
-
-/** GET /strategy/signals — one row of the daily asset ranking. */
-export interface AssetSignal {
+/** GET /strategy/recommendations — Engine 2, daily_strategy.recommend_signals().
+ *  One per-stock action from the EMA/MACD/RSI confluence layer, cross-referenced
+ *  with what's held. `score` is the raw confluence score, roughly ±3.5
+ *  (EMA ±1.5, MACD ±1.0, RSI ±1.0). */
+export interface StrategyRecommendation {
   symbol: string;
-  score: number; // 0..100
-  action: "increase" | "hold" | "reduce" | string;
-  indicators: Record<string, number>; // momentum, trend, sharpe, volatility, drawdown
-  rationale: string;
+  recommendation: "BUY" | "ADD" | "TRIM" | "SELL" | "HOLD" | string;
+  held: boolean;
+  raw_signal: "BUY" | "SELL" | "HOLD" | string;
+  score: number;
+  quantity: number;
+  avg_buy_price: number | null;
+  current_price: number | null;
+  unrealized_pnl_pct: number | null; // already a percentage (12.3 = +12.3%)
+  reasons: string[];
 }
 
 /** GET /news/essential — Engine 3, one classified news story. */
@@ -187,6 +187,35 @@ export interface EventsPayload {
 export interface ReactResponse {
   risk: ReactionRisk;
   recommendation: Recommendation;
+}
+
+/** GET /risk/estimates — one symbol × horizon downside-risk estimate
+ *  (HAR volatility forecast + Filtered Historical Simulation). */
+export interface RiskEstimate {
+  symbol: string;
+  horizon: number;
+  sigma_daily: number;
+  sigma_h: number; // forecast vol over the horizon
+  var_95: number; // downside VaR, horizon return threshold (negative)
+  var_99: number;
+  es_95: number; // expected shortfall / CVaR
+  band_lo: number;
+  band_hi: number;
+  risk_level: number; // 0..100, sigma percentile vs. the stock's own history
+  as_of: string | null;
+  has_history: boolean;
+}
+
+/** GET /risk/portfolio — aggregate portfolio downside risk for one horizon. */
+export interface PortfolioRisk {
+  horizon: number;
+  n_holdings: number;
+  sigma_h: number;
+  var_95: number;
+  var_99: number;
+  es_95: number;
+  diversification_ratio: number; // portfolio VaR / sum(w * VaR_i); <1 = diversified
+  as_of: string | null;
 }
 
 /* ---------- backend-persisted portfolio (data/portfolio.csv) ---------- */

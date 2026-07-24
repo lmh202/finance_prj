@@ -31,7 +31,7 @@ import hashlib
 import json
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import mktime
 from typing import Dict, List, Optional
@@ -60,6 +60,15 @@ GENERAL_FEEDS: List[Dict] = [
 YAHOO_TICKER_URL = (
     "https://feeds.finance.yahoo.com/rss/2.0/headline?s={sym}&region=US&lang=en-US"
 )
+
+# Skip re-fetching a feed URL if the store already holds an entry fetched
+# more recently than this. collect() runs on every tracked-symbol change
+# (add/remove/reset in the frontend ticker picker) and each fetch is a live,
+# serial HTTP request per feed — without this, narrowing the symbol list
+# (e.g. just removing one ticker) still re-fetched every remaining feed over
+# the network for no reason, since dropping a symbol can't require fresher
+# data for the symbols left over.
+FEED_STALE_MINUTES = 5
 
 
 def build_feeds(symbols: List[str]) -> List[Dict]:
@@ -140,13 +149,48 @@ def save_store(records: Dict[str, Dict], path: Path = STORE) -> None:
 # ------------------------------------------------------------------ collection
 
 def collect(symbols: List[str], store_path: Path = STORE) -> Dict[str, int]:
-    """Fetch all feeds, merge into the JSONL store, return run statistics."""
-    fetched_utc = datetime.now(timezone.utc).isoformat()
-    records = load_store(store_path)
-    stats = {"feeds_ok": 0, "feeds_failed": 0, "entries_seen": 0,
-             "new": 0, "updated_tags": 0, "total_in_store": 0}
+    """Fetch all feeds (general + one per portfolio symbol), merge into the
+    JSONL store, return run statistics."""
+    return collect_feeds(build_feeds(symbols), store_path)
 
-    for feed in build_feeds(symbols):
+
+def collect_urls(urls: List[str], store_path: Path = STORE) -> Dict[str, int]:
+    """Fetch arbitrary feed URLs (no ticker tagging) into the same store —
+    used by fetch_headlines() when called with an explicit feed list."""
+    feeds = [{"name": url, "url": url, "symbols": []} for url in urls]
+    return collect_feeds(feeds, store_path)
+
+
+def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]:
+    """Fetch a specific list of {name, url, symbols} feed dicts, merge into
+    the JSONL store, return run statistics. `collect()`/`collect_urls()` are
+    thin wrappers over this that build the feed list differently.
+
+    A feed fetched within the last FEED_STALE_MINUTES is skipped rather than
+    re-parsed — the check is a lookup against records already loaded from
+    the store, so it costs nothing like a network round trip does.
+    """
+    now = datetime.now(timezone.utc)
+    fetched_utc = now.isoformat()
+    records = load_store(store_path)
+
+    last_fetch_by_feed: Dict[str, datetime] = {}
+    for r in records.values():
+        ts, feed_url = r.get("fetched_utc"), r.get("feed_url")
+        if not ts or not feed_url:
+            continue
+        t = datetime.fromisoformat(ts)
+        if feed_url not in last_fetch_by_feed or t > last_fetch_by_feed[feed_url]:
+            last_fetch_by_feed[feed_url] = t
+
+    stats = {"feeds_ok": 0, "feeds_failed": 0, "feeds_skipped_fresh": 0,
+             "entries_seen": 0, "new": 0, "updated_tags": 0, "total_in_store": 0}
+
+    for feed in feeds:
+        last = last_fetch_by_feed.get(feed["url"])
+        if last is not None and now - last < timedelta(minutes=FEED_STALE_MINUTES):
+            stats["feeds_skipped_fresh"] += 1
+            continue
         try:
             parsed = feedparser.parse(feed["url"])
             entries = parsed.entries

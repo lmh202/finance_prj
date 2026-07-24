@@ -1,0 +1,89 @@
+{
+  "finance_keywords": [
+    "market", "stock", "bond", "yield", "economy", "economic", "bank", "financial",
+    "investment", "investor", "trade", "tariff", "currency", "dollar", "euro", "oil",
+    "gold", "commodity", "regulation", "earnings", "recession", "growth", "inflation"
+  ],
+  "categories": {
+    "interest_rates": {
+      "label": "Interest rates",
+      "keywords": ["interest rate", "rate cut", "rate hike", "central bank", "federal reserve", "fomc", "ecb", "monetary policy", "policy rate"],
+      "severity_keywords": ["unexpected", "emergency", "surprise", "sharp", "largest"],
+      "impact_score": 85,
+      "asset_impacts": {"Technology stocks": "negative", "Banks": "mixed/positive", "Long-duration bonds": "negative", "Cash": "positive defensively"}
+    },
+    "inflation": {
+      "label": "Inflation",
+      "keywords": ["inflation", "consumer prices", "cpi", "producer prices", "price pressures", "cost of living"],
+      "severity_keywords": ["surge", "soar", "unexpected", "record", "accelerate"],
+      "impact_score": 80,
+      "asset_impacts": {"Long-duration bonds": "negative", "Gold": "mixed/positive", "Consumer stocks": "negative"}
+    },
+    "economic_growth": {
+      "label": "Economic growth",
+      "keywords": ["gdp", "economic growth", "recession", "unemployment", "jobs report", "payroll", "manufacturing", "retail sales"],
+      "severity_keywords": ["contraction", "recession", "collapse", "record", "unexpected"],
+      "impact_score": 75,
+      "asset_impacts": {"Equities": "direction depends on surprise", "Government bonds": "mixed", "Cyclical stocks": "high sensitivity"}
+    },
+    "geopolitical": {
+      "label": "Geopolitical conflict",
+      "keywords": ["war", "conflict", "invasion", "missile", "sanction", "geopolitical", "ceasefire", "military", "attack"],
+      "severity_keywords": ["escalate", "invasion", "emergency", "attack", "nuclear"],
+      "impact_score": 90,
+      "asset_impacts": {"Gold": "positive defensively", "Oil": "potentially positive", "Global equities": "negative", "Defence stocks": "potentially positive"}
+    },
+    "energy_commodities": {
+      "label": "Energy and commodities",
+      "keywords": ["oil", "crude", "opec", "natural gas", "gold", "silver", "commodity", "energy prices", "copper"],
+      "severity_keywords": ["supply shock", "embargo", "record", "plunge", "surge"],
+      "impact_score": 75,
+      "asset_impacts": {"Energy stocks": "same direction as energy prices", "Airlines": "negative when oil rises", "Gold": "event dependent", "Inflation-sensitive assets": "high sensitivity"}
+    },
+    "technology_regulation": {
+      "label": "Technology regulation",
+      "keywords": ["antitrust", "technology regulation", "ai regulation", "data privacy", "chip export", "semiconductor restriction", "big tech", "competition authority"],
+      "severity_keywords": ["ban", "fine", "investigation", "restriction", "break up"],
+      "impact_score": 70,
+      "asset_impacts": {"Technology stocks": "negative/mixed", "Semiconductors": "high sensitivity", "Broad growth ETFs": "mixed"}
+    },
+    "corporate_earnings": {
+      "label": "Corporate earnings",
+      "keywords": ["earnings", "profit", "revenue", "quarterly results", "guidance", "profit warning", "dividend"],
+      "severity_keywords": ["miss", "beat", "warning", "record loss", "bankruptcy"],
+      "impact_score": 65,
+      "asset_impacts": {"Company stock": "direction depends on results", "Sector peers": "possible read-through"}
+    },
+    "financial_system": {
+      "label": "Financial-system stress",
+      "keywords": ["bank failure", "bank run", "liquidity crisis", "credit crisis", "default", "systemic risk", "financial stability", "bailout"],
+      "severity_keywords": ["failure", "crisis", "default", "emergency", "contagion"],
+      "impact_score": 95,
+      "asset_impacts": {"Banks": "negative", "Government bonds": "positive defensively", "Gold": "positive defensively", "Risk assets": "negative"}
+    }
+  },
+  "sentiment": {
+    "positive": ["beat", "growth", "gain", "rise", "rally", "improve", "strong", "surplus", "record high", "ceasefire", "cut rates"],
+    "negative": ["miss", "loss", "fall", "plunge", "weak", "crisis", "war", "attack", "default", "recession", "inflation", "sanction", "bankruptcy", "rate hike"]
+  },
+  "holding_asset_map": {
+    "AAPL": ["Technology stocks", "Company stock", "Broad growth ETFs"],
+    "MSFT": ["Technology stocks", "Company stock", "Broad growth ETFs"],
+    "META": ["Technology stocks", "Company stock", "Broad growth ETFs"],
+    "NVDA": ["Technology stocks", "Semiconductors", "Company stock"],
+    "QQQ": ["Technology stocks", "Broad growth ETFs"],
+    "SPY": ["Equities", "Global equities", "Risk assets"],
+    "XLV": ["Equities", "Risk assets"],
+    "GLD": ["Gold"],
+    "SLV": ["Silver"],
+    "TLT": ["Long-duration bonds", "Government bonds"],
+    "XLE": ["Energy stocks", "Oil"],
+    "XLF": ["Banks", "Risk assets"]
+  },
+  "source_credibility": {
+    "Yahoo Finance": 0.75,
+    "CNBC Top News": 0.85,
+    "MarketWatch": 0.85,
+    "_default": 0.7
+  }
+}

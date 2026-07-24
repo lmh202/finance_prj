@@ -176,8 +176,10 @@ def strategy_recommendations(universe: Optional[List[str]] = None) -> List[dict]
     return _get("/strategy/recommendations", **params)
 
 
-def essential_news(max_events: int = 5) -> List[dict]:
-    return _get("/news/essential", max_events=max_events)
+def essential_news(max_events: int = 5, symbols: Optional[List[str]] = None) -> List[dict]:
+    if symbols is None:
+        return _get("/news/essential", max_events=max_events)
+    return _get("/news/essential", max_events=max_events, symbols=",".join(symbols))
 
 
 def news_feeds() -> List[str]:

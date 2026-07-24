@@ -2,9 +2,10 @@
 
 /**
  * Shared scaffolding for the AURORA engine pages (/portfolio, /health,
- * /strategy, /news, /react, /performance): page chrome + title block,
- * the three expected non-ready states (backend down, empty portfolio,
- * no price history) and small UI primitives reused across those pages.
+ * /strategy, /news, /react, /performance, /risk): page chrome + title
+ * block, the expected non-ready states (backend down, empty portfolio,
+ * no price history, risk model not built) and small UI primitives reused
+ * across those pages.
  */
 
 import { useEffect, useState, type ReactNode } from "react";
@@ -12,6 +13,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Briefcase,
+  Cog,
   Loader2,
   PackageOpen,
   RefreshCw,
@@ -20,7 +22,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Footer, Header } from "@/components/chrome";
-import { EMPTY_PORTFOLIO, loadSamplePortfolio } from "@/lib/api-client";
+import { EMPTY_PORTFOLIO, NO_MODEL, loadSamplePortfolio } from "@/lib/api-client";
 import type { EngineStatus } from "@/lib/use-engine";
 import { clamp } from "@/lib/format";
 
@@ -123,6 +125,27 @@ export function EngineShell({
     body =
       status.marker === EMPTY_PORTFOLIO ? (
         <EmptyPortfolioState onReload={reload} />
+      ) : status.marker === NO_MODEL ? (
+        <StateCard
+          icon={Cog}
+          iconTone="text-warn"
+          title="Risk model not built yet"
+          body={
+            <>
+              The offline-trained volatility model hasn&apos;t been generated. Run{" "}
+              <code className="rounded bg-overlay/[0.06] px-1.5 py-0.5 font-mono text-[11px] text-ink/90">
+                python scripts/risk_measures.py
+              </code>
+              , then retry.
+            </>
+          }
+          actions={
+            <button onClick={reload} className={BTN_GHOST}>
+              <RefreshCw className="size-3.5" />
+              Retry
+            </button>
+          }
+        />
       ) : (
         <StateCard
           icon={TriangleAlert}
