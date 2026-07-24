@@ -40,6 +40,7 @@ SCORED = OUT / "news_sentiment_scored.parquet"
 SENT_FEATS = OUT / "sentiment_features.parquet"
 PRICE_FEATS = OUT / "price_features.parquet"
 TRAIN = OUT / "training_dataset.parquet"
+EXTENDED_NEWS = OUT / "extended_news_features.parquet"
 
 TRADING_DAYS = 252
 
@@ -207,6 +208,21 @@ def merge(price: pd.DataFrame, sent: pd.DataFrame) -> pd.DataFrame:
     df["news_count"] = df["news_count"].fillna(0).astype(int)
     df["has_news"] = df["has_news"].fillna(0).astype(int)
     df = df.sort_values(["symbol", "date"]).reset_index(drop=True)
+    if EXTENDED_NEWS.exists():
+        from augment_training_dataset import merge_extended_features
+
+        extended = pd.read_parquet(EXTENDED_NEWS)
+        df, stats = merge_extended_features(df, extended)
+        print(
+            "      merged "
+            f"{len(stats['added_columns']):,} extended FNSPID/FinBERT features "
+            f"from {EXTENDED_NEWS.name}"
+        )
+    else:
+        print(
+            f"      warning: {EXTENDED_NEWS.name} not found; "
+            "writing the legacy three-column news contract only"
+        )
     df.to_parquet(TRAIN, index=False)
     print(f"      wrote {TRAIN.name} ({len(df):,} rows)")
     return df

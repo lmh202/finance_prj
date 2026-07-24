@@ -1,0 +1,113 @@
+{
+  "target": "future five-session daily realised volatility",
+  "outer_years": [
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "rows": 27027,
+  "symbols": 21,
+  "price_features": 34,
+  "deployable_news_features": 34,
+  "mlp_input_features": 68,
+  "mlp_configs": [
+    {
+      "name": "mlp_64_32",
+      "hidden": [
+        64,
+        32
+      ],
+      "dropout": 0.1,
+      "weight_decay": 0.0001,
+      "learning_rate": 0.001
+    },
+    {
+      "name": "mlp_128_64",
+      "hidden": [
+        128,
+        64
+      ],
+      "dropout": 0.15,
+      "weight_decay": 0.0003,
+      "learning_rate": 0.001
+    },
+    {
+      "name": "mlp_128_64_32",
+      "hidden": [
+        128,
+        64,
+        32
+      ],
+      "dropout": 0.2,
+      "weight_decay": 0.0008,
+      "learning_rate": 0.001
+    }
+  ],
+  "mlp_parameter_counts": {
+    "mlp_64_32": 6721,
+    "mlp_128_64": 17537,
+    "mlp_128_64_32": 19649
+  },
+  "device": "cpu",
+  "model_ranking": [
+    {
+      "model": "XGBoost Gamma",
+      "qlike": 0.6571401987602066,
+      "gain_vs_har_x": 0.10312313032909012,
+      "log_rmse": 0.5684738280743589,
+      "r2_log": 0.29080649409458237,
+      "realized_to_forecast": 0.8924822097864038,
+      "high_vol_qlike": 1.353879642340831,
+      "positive_symbol_share_vs_har_x": 0.9523809523809523,
+      "dm_t_vs_har_x": -3.2889999817657434,
+      "dm_p_vs_har_x": 0.0010054403017212277,
+      "rows": 27027,
+      "symbols": 21
+    },
+    {
+      "model": "HAR-X + News",
+      "qlike": 0.6942732623397467,
+      "gain_vs_har_x": 0.052443251229711586,
+      "log_rmse": 0.5400449821015865,
+      "r2_log": 0.35996507886535434,
+      "realized_to_forecast": 0.981090011393066,
+      "high_vol_qlike": 1.6807678386216802,
+      "positive_symbol_share_vs_har_x": 0.8571428571428571,
+      "dm_t_vs_har_x": -3.266628154299309,
+      "dm_p_vs_har_x": 0.0010883653402247173,
+      "rows": 27027,
+      "symbols": 21
+    },
+    {
+      "model": "Residual MLP",
+      "qlike": 0.6987204961326648,
+      "gain_vs_har_x": 0.04637358583652423,
+      "log_rmse": 0.5566858905506857,
+      "r2_log": 0.3199133838679128,
+      "realized_to_forecast": 0.9167517335911877,
+      "high_vol_qlike": 1.565427501757671,
+      "positive_symbol_share_vs_har_x": 0.8095238095238095,
+      "dm_t_vs_har_x": -0.10658361100148246,
+      "dm_p_vs_har_x": 0.9151193210388349,
+      "rows": 27027,
+      "symbols": 21
+    },
+    {
+      "model": "HAR-X",
+      "qlike": 0.732698345762145,
+      "gain_vs_har_x": 0.0,
+      "log_rmse": 0.519216741230045,
+      "r2_log": 0.40838227892061496,
+      "realized_to_forecast": 1.0568940285706194,
+      "high_vol_qlike": 1.998601452385876,
+      "positive_symbol_share_vs_har_x": 0.0,
+      "dm_t_vs_har_x": 0.0,
+      "dm_p_vs_har_x": 1.0,
+      "rows": 27027,
+      "symbols": 21
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
-  "model": "HAR-X (HAR point forecast + empirically calibrated band)",
-  "created": "2026-07-23",
+  "model": "HAR-News Integrated Risk Engine",
+  "created": "2026-07-24",
   "train_end": "2018-12-31",
   "val_end": "2020-12-31",
   "min_val_gain_to_adopt": 0.01,
@@ -22,13 +22,15 @@
       "l_park22",
       "l_absret"
     ],
-    "note": "needs ~70d daily OHLC per symbol"
+    "note": "needs ~70d daily OHLC per symbol",
+    "news_inputs": [
+      "log_count"
+    ],
+    "mapping": "price HAR features + causal news attention -> predicted 5-day risk"
   },
   "rejected_components": {
     "5": [
-      "+leverage",
-      "+news",
-      "+lev+news"
+      "+leverage"
     ],
     "20": [
       "+leverage"
@@ -45,21 +47,36 @@
         "l_absret"
       ],
       "coef": {
-        "l_rv5": 0.015699091550639113,
-        "l_rv22": -0.09858600161787237,
-        "l_rv66": 0.39219528068041565,
-        "l_park5": 0.2869438217839094,
-        "l_park22": 0.26729618052006093,
-        "l_absret": 0.016361202688896404
+        "l_rv5": 0.015391158245590127,
+        "l_rv22": -0.00849106794256832,
+        "l_rv66": 0.26498404295456524,
+        "l_park5": 0.36730534827983585,
+        "l_park22": 0.255988455375667,
+        "l_absret": 0.011719421145875875
       },
-      "intercept": -0.581921293367103,
-      "smearing": 1.1718103269017113,
+      "intercept": -0.41419521435294904,
+      "smearing": 1.1536019542874103,
       "band_k": 2.491745951076908,
       "t_dof": 3.50033564240369,
       "test_qlike": 0.4294401076619291,
       "test_r2_log": 0.45952487430425226,
       "test_coverage_gauss": 0.9246151271753681,
-      "test_coverage_calibrated": 0.9689591700133868
+      "test_coverage_calibrated": 0.9689591700133868,
+      "model_type": "har_news_integrated_gamma",
+      "news_features": [
+        "log_count"
+      ],
+      "oof_news_increment": {
+        "qlike_relative_gain": 0.052443251229711885,
+        "bootstrap_95": [
+          0.023775689132272373,
+          0.0882525431450809
+        ],
+        "dm_p": 0.0010870094986876744,
+        "positive_years": 5,
+        "positive_symbol_share": 0.8571428571428571,
+        "high_vol_relative_gain": 0.1356151959695845
+      }
     },
     "20": {
       "features": [
@@ -101,12 +118,12 @@
     },
     "horizons": {
       "5": {
-        "q05": -1.7316235616112998,
-        "q01": -3.117646513126021,
-        "q025": -2.2846081856048563,
-        "q975": 2.403946386189425,
-        "es05": -2.668847381926437,
-        "es01": -4.477051327648473
+        "q05": -1.6739471435959543,
+        "q01": -2.865345229541549,
+        "q025": -2.167648129913108,
+        "q975": 2.332561580893346,
+        "es05": -2.5022518652952255,
+        "es01": -4.085711611719042
       },
       "20": {
         "q05": -1.3446529847007163,
@@ -126,5 +143,88 @@
       "calibrated_weights": "equal-weight"
     },
     "risk_level": "percentile of current sigma_h vs the symbol's own history"
+  },
+  "news_overlays": {
+    "5": {
+      "model_type": "linear_gamma_variance_ratio",
+      "features": [
+        "log_count"
+      ],
+      "alpha": 10.0,
+      "scale": {
+        "log_count": 0.8845977233308507
+      },
+      "coef": {
+        "log_count": 0.024087121597530216
+      },
+      "intercept": 0.0,
+      "max_sigma_multiplier": 2.0,
+      "required_for_primary_output": true,
+      "source_contract": "FNSPID offline / RSS live"
+    }
+  },
+  "version": "risk-har-news-5d-v1",
+  "primary_horizon": 5,
+  "auxiliary_horizon": {
+    "horizon": 20,
+    "model": "price-only HAR-X",
+    "reason": "20-day news increment was negative out of sample"
+  },
+  "news_validation": {
+    "outer_years": [
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023
+    ],
+    "observed_not_pristine": [
+      2021,
+      2022,
+      2023
+    ],
+    "gate": {
+      "candidate": "har_news_linear_deployable",
+      "reference": "current_frozen_har",
+      "aggregate_relative_gain": 0.052443251229711885,
+      "yearly_gains": {
+        "2018": 0.030045202773761152,
+        "2019": 0.03812573959859766,
+        "2020": 0.06969627390462306,
+        "2021": 0.07082155383779137,
+        "2022": 0.12143561751261749,
+        "2023": -0.006599909292604654
+      },
+      "positive_symbol_share": 0.8571428571428571,
+      "median_symbol_gain": 0.07508465787337915,
+      "high_vol_relative_gain": 0.1356151959695845,
+      "bootstrap_ci": [
+        0.023775689132272373,
+        0.052295652474221535,
+        0.0882525431450809
+      ],
+      "dm_t": -3.26698106667768,
+      "dm_p": 0.0010870094986876744,
+      "var95_breach_rate": 0.043216043216043214,
+      "band_coverage": 0.9634069634069634,
+      "es_ratio": 0.9827571799069947,
+      "checks": {
+        "gain_at_least_3pct": true,
+        "bootstrap_lower_positive": true,
+        "dm_significant": true,
+        "positive_years": true,
+        "worst_year": true,
+        "positive_symbols": true,
+        "median_symbol_positive": true,
+        "high_vol_not_worse": true,
+        "var95_calibrated": true,
+        "band_calibrated": true,
+        "es_calibrated": true,
+        "rss_shadow_60_mature": false
+      },
+      "passed": false
+    },
+    "promotion_override": "User requires news to be a core formal input; all historical significance and tail gates passed."
   }
 }

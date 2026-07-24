@@ -1,0 +1,36 @@
+{
+  "reference_model": "XGBoost Gamma price-only",
+  "candidate_model": "XGBoost Gamma price+news",
+  "reference_qlike": 0.6571401987602066,
+  "candidate_qlike": 0.6855238443705507,
+  "relative_gain": -0.04319267891980147,
+  "dm_t": 1.6094307766407316,
+  "dm_p": 0.10752218013413972,
+  "bootstrap_95": [
+    -0.07647899809611966,
+    -0.04512926513476272,
+    -0.010877266840856244
+  ],
+  "positive_years": 3,
+  "yearly_gains": {
+    "2018": 0.005247385045411211,
+    "2019": 0.002348221924877541,
+    "2020": -0.09313750734678804,
+    "2021": 0.0012707147196643934,
+    "2022": -0.10084621625824298,
+    "2023": -0.0027264414354412326
+  },
+  "positive_symbol_share": 0.0,
+  "median_symbol_gain": -0.021714348088557923,
+  "news_active_gain": -0.02727940002571909,
+  "zero_news_gain": -0.048662339472006495,
+  "high_volatility_gain": -0.07934653821179523,
+  "rows": 27027,
+  "symbols": 21,
+  "selected_news_families": {
+    "attention_finbert": 3,
+    "all_deployable": 2,
+    "log_count": 1
+  },
+  "news_total_gain_share": 0.0167047772702677
+}

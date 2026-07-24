@@ -1,0 +1,346 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.72in,headheight=21pt]{geometry}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage[table]{xcolor}
+
+\definecolor{AuroraBlue}{HTML}{246BCE}
+\definecolor{AuroraLight}{HTML}{EAF3FF}
+\definecolor{RuleGray}{HTML}{C9CED6}
+\definecolor{TextGray}{HTML}{4E5661}
+\definecolor{GoodGreen}{HTML}{18794E}
+\definecolor{WarnRed}{HTML}{B42318}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=AuroraBlue,
+  urlcolor=AuroraBlue,
+  pdfauthor={AURORA Risk Engine Team},
+  pdftitle={Risk Engine Model Evaluation}
+}
+\urlstyle{same}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textcolor{TextGray}{AURORA Risk Engine}}
+\rhead{\textcolor{TextGray}{Five-session volatility}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{RuleGray}\leaders\hrule height \headrulewidth\hfill}}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist[itemize]{leftmargin=1.3em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
+\renewcommand{\arraystretch}{1.18}
+
+\newcommand{\metric}[1]{\textbf{\textcolor{AuroraBlue}{#1}}}
+\newcommand{\positive}[1]{\textbf{\textcolor{GoodGreen}{#1}}}
+\newcommand{\negative}[1]{\textbf{\textcolor{WarnRed}{#1}}}
+
+\begin{document}
+
+{\LARGE\bfseries Risk Engine Model Evaluation}
+
+\vspace{0.25em}
+{\large Five-session realized-volatility forecasting}
+
+\vspace{0.75em}
+\colorbox{AuroraLight}{%
+  \parbox{\dimexpr\textwidth-2\fboxsep\relax}{%
+    \textbf{Decision.}
+    Keep \textbf{HAR-X + News} as the formal Risk Engine.
+    Price-only XGBoost is the strongest point-forecast challenger, while
+    XGBoost with a constrained news-attention residual is the best
+    news-aware research challenger. Neither XGBoost variant is ready to
+    replace the formal model.
+  }%
+}
+
+\section{Key findings}
+
+\begin{itemize}
+  \item \textbf{XGBoost Gamma has the lowest out-of-fold QLIKE:}
+        \metric{0.6571}, a \metric{10.31\%} improvement over HAR-X
+        (\(p=0.0010\)).
+  \item \textbf{HAR-X + News is the best production compromise:}
+        QLIKE improves by \metric{5.24\%}, the news increment is significant
+        (\(p=0.0011\)), and the realized-to-forecast calibration ratio is
+        \metric{0.981}.
+  \item \textbf{Residual MLP does not establish a reliable advantage:}
+        average QLIKE improves by 4.64\%, but the date-aggregated DM test is
+        not significant (\(p=0.915\)).
+  \item \textbf{News can improve XGBoost only under a constrained design:}
+        an attention-based Gamma residual reduces XGBoost QLIKE by
+        \positive{1.30\%}, but worsens high-volatility QLIKE by
+        \negative{4.17\%}.
+  \item \textbf{FinBERT sentiment does not improve the XGBoost residual model}
+        in the current panel. Its measurable XGBoost news contribution comes
+        from attention, recency, and causal coverage states.
+\end{itemize}
+
+\section{Evaluation protocol}
+
+\begin{tabularx}{\textwidth}{>{\bfseries}p{0.26\textwidth}X}
+\toprule
+Target & Future five-session daily realized volatility; no price-direction label is used. \\
+Universe & 21 FNSPID research symbols; 27,027 stock-date outer-fold forecasts. \\
+Training history & 9 April 2013 to 28 December 2023. \\
+Outer evaluation & Annual expanding walk-forward tests for 2018--2023. \\
+Leakage control & Five-session embargo at each outer boundary; model, feature, and calibration decisions use prior data only. \\
+Weighting & Stock-equal loss weighting so high-news-volume symbols cannot dominate. \\
+Primary metric & QLIKE on realized variance; lower is better. \\
+Supporting evidence & Log-RMSE, log-\(R^2\), calibration ratio, high-volatility QLIKE, per-stock gains, Newey-West DM tests, and moving-block bootstrap intervals. \\
+\bottomrule
+\end{tabularx}
+
+\section{Models}
+
+\subsection{HAR-X}
+
+HAR-X is an interpretable pooled log-volatility model. The formal price
+specification uses six causal features:
+\[
+\log \widehat{\sigma}^{\,P}_{t,5}
+=
+\beta_0
++\beta_1\log RV_{t,5}
++\beta_2\log RV_{t,22}
++\beta_3\log RV_{t,66}
++\beta_4\log PARK_{t,5}
++\beta_5\log PARK_{t,22}
++\beta_6\log |r_t|.
+\]
+The fitted log forecast is exponentiated and corrected with a smearing factor.
+HAR-X provides a smooth and interpretable reference, but misses more of the
+high-volatility regime than the nonlinear challengers.
+
+\subsection{HAR-X + News}
+
+The formal five-session model combines the HAR-X price forecast with a
+regularized Gamma variance-ratio term:
+\[
+\widehat{\sigma}_{t,5}
+=
+\widehat{\sigma}^{\,P}_{t,5}
+\times
+\exp\!\left[
+  \frac{1}{2}\gamma
+  \frac{\log(1+N_t)}{s_N}
+\right].
+\]
+Here \(N_t\) is the causal news count and \(s_N\) is the training-period scale.
+A zero-news observation is retained with \(N_t=0\); it is not dropped or
+replaced by a sentiment-neutral article. The current deployable news term uses
+\texttt{log\_count}, selected in all six outer folds.
+
+\subsection{XGBoost Gamma}
+
+The XGBoost challenger uses a Gamma objective to predict positive realized
+variance from 34 price features. The inputs include HAR features, OHLC
+range estimators, semivariances, jump and extreme-return measures, volume,
+liquidity, SPY market risk, and cross-sectional risk states. For each outer
+year, shallow-tree hyperparameters are chosen from the original 96-configuration
+inner search, with early stopping and an internally selected HAR blend.
+
+\subsection{Residual MLP}
+
+The neural candidate uses 68 inputs: 34 price features and 34 deployable
+news/state features. Three regularized architectures are considered inside
+each outer training window:
+\[
+64\!-\!32,\qquad 128\!-\!64,\qquad 128\!-\!64\!-\!32.
+\]
+The networks use LayerNorm, GELU activations, dropout, AdamW, and a bounded
+log-volatility residual around a fold-local HAR forecast. The candidate has
+6,721--19,649 trainable parameters depending on the selected architecture.
+
+\section{Core out-of-fold results}
+
+\begin{table}[ht]
+\centering
+\caption{Five-session point-forecast performance, 2018--2023 OOF.
+Lower QLIKE and log-RMSE are better.}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+Model & QLIKE & Gain & Log-RMSE & Log-\(R^2\) & Calib. & High-vol & DM \(p\) \\
+\midrule
+XGBoost Gamma
+  & \textbf{0.6571} & \textbf{10.31\%} & 0.5685 & 0.291 & 0.892 & \textbf{1.3539} & 0.0010 \\
+HAR-X + News
+  & 0.6943 & 5.24\% & 0.5400 & 0.360 & \textbf{0.981} & 1.6808 & 0.0011 \\
+Residual MLP
+  & 0.6987 & 4.64\% & 0.5567 & 0.320 & 0.917 & 1.5654 & 0.9151 \\
+HAR-X
+  & 0.7327 & Reference & \textbf{0.5192} & \textbf{0.408} & 1.057 & 1.9986 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Interpretation.}
+XGBoost is the strongest model under the primary QLIKE objective and produces
+the lowest high-volatility loss. HAR-X has better ordinary log-error metrics,
+which reflects smoother performance in normal regimes, but it underperforms on
+variance-ratio loss. HAR-X + News gives up some point-forecast performance
+relative to XGBoost in exchange for a near-unit calibration ratio, validated
+news contribution, simple serialization, and stable zero-news behavior.
+
+The MLP improves in five of six annual folds and 81.0\% of stocks, but the
+daily loss-difference series is unstable enough that its aggregate DM
+\(p\)-value remains 0.915. It is not a promotion candidate.
+
+\section{Validated news contribution}
+
+\subsection{Formal HAR-X + News}
+
+\begin{table}[ht]
+\centering
+\caption{News increment and tail-risk validation for the formal model.}
+\begin{tabular}{lr}
+\toprule
+Metric & Result \\
+\midrule
+Stock-equal QLIKE gain vs HAR-X & \textbf{5.24\%} \\
+95\% moving-block bootstrap interval & \textbf{+2.38\% to +8.83\%} \\
+DM test & \(p=0.001087\) \\
+Positive outer years & 5/6 \\
+Positive stocks & 85.7\% \\
+Median stock gain & 7.51\% \\
+High-volatility QLIKE gain & 13.56\% \\
+VaR-95 breach rate & 4.32\% \\
+95\% risk-band coverage & 96.34\% \\
+Expected-shortfall ratio & 0.983 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The formal news model passes the historical accuracy, breadth, significance,
+and tail-calibration gates. Its only unresolved evidence requirement is a
+mature live-RSS evaluation period.
+
+\subsection{Can news improve XGBoost?}
+
+Two architectures were tested without removing zero-news samples.
+
+\textbf{Direct concatenation failed.}
+Appending news fields to the 34 price inputs increased QLIKE from 0.6571 to
+0.6855, a \negative{4.32\% deterioration}. News-active rows deteriorated by
+2.73\%, high-volatility rows by 7.93\%, and news features represented only
+1.67\% of final-tree total gain.
+
+\textbf{A constrained residual layer found a smaller positive signal.}
+The price-only XGBoost forecast was held fixed and news was used only to model
+its remaining variance ratio:
+\[
+\widehat{\sigma}_{t,5}
+=
+\widehat{\sigma}^{\,XGB}_{t,5}
+\times
+GammaRatio(\text{news}_{t}).
+\]
+
+\begin{table}[ht]
+\centering
+\caption{News residual families on top of price-only XGBoost.}
+\scriptsize
+\begin{tabular}{lrrrrrrr}
+\toprule
+News family & QLIKE & Gain & DM \(p\) & Bootstrap 95\% & Years & Stocks & High-vol \\
+\midrule
+Attention
+  & \textbf{0.6486} & \textbf{+1.30\%} & 0.00137 & +0.51\% to +2.67\% & 4/6 & 81.0\% & \negative{-4.17\%} \\
+Log count
+  & 0.6531 & +0.61\% & 0.00027 & +0.27\% to +1.39\% & 5/6 & 71.4\% & -2.58\% \\
+All deployable
+  & 0.6518 & +0.81\% & 0.05235 & -0.10\% to +2.44\% & 4/6 & 71.4\% & -4.58\% \\
+Attention + FinBERT
+  & 0.6627 & -0.84\% & 0.64580 & -3.12\% to +1.89\% & 4/6 & 57.1\% & -8.12\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The attention family contains article frequency, short-window counts, time
+since the latest article, and causal coverage/silence states. Its average gain
+remains significant after a conservative four-family multiple-test correction,
+but it fails the high-volatility non-degradation gate. FinBERT polarity and
+distribution fields do not add value to this XGBoost residual specification.
+
+\section{External generalization and production status}
+
+The independent 2024--2026 price-backbone test contains 40 symbols and 25,400
+mature five-session observations.
+
+\begin{table}[ht]
+\centering
+\caption{HAR-X price-backbone external validation against trailing-22-day volatility.}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Scope & Symbols & HAR QLIKE & Baseline QLIKE & Gain & DM \(p\) \\
+\midrule
+All external panel & 40 & 0.5829 & 0.6354 & 8.26\% & 0.00345 \\
+Original research symbols & 21 & 0.6661 & 0.7195 & 7.42\% & 0.02742 \\
+Unseen symbols & 19 & 0.4910 & 0.5425 & 9.48\% & 0.00626 \\
+Current six-symbol portfolio & 6 & 0.6181 & 0.6262 & 1.30\% & 0.82950 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Across all 40 symbols, the VaR-95 breach rate is 4.60\%, the 95\% risk-band
+coverage is 95.37\%, and the expected-shortfall ratio is 0.914. The unseen
+scope is mostly broad and sector ETFs, so it is evidence of cross-symbol
+transfer rather than a complete unseen-single-stock test.
+
+\newpage
+The live news contract remains the final production gap. FNSPID validates the
+historical news increment, but the system still needs at least 60 mature
+five-session RSS forecasts to confirm that live source intensity and coverage
+transfer correctly.
+
+\section{Final model decision}
+
+\begin{enumerate}
+  \item \textbf{Formal output: HAR-X + News.}
+        It is the only candidate that combines a statistically significant news
+        contribution with acceptable VaR, risk-band, expected-shortfall, and
+        high-volatility behavior.
+  \item \textbf{Primary challenger: price-only XGBoost Gamma.}
+        It has the best OOF QLIKE, but needs external unseen-stock validation,
+        component-specific tail calibration, and a news specification that does
+        not degrade high-volatility performance.
+  \item \textbf{News-aware XGBoost research ceiling: attention residual.}
+        The +1.30\% average gain is real, but the -4.17\% high-volatility result
+        blocks promotion.
+  \item \textbf{Residual MLP: research only.}
+        More cross-sectional data and a longer live-news history are required
+        before neural complexity can be justified.
+\end{enumerate}
+
+\section*{Reproducibility artifacts}
+
+\small
+\begin{itemize}
+  \item Core comparison:
+        \path{reports/risk_engine_presentation/model_comparison.csv}
+  \item Annual OOF results:
+        \path{reports/risk_engine_presentation/yearly_qlike.csv}
+  \item XGBoost news-family comparison:
+        \path{reports/risk_engine_xgb_news/overlay_family_comparison.csv}
+  \item Formal promotion gates:
+        \path{reports/risk_engine_optimization/promotion_gates.json}
+  \item Current external validation:
+        \path{data/processed/current_risk_test/current_validation_summary.csv}
+  \item Formal checkpoint:
+        \path{data/processed/risk_model.json}
+\end{itemize}
+
+\end{document}

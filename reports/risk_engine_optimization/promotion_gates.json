@@ -1,0 +1,119 @@
+{
+  "price_5d": {
+    "candidate": "linear_gamma",
+    "reference": "current_frozen_har",
+    "aggregate_relative_gain": 0.10442390075060737,
+    "yearly_gains": {
+      "2018": 0.17576349172821584,
+      "2019": 0.08475716038171796,
+      "2020": 0.1262487078174397,
+      "2021": 0.05529194741957235,
+      "2022": 0.07668978237437468,
+      "2023": -0.004555329529685211
+    },
+    "positive_symbol_share": 0.8095238095238095,
+    "median_symbol_gain": 0.14441557853694437,
+    "high_vol_relative_gain": 0.24999367353192345,
+    "bootstrap_ci": [
+      0.030736921670186323,
+      0.10488530153881975,
+      0.1891631021755877
+    ],
+    "dm_t": -2.4368626612999345,
+    "dm_p": 0.014815305041994131,
+    "var95_breach_rate": 0.03522403522403522,
+    "band_coverage": 0.9732489732489733,
+    "es_ratio": 0.9668572198325135,
+    "checks": {
+      "gain_at_least_3pct": true,
+      "bootstrap_lower_positive": true,
+      "dm_significant": true,
+      "positive_years": true,
+      "worst_year": true,
+      "positive_symbols": true,
+      "median_symbol_positive": true,
+      "high_vol_not_worse": true,
+      "var95_calibrated": false,
+      "band_calibrated": false,
+      "es_calibrated": true,
+      "rss_shadow_60_mature": true,
+      "external_price_not_worse": false
+    },
+    "passed": false
+  },
+  "news_5d": {
+    "candidate": "har_news_linear_deployable",
+    "reference": "current_frozen_har",
+    "aggregate_relative_gain": 0.052443251229711885,
+    "yearly_gains": {
+      "2018": 0.030045202773761152,
+      "2019": 0.03812573959859766,
+      "2020": 0.06969627390462306,
+      "2021": 0.07082155383779137,
+      "2022": 0.12143561751261749,
+      "2023": -0.006599909292604654
+    },
+    "positive_symbol_share": 0.8571428571428571,
+    "median_symbol_gain": 0.07508465787337915,
+    "high_vol_relative_gain": 0.1356151959695845,
+    "bootstrap_ci": [
+      0.023775689132272373,
+      0.052295652474221535,
+      0.0882525431450809
+    ],
+    "dm_t": -3.26698106667768,
+    "dm_p": 0.0010870094986876744,
+    "var95_breach_rate": 0.043216043216043214,
+    "band_coverage": 0.9634069634069634,
+    "es_ratio": 0.9827571799069947,
+    "checks": {
+      "gain_at_least_3pct": true,
+      "bootstrap_lower_positive": true,
+      "dm_significant": true,
+      "positive_years": true,
+      "worst_year": true,
+      "positive_symbols": true,
+      "median_symbol_positive": true,
+      "high_vol_not_worse": true,
+      "var95_calibrated": true,
+      "band_calibrated": true,
+      "es_calibrated": true,
+      "rss_shadow_60_mature": false
+    },
+    "passed": false
+  },
+  "model_20d": {
+    "candidate": "har_news_linear_deployable",
+    "reference": "current_frozen_har",
+    "aggregate_relative_gain": -0.03887999671352238,
+    "yearly_gains": {
+      "2018": -0.04900614709834254,
+      "2019": 0.00915819005897712,
+      "2020": -0.04422627998672693,
+      "2021": 0.00038893692772406363,
+      "2022": 0.022809156965552215,
+      "2023": -0.12931854660416484
+    },
+    "positive_symbol_share": 0.38095238095238093,
+    "median_symbol_gain": -0.005368396887593588,
+    "high_vol_relative_gain": -0.05379820862627337,
+    "bootstrap_ci": [
+      -0.0842927023333629,
+      -0.03708313214246271,
+      -0.006067787594430926
+    ],
+    "dm_t": 1.4943455163565227,
+    "dm_p": 0.1350853341693823,
+    "var95_breach_rate": 0.057651991614255764,
+    "band_coverage": 0.9485624438454627,
+    "es_ratio": 1.0395454416081116,
+    "checks": {
+      "aggregate_not_worse_1pct": false,
+      "significantly_better_if_promoted": false,
+      "tail_not_worse": false,
+      "band_not_worse": true,
+      "rss_shadow_60_mature": false
+    },
+    "passed": false
+  }
+}

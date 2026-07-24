@@ -1,0 +1,79 @@
+{
+  "created": "2026-07-23T07:44:52.462040+00:00",
+  "source_articles": 131630,
+  "symbols": [
+    "AAPL",
+    "ADBE",
+    "AMD",
+    "AMZN",
+    "ASML",
+    "AVGO",
+    "COST",
+    "CSCO",
+    "GLD",
+    "GOOGL",
+    "INTC",
+    "INTU",
+    "MSFT",
+    "MU",
+    "NFLX",
+    "NVDA",
+    "PEP",
+    "QCOM",
+    "SLV",
+    "TSLA",
+    "TXN"
+  ],
+  "date_range": [
+    "2013-01-02",
+    "2023-12-28"
+  ],
+  "no_lookahead": "news date shifted strictly to next trading session",
+  "timestamp_note": "FNSPID intraday timestamps excluded: >99% are midnight",
+  "families": {
+    "attention": [
+      "has_news",
+      "log_count",
+      "count_z20",
+      "count_ratio20",
+      "news_count_3d",
+      "news_count_5d",
+      "days_since_news"
+    ],
+    "sentiment_distribution": [
+      "sent_mean",
+      "sent_std",
+      "sent_range",
+      "sent_abs_mean",
+      "sent_positive_share",
+      "sent_negative_share",
+      "sent_extreme_share",
+      "sent_surprise20",
+      "sent_abs_surprise20"
+    ],
+    "source_diffusion_novelty": [
+      "unique_story_count",
+      "duplicate_share",
+      "unique_publisher_count",
+      "publisher_entropy",
+      "publisher_missing_share",
+      "summary_share",
+      "mean_text_length",
+      "mean_story_breadth",
+      "max_story_breadth",
+      "firm_specific_share",
+      "broad_story_share",
+      "title_token_novelty"
+    ],
+    "event_categories": [
+      "event_earnings_share",
+      "event_analyst_share",
+      "event_corporate_action_share",
+      "event_legal_regulatory_share",
+      "event_product_share",
+      "event_macro_share",
+      "event_management_share",
+      "event_financing_share"
+    ]
+  }
+}

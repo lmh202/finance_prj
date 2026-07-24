@@ -1,0 +1,4 @@
+component,candidate,reference,var95_breach_rate,band_coverage,es_ratio,high_vol_relative_gain,passed,failed_checks
+price_5d,linear_gamma,current_frozen_har,0.03522403522403522,0.9732489732489733,0.9668572198325135,0.24999367353192345,False,"var95_calibrated,band_calibrated,external_price_not_worse"
+news_5d,har_news_linear_deployable,current_frozen_har,0.043216043216043214,0.9634069634069634,0.9827571799069947,0.1356151959695845,False,rss_shadow_60_mature
+model_20d,har_news_linear_deployable,current_frozen_har,0.057651991614255764,0.9485624438454627,1.0395454416081116,-0.05379820862627337,False,"aggregate_not_worse_1pct,significantly_better_if_promoted,tail_not_worse,rss_shadow_60_mature"
