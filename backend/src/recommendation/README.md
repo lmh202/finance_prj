@@ -1,62 +1,91 @@
-# Developer 4 — Decision Layer: Reaction Risk, Recommendation & Product
+# Final Decision Layer
 
-**Mission (Architecture.md §7–§9 + fusion):** combine the other three engines
-into one answer — *"what should the user do, and how risky is reacting?"* —
-**without double-counting news**, and own the Streamlit product end to end.
+## Production rule fusion
 
-> **Split note:** your files are this engine, `backend/routers/recommendation.py`,
-> and `frontend/views/recommendation.py` (plus `frontend/app.py` and
-> `backend/main.py` as product owner). No streamlit in backend/, no `src`
-> imports in frontend/.
+`fusion.py` is the default daily recommendation path. It produces one
+explainable result per held asset:
 
-## Your contract (frozen — see `src/interfaces.py`)
-
-```python
-reaction_risk(event, weights, regime) -> ReactionRisk
-recommend_daily(regime, signals, weights) -> Recommendation
-recommend_event(event, risk) -> Recommendation
-apply_constraints(trades, weights) -> List[ProposedTrade]
+```text
+strategy (direction) + news (direction) + portfolio health (quality)
+    -> raw directional score
+    -> HAR-X risk attenuation
+    -> AURORA score, outlook, confidence, action, and bounded position change
 ```
 
-You CONSUME (through frozen contracts only): `portfolio_health.compute_health`
-/ `what_if_health`, `daily_strategy.classify_regime` / `score_assets`,
-`news_intelligence.essential_news`.
+The initial directional weights are 50% strategy, 30% news, and 20% health.
+HAR-X risk is not a bearish vote: it multiplies the raw score by
+`1 - 0.45 * risk_percentile / 100`, so it can only move a recommendation
+toward neutral. The live adapter removes the legacy strategy score's explicit
+low-volatility rank before fusion to avoid treating volatility as direction.
 
-## Your key intellectual problem: double-counting news
+News is importance/relevance/recency weighted and duplicate stories are
+collapsed. With one or two current articles, news receives at most 10% and the
+unused weight moves to strategy. With no current news, its weight is zero and
+the asset still receives a recommendation. Strong strategy/news conflict
+forces Hold; extreme volatility caps positive exposure; stale and unavailable
+inputs are explicit in the output.
 
-Once Developer 2's ML scores include sentiment features, a headline influences
-the recommendation through TWO paths — the model's tilted score AND the
-event-driven recommendation. Reacting to both = reacting twice. Your §7
-`priced_in` factor is where this gets solved: if the affected assets' current
-signals already reflect today's sentiment (or prices already moved), raise the
-risk of reacting further. This is the smartest slide of the demo — "AURORA
-knows when the news is already priced in and tells you NOT to trade."
+The current Health engine is portfolio-level. Its score is therefore a shared
+quality input for all held assets and the API labels it with
+`health_scope=portfolio`.
 
-Everything else stays formula-based on purpose (explainability is the §7/§8
-story) — resist the temptation to put an ML model or LLM in this layer.
+## Experimental numeric optimiser
 
-## Files you own
+The daily decision path combines two numerical inputs:
 
-- `engine.py` — §7 risk formula (implement `priced_in` + corroboration from
-  real inputs), §8 combiner, §9 constraints (add sector caps, min holdings).
-- `page.py` — "Should I React?" (remove the DEMO event once Dev 3 ships).
-- **Exception to the folder rule:** you also maintain `app/` (Home page,
-  navigation, visual consistency) and the shared kernel (`src/data_loader.py`,
-  `src/portfolio.py`) — treat kernel changes as breaking: announce first.
-  You are custodian of `src/interfaces.py` amendments (collect team sign-off).
+1. a candidate model that estimates each stock's next-20-session return
+   relative to SPY; and
+2. the formal HAR-X + News five-session volatility estimate.
 
-## Definition of done
+The return model supplies cross-sectional alpha only after it passes the
+promotion gates. The risk estimate always supplies per-stock volatility and
+therefore affects the covariance matrix, target weights, and proposed trades.
+If the return model fails promotion, production falls back to the same
+deterministic optimiser with expected alpha set to zero.
 
-- [ ] `priced_in` implemented from real inputs (event sentiment/timestamp vs. current signals and recent price moves); corroboration wired from the news engine
-- [ ] Daily + event recommendations shown side by side (§14: keep them separate), each with the what-if health delta (already wired for daily)
-- [ ] §9 constraints enforced on every displayed trade (incl. min holdings, sector caps)
-- [ ] Home page per §10 Page 1: value, health score, regime, risk level, #essential news, main recommendation
-- [ ] "Should I React?" offers the three §10 choices (do nothing / moderate / aggressive) with risk beside each
-- [ ] Demo-day narrative: you own the end-to-end story and present the ablation result (Dev 2's numbers) in product terms
+The optimiser is long-only and fully invested. It applies the shared maximum
+position, maximum weekly change, and minimum trade constraints, and includes
+transaction costs in its objective.
 
-## Rules
+DeepSeek is an explanation-only layer. It receives an already-fixed numeric
+decision and cannot add, remove, reverse, or resize trades. Missing credentials,
+network errors, malformed JSON, or schema violations use a deterministic
+template instead.
 
-1. Outside your folder you may edit ONLY `app/` and the shared kernel (with
-   announcement) — never another developer's engine folder.
-2. `src/interfaces.py` changes require agreement from all four developers.
-3. New pip dependency? Announce it, then add to `requirements.txt`.
+## Files
+
+- `fusion.py`: production rulebook, news aggregation, risk attenuation,
+  conflict/staleness gates, and explainable per-asset results.
+- `decision.py`: online feature parity, artifact loading, constrained
+  optimisation, and the first fallback recommendation path.
+- `llm_client.py`: validated DeepSeek JSON explanations, caching, and
+  deterministic fallback.
+- `engine.py`: legacy event-reaction and final fallback paths.
+
+## Offline artifacts
+
+- `data/processed/decision_model/decision_model.json`
+- `data/processed/decision_model/return_model.joblib`
+- `reports/decision_layer/report.md`
+
+Set `DEEPSEEK_API_KEY` only in the runtime environment. Never commit it.
+# Gated-news candidate
+
+`gated_news.py` implements the current candidate decision architecture:
+
+1. Daily Strategy supplies the prior direction.
+2. A confidence-gated model may add a small news residual.
+3. HAR-X + News risk is used externally for covariance, risky gross exposure,
+   cash, and per-stock sizing.
+4. Portfolio Health changes only the risk budget and risk aversion.
+5. No recent news produces the exact strategy-only path.
+
+The candidate checkpoint lives in
+`data/processed/decision_model_candidate_gated_news`. The daily endpoint only
+loads it when `metadata.json` records `promotion_status: promoted`; an
+`experimental_only` checkpoint never applies a direct news residual.
+
+Until promotion, the production path is Daily Strategy plus external
+HAR-X + News position control. News therefore still changes the formal output
+through estimated volatility, covariance, risky gross exposure, and cash, but
+it does not cast an unvalidated directional vote.

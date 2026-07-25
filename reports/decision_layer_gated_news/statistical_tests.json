@@ -1,0 +1,35 @@
+{
+  "gated_news_vs_strategy": {
+    "mean_daily_return_gain": 1.066768615598957e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.5100895804805876,
+    "newey_west_p": 0.6099887045990378,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.00830208416248866,
+    "cer_gain_ci_high": 0.012973802186366628,
+    "probability_cer_gain_positive": 0.658
+  },
+  "gated_news_vs_news_unavailable": {
+    "mean_daily_return_gain": 1.066768615598957e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.5100895804805876,
+    "newey_west_p": 0.6099887045990378,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.00830208416248866,
+    "cer_gain_ci_high": 0.012973802186366628,
+    "probability_cer_gain_positive": 0.658
+  },
+  "gated_news_vs_sentiment_zero": {
+    "mean_daily_return_gain": -4.122876633947838e-06,
+    "newey_west_lag": 5,
+    "newey_west_t": -0.163803247592158,
+    "newey_west_p": 0.8698860350055702,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.013958307830685307,
+    "cer_gain_ci_high": 0.01006130184778418,
+    "probability_cer_gain_positive": 0.3635
+  }
+}

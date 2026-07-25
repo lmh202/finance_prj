@@ -1,0 +1,43 @@
+{
+  "validation_numerical_gates_passed": false,
+  "numerical_gates_passed": false,
+  "promotion_status": "experimental_only",
+  "promotion_blocker": "The diagnostic news gain is not statistically distinguishable from zero, and 2021-2023 was already observed by earlier decision-layer experiments. At least 60 mature live five-session predictions are required for a fresh promotion decision.",
+  "validation_checks": {
+    "mean_cer_gain_positive": true,
+    "median_cer_gain_positive": false,
+    "positive_in_at_least_2_of_3_years": false,
+    "mean_sharpe_gain_positive": true,
+    "worst_drawdown_not_worse_by_more_than_2pp": true,
+    "no_news_exact_fallback": true,
+    "risk_stress_reduces_gross": true
+  },
+  "diagnostic_statistical_checks": {
+    "newey_west_p_below_005": false,
+    "bootstrap_cer_gain_lower_bound_positive": false
+  },
+  "diagnostic_only": {
+    "gated_news_vs_strategy": {
+      "mean_daily_return_gain": 1.066768615598957e-05,
+      "newey_west_lag": 5,
+      "newey_west_t": 0.5100895804805876,
+      "newey_west_p": 0.6099887045990378,
+      "block_length": 10,
+      "bootstrap_samples": 2000,
+      "cer_gain_ci_low": -0.00830208416248866,
+      "cer_gain_ci_high": 0.012973802186366628,
+      "probability_cer_gain_positive": 0.658
+    },
+    "gated_news_vs_news_unavailable": {
+      "mean_daily_return_gain": 1.066768615598957e-05,
+      "newey_west_lag": 5,
+      "newey_west_t": 0.5100895804805876,
+      "newey_west_p": 0.6099887045990378,
+      "block_length": 10,
+      "bootstrap_samples": 2000,
+      "cer_gain_ci_low": -0.00830208416248866,
+      "cer_gain_ci_high": 0.012973802186366628,
+      "probability_cer_gain_positive": 0.658
+    }
+  }
+}

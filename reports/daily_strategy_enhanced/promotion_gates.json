@@ -1,0 +1,20 @@
+{
+  "promoted": false,
+  "status": "experimental_only",
+  "validation_checks": {
+    "eligible_candidate_exists": false,
+    "mean_cer_gain_positive": true,
+    "positive_in_at_least_2_of_3_years": true,
+    "mean_sharpe_gain_positive": false,
+    "worst_drawdown_not_worse_by_more_than_2pp": true
+  },
+  "diagnostic_checks": {
+    "newey_west_p_below_005": false,
+    "bootstrap_cer_lower_bound_positive": false
+  },
+  "external_checks": {
+    "overall_cer_gain_nonnegative": false,
+    "unseen_cer_gain_nonnegative": true,
+    "overall_drawdown_not_worse_by_more_than_2pp": true
+  }
+}

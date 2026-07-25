@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "model_version": "decision-ceiling-candidate-v1",
+  "created_utc": "2026-07-24T07:21:25.151198+00:00",
+  "formal_production_checkpoint_replaced": false,
+  "selected_model": "quantile_hgb",
+  "selected_spec": {
+    "name": "quantile_hgb",
+    "kind": "quantile_hgb",
+    "max_depth": 3,
+    "learning_rate": 0.04,
+    "max_iter": 300,
+    "min_samples_leaf": 40,
+    "l2_regularization": 2.0
+  },
+  "feature_order": [
+    "ret_1d",
+    "mom_20d",
+    "mom_60d",
+    "price_vs_sma50",
+    "sma50_vs_sma200",
+    "vol_20d",
+    "rsi_14",
+    "drawdown",
+    "risk_adj_mom",
+    "beta_60d",
+    "rel_str_20d"
+  ],
+  "target": "excess_ret_20d",
+  "target_definition": "20-session stock return minus SPY return",
+  "signal_transform": "daily_cross_sectional_rank_to_minus1_plus1",
+  "alpha_strength": 0.0025,
+  "rebalance_sessions": 5,
+  "optimizer_risk_aversion": 6.0,
+  "turnover_penalty_multiplier": 2.0,
+  "primary_transaction_cost_bps": 25.0,
+  "fixed_risk_input": "formal HAR-X + News five-session OOF sigma for 2018-2023",
+  "validation_years": [
+    2018,
+    2019,
+    2020
+  ],
+  "reused_test_years": [
+    2021,
+    2022,
+    2023
+  ],
+  "artifacts": {
+    "model": "return_model.joblib",
+    "model_sha256": "cbd670b05351b43bbe6ef74419c6e23196d11f9de041a7da7746b73e3f11b8f5",
+    "historical_panel_sha256": "7e613ba55ba59bdb4602de60ff71aa897b6a4e9797b7a3cb16ff97eeffbd1ddd",
+    "external_panel_sha256": "6482dbd38f3e51795ba0de4b51fd0da89145f2f35fc5124e47cda095e99b1ab5"
+  },
+  "diagnostics": {
+    "candidate_passes_diagnostic_gates": false,
+    "automatic_promotion_allowed": false,
+    "reason_automatic_promotion_disabled": "The 2021-2026 holdouts were observed by earlier experiments and are no longer pristine blind tests.",
+    "selected_model": "quantile_hgb",
+    "selected_spec": {
+      "name": "quantile_hgb",
+      "kind": "quantile_hgb",
+      "max_depth": 3,
+      "learning_rate": 0.04,
+      "max_iter": 300,
+      "min_samples_leaf": 40,
+      "l2_regularization": 2.0
+    },
+    "signal_transform": "daily_cross_sectional_rank_to_minus1_plus1",
+    "alpha_strength": 0.0025,
+    "rebalance_sessions": 5,
+    "turnover_penalty_multiplier": 2.0,
+    "fixed_risk_input": "formal HAR-X + News five-session OOF sigma for 2018-2023",
+    "checks": {
+      "validation_cer_above_risk_only": true,
+      "locked_test_cer_above_risk_only": false,
+      "locked_test_sharpe_above_risk_only": false,
+      "positive_test_years_at_least_2_of_3": true,
+      "bootstrap_lower_bound_positive": false,
+      "locked_test_drawdown_not_worse_by_2pp": false,
+      "external_cer_not_below_risk_only": false,
+      "external_unseen_cer_not_below_risk_only": true,
+      "max_position_constraint": true,
+      "max_change_constraint": true,
+      "minimum_trade_constraint": true
+    },
+    "statistics": {
+      "bootstrap_utility_gain_95": [
+        -0.02076311276492698,
+        -0.0018754210050726076,
+        0.015449875037556878
+      ],
+      "positive_test_years": 2,
+      "locked_test_cer_gain": -0.0015489746192672016,
+      "locked_test_sharpe_gain": -0.006707121807169147,
+      "external_cer_gain": -0.008813573236070127,
+      "external_unseen_cer_gain": 0.005668203967929122
+    },
+    "known_limitations": [
+      "The 2024-2026 external risk panel is price-only because no historical RSS archive exists; it does not test the full live news path.",
+      "The optimizer is fully invested and does not yet enforce sector, commodity, or cash constraints."
+    ]
+  },
+  "random_seed": 20260724
+}

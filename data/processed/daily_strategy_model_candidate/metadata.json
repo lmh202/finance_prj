@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "model_version": "daily-strategy-xgb-residual-v1",
+  "created_utc": "2026-07-24T15:54:18.494708+00:00",
+  "promotion_status": "experimental_only",
+  "target": "future_5d_stock_return_minus_beta_times_spy_return_cross_sectional_rank_residual",
+  "base_strategy": "causal Daily Strategy price-rule rank",
+  "risk_usage": "external_only",
+  "health_usage": "external_only",
+  "feature_order": [
+    "ret_1d",
+    "ret_5d",
+    "ret_10d",
+    "mom_20d",
+    "mom_60d",
+    "momentum_acceleration",
+    "price_vs_sma50",
+    "sma50_vs_sma200",
+    "trend_strength",
+    "vol_5d",
+    "vol_20d",
+    "vol_60d",
+    "vol_ratio_5_20",
+    "vol_ratio_20_60",
+    "downside_vol_20d",
+    "skew_20d",
+    "rsi_scaled",
+    "drawdown",
+    "risk_adj_mom",
+    "beta_60d",
+    "rel_str_20d",
+    "strategy_sharpe",
+    "strategy_drawdown",
+    "strategy_score",
+    "rank_ret_5d",
+    "rank_mom_20d",
+    "rank_mom_60d",
+    "rank_momentum_acceleration",
+    "rank_trend_strength",
+    "rank_vol_20d",
+    "rank_downside_vol_20d",
+    "rank_rsi_scaled",
+    "rank_drawdown",
+    "rank_risk_adj_mom",
+    "rank_rel_str_20d",
+    "benchmark_ret_1d",
+    "market_ret_5d",
+    "market_ret_20d",
+    "market_ret_60d",
+    "market_vol_20d",
+    "market_vol_60d",
+    "market_drawdown"
+  ],
+  "feature_bounds": {
+    "ret_1d": [
+      -0.060512562423755606,
+      0.06582240194877326
+    ],
+    "ret_5d": [
+      -0.12878839521735844,
+      0.14733763066214406
+    ],
+    "ret_10d": [
+      -0.16914703894544977,
+      0.21605495490617832
+    ],
+    "mom_20d": [
+      -0.22753152455909476,
+      0.3273203239761934
+    ],
+    "mom_60d": [
+      -0.32912309875861534,
+      0.6117578011191372
+    ],
+    "momentum_acceleration": [
+      -0.2066523355634539,
+      0.2569050372881943
+    ],
+    "price_vs_sma50": [
+      -0.2153964531691666,
+      0.26338844603618733
+    ],
+    "sma50_vs_sma200": [
+      -0.30817650448516437,
+      0.4407317397079984
+    ],
+    "trend_strength": [
+      -0.43815407309177135,
+      0.5905444918110743
+    ],
+    "vol_5d": [
+      0.04111012628420887,
+      1.0749808781680807
+    ],
+    "vol_20d": [
+      0.08250695759165165,
+      0.9899336448693256
+    ],
+    "vol_60d": [
+      0.0,
+      0.8847747111320136
+    ],
+    "vol_ratio_5_20": [
+      0.20233874755844705,
+      1.8562203423687407
+    ],
+    "vol_ratio_20_60": [
+      0.0,
+      1.588135641931337
+    ],
+    "downside_vol_20d": [
+      0.026162489480528874,
+      0.605992998721346
+    ],
+    "skew_20d": [
+      -2.62647997719649,
+      3.1025431165094357
+    ],
+    "rsi_scaled": [
+      -0.6741963150281863,
+      0.8019989387376302
+    ],
+    "drawdown": [
+      -0.9464696237178352,
+      0.0
+    ],
+    "risk_adj_mom": [
+      -0.5095066605602315,
+      0.8070277693996054
+    ],
+    "beta_60d": [
+      -0.44505409877246394,
+      2.7264840902046843
+    ],
+    "rel_str_20d": [
+      -0.19347566564642704,
+      0.2924445194357195
+    ],
+    "strategy_sharpe": [
+      -1.1519691320180074,
+      2.6817137365239425
+    ],
+    "strategy_drawdown": [
+      -0.7675281227001227,
+      0.0
+    ],
+    "strategy_score": [
+      -0.8320756302521009,
+      0.835294117647059
+    ],
+    "rank_ret_5d": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_mom_20d": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_mom_60d": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_momentum_acceleration": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_trend_strength": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_vol_20d": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_downside_vol_20d": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_rsi_scaled": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_drawdown": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_risk_adj_mom": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "rank_rel_str_20d": [
+      -0.9047619047619048,
+      1.0
+    ],
+    "benchmark_ret_1d": [
+      -0.031663077462634415,
+      0.026178397748795268
+    ],
+    "market_ret_5d": [
+      -0.06653229720905174,
+      0.0555136181690592
+    ],
+    "market_ret_20d": [
+      -0.11037370495386445,
+      0.10585161605392712
+    ],
+    "market_ret_60d": [
+      -0.1638210296171425,
+      0.16721834203523067
+    ],
+    "market_vol_20d": [
+      0.035905483811204134,
+      0.5775178703857745
+    ],
+    "market_vol_60d": [
+      0.0,
+      0.5985647871882165
+    ],
+    "market_drawdown": [
+      -0.22368258374271954,
+      0.0
+    ]
+  },
+  "selected_spec": {
+    "name": "xgb_26",
+    "max_depth": 2,
+    "learning_rate": 0.015692598946899526,
+    "min_child_weight": 16.0,
+    "subsample": 0.8642537632882863,
+    "colsample_bytree": 0.9790789448960617,
+    "reg_alpha": 0.2,
+    "reg_lambda": 80.0,
+    "gamma": 0.01
+  },
+  "eta": 0.75,
+  "residual_cap": 0.5,
+  "training_range": [
+    "2013-10-16",
+    "2023-11-29"
+  ],
+  "training_rows": 48387,
+  "training_symbols": 21,
+  "validation_years": [
+    2018,
+    2019,
+    2020
+  ],
+  "diagnostic_years": [
+    2021,
+    2022,
+    2023
+  ],
+  "external_range": [
+    "2024-01-02",
+    "2026-06-23"
+  ],
+  "external_symbols": 39,
+  "external_unseen_symbols": 18,
+  "historical_data_sha256": "7e613ba55ba59bdb4602de60ff71aa897b6a4e9797b7a3cb16ff97eeffbd1ddd",
+  "external_data_sha256": "6482dbd38f3e51795ba0de4b51fd0da89145f2f35fc5124e47cda095e99b1ab5",
+  "model_sha256": "54c4390d70560890b0f239521013ae7ce7ba3a13a69b855bc34e59a4316b8c65",
+  "diagnostic_rule_slope": -0.0004661798944079168,
+  "final_rule_slope": 0.003924315539741248,
+  "promotion": {
+    "promoted": false,
+    "status": "experimental_only",
+    "validation_checks": {
+      "eligible_candidate_exists": false,
+      "mean_cer_gain_positive": true,
+      "positive_in_at_least_2_of_3_years": true,
+      "mean_sharpe_gain_positive": false,
+      "worst_drawdown_not_worse_by_more_than_2pp": true
+    },
+    "diagnostic_checks": {
+      "newey_west_p_below_005": false,
+      "bootstrap_cer_lower_bound_positive": false
+    },
+    "external_checks": {
+      "overall_cer_gain_nonnegative": false,
+      "unseen_cer_gain_nonnegative": true,
+      "overall_drawdown_not_worse_by_more_than_2pp": true
+    }
+  }
+}

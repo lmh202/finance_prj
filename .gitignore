@@ -12,6 +12,12 @@ data/news_raw.json
 
 # Secrets
 .streamlit/secrets.toml
+.env
+.env.*
+!.env.example
+
+# Runtime-only LLM response caches
+data/processed/decision_llm_cache.json
 
 # Jupyter
 .ipynb_checkpoints/

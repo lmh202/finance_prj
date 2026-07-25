@@ -1,0 +1,46 @@
+{
+  "diagnostic_candidate_vs_rule": {
+    "mean_daily_return_gain": -7.7849217827237e-06,
+    "newey_west_lag": 5,
+    "newey_west_t": -0.11204130847614206,
+    "newey_west_p": 0.910790653326304,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.039754025904082745,
+    "cer_gain_ci_high": 0.028751273736460935,
+    "probability_cer_gain_positive": 0.4545
+  },
+  "external_all_candidate_vs_rule": {
+    "mean_daily_return_gain": -5.725183854125875e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": -0.43437809638825253,
+    "newey_west_p": 0.6640139008422264,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.10549280125497756,
+    "cer_gain_ci_high": 0.017051194673638848,
+    "probability_cer_gain_positive": 0.0705
+  },
+  "external_seen_candidate_vs_rule": {
+    "mean_daily_return_gain": -4.455075737201569e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": -0.3300409754538783,
+    "newey_west_p": 0.7413690012196344,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.089397688761195,
+    "cer_gain_ci_high": 0.030505343838880056,
+    "probability_cer_gain_positive": 0.1475
+  },
+  "external_unseen_candidate_vs_rule": {
+    "mean_daily_return_gain": 5.844148705431533e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.7828864875295601,
+    "newey_west_p": 0.4336937731285154,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.0285747829965435,
+    "cer_gain_ci_high": 0.04334280819135919,
+    "probability_cer_gain_positive": 0.617
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "target": "20-session stock return minus SPY return",
+  "target_column": "excess_ret_20d",
+  "target_rank_column": "target_rank_20d",
+  "price_features": [
+    "ret_1d",
+    "mom_20d",
+    "mom_60d",
+    "price_vs_sma50",
+    "sma50_vs_sma200",
+    "vol_20d",
+    "rsi_14",
+    "drawdown",
+    "risk_adj_mom",
+    "beta_60d",
+    "rel_str_20d"
+  ],
+  "risk_feature": "formal HAR-X + News five-session OOF sigma",
+  "embargo_sessions": 20,
+  "historical": {
+    "rows": 48467,
+    "symbols": 21,
+    "start": "2013-10-16",
+    "end": "2023-11-29",
+    "sha256": "7e613ba55ba59bdb4602de60ff71aa897b6a4e9797b7a3cb16ff97eeffbd1ddd"
+  },
+  "external": {
+    "rows": 24175,
+    "symbols": 39,
+    "start": "2024-01-02",
+    "end": "2026-06-23",
+    "sha256": "6482dbd38f3e51795ba0de4b51fd0da89145f2f35fc5124e47cda095e99b1ab5"
+  },
+  "source_hashes": {
+    "data\\processed\\training_dataset.parquet": "4293921378b16fae25513de979ed1e0349a8e902a4baf542637703fa886357c4",
+    "reports\\risk_engine_optimization\\oof_predictions.parquet": "e91eca6aeeffecd0287c69d71874e9e26601a9d81a886de23b062dddc0200428",
+    "data\\processed\\current_risk_test\\ohlc.parquet": "f8d6cee82bfbc540ebadde205637b517c8cdc78fd5aa89ee3ae6e6d7ad6bf6d0",
+    "data\\processed\\current_risk_test\\risk_backtest_panel.parquet": "bcfc98be38cedb1c915aeec3e8e81a8f6599c16d218e284395173ed876b18cce"
+  }
+}

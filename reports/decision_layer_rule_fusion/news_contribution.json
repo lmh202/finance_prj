@@ -1,0 +1,24 @@
+{
+  "validation": {
+    "mean_daily_return_gain": 0.0001200084469101449,
+    "newey_west_lag": 5,
+    "newey_west_t": 1.453264472081794,
+    "newey_west_p": 0.14615033757881785,
+    "block_length": 20,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.007604124063422468,
+    "cer_gain_ci_high": 0.1349812788470646,
+    "probability_cer_gain_positive": 0.944
+  },
+  "locked_test": {
+    "mean_daily_return_gain": -8.035701619299869e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": -1.2970348142902284,
+    "newey_west_p": 0.1946192083445546,
+    "block_length": 20,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.046444476266686,
+    "cer_gain_ci_high": 0.008446292627889691,
+    "probability_cer_gain_positive": 0.0955
+  }
+}

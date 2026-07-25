@@ -1,0 +1,15 @@
+{
+  "news_contribution_validated": false,
+  "fusion_deployment_validated": false,
+  "checks": {
+    "validation_cer_above_no_news": true,
+    "locked_test_cer_above_no_news": false,
+    "locked_test_sharpe_above_no_news": false,
+    "locked_test_cer_above_strategy_only": false,
+    "locked_test_cer_above_equal_weight": false,
+    "locked_test_news_nw_p_below_005": false,
+    "locked_test_news_bootstrap_ci_positive": false,
+    "locked_test_drawdown_not_worse_than_no_news_2pp": true
+  },
+  "primary_transaction_cost_bps": 25.0
+}
