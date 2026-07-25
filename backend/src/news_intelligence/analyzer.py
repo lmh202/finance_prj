@@ -1,9 +1,12 @@
 """Deterministic keyword-rule analysis: raw records -> src.interfaces.NewsEvent.
 
 Ported from an earlier standalone prototype (an MVP built before the
-four-engine split existed). No ML/LLM here by design — this is the always-
-available fallback path described in this engine's README; a batched LLM
-classification pass can sit in front of it later without touching this module.
+four-engine split existed). Category, relevance and severity are still
+keyword rules by design — this is the always-available fallback path
+described in this engine's README; a batched LLM classification pass can
+sit in front of it later without touching this module. Sentiment is the
+exception: it's scored by a local FinBERT model (see finbert_sentiment.py),
+falling back to a keyword heuristic only if that model can't be loaded.
 
 Operates on collector.py's raw record schema (plain dicts, not a dataclass):
     id, title, summary, url, source, publisher, feed_url,
@@ -19,12 +22,14 @@ from __future__ import annotations
 import json
 import math
 import re
+import warnings
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from src.interfaces import NewsEvent
+from src.news_intelligence import finbert_sentiment
 
 RULES_PATH = Path(__file__).resolve().parent / "rules.json"
 
@@ -66,6 +71,28 @@ def _text(records: List[dict]) -> str:
 
 def _tagged_symbols(records: List[dict]) -> set:
     return {s for r in records for s in r.get("symbols", [])}
+
+
+def _outlet(record: dict) -> str:
+    """The record's true publisher when the feed tagged one in its <source>
+    element (e.g. a Yahoo-syndicated Reuters story), else the feed's own
+    name. Feed name is where we found a story, not who wrote it — using it
+    for credibility/display conflates the two and makes every Yahoo-sourced
+    story read as "Yahoo Finance" regardless of the real byline."""
+    return record.get("publisher") or record["source"]
+
+
+_TICKER_SUFFIX_RE = re.compile(r": [A-Za-z][A-Za-z0-9.\-]*$")
+
+
+def _credibility_key(outlet: str) -> str:
+    """Collapse a per-ticker feed name ("Seeking Alpha: AAPL") to its base
+    outlet ("Seeking Alpha") for rules.json lookup — collector.py's
+    per-ticker templates suffix every feed name with the symbol, but that
+    suffix says which feed we polled, not a different publisher. A true
+    `publisher` value (e.g. "Reuters") never has this suffix, so this is a
+    no-op for anything that already came from _outlet()'s publisher branch."""
+    return _TICKER_SUFFIX_RE.sub("", outlet)
 
 
 # Memoizes the single most recent cluster() call, keyed on exactly which
@@ -139,13 +166,22 @@ def _category(text: str, rules: dict) -> Tuple[str, dict]:
     return name, rules["categories"][name]
 
 
-def _sentiment(text: str, rules: dict) -> Tuple[float, str]:
+def _sentiment_keywords(text: str, rules: dict) -> Tuple[float, str]:
+    """Fallback only (see _sentiment) — keyword-count heuristic."""
     positives = sum(_contains(text, word) for word in rules["sentiment"]["positive"])
     negatives = sum(_contains(text, word) for word in rules["sentiment"]["negative"])
     matches = positives + negatives
     score = 0.0 if not matches else max(-1.0, min(1.0, (positives - negatives) / math.sqrt(matches)))
     label = "positive" if score >= 0.15 else "negative" if score <= -0.15 else "neutral"
     return round(score, 3), label
+
+
+def _sentiment(text: str, rules: dict) -> Tuple[float, str]:
+    try:
+        return finbert_sentiment.score(text)
+    except finbert_sentiment.ModelUnavailable as exc:
+        warnings.warn(f"FinBERT unavailable, using keyword sentiment fallback: {exc}")
+        return _sentiment_keywords(text, rules)
 
 
 def _affected_symbols(
@@ -182,6 +218,20 @@ def _affected_symbols(
     return matched, direct, impact
 
 
+def _canonical_record(
+    records: List[dict], credibility_map: Dict[str, float], default_credibility: float
+) -> dict:
+    """The record to show as the event's article: highest source
+    credibility (by true outlet, see _outlet), ties broken by recency."""
+    return max(
+        records,
+        key=lambda r: (
+            credibility_map.get(_credibility_key(_outlet(r)), default_credibility),
+            _record_time(r),
+        ),
+    )
+
+
 def _summary(record: dict) -> str:
     source_text = record.get("summary") or record["title"]
     sentences = re.split(r"(?<=[.!?])\s+", source_text)
@@ -211,14 +261,15 @@ def analyze(
 
     credibility_map = rules.get("source_credibility", {})
     default_credibility = credibility_map.get("_default", 0.7)
-    credibility = max(credibility_map.get(r["source"], default_credibility) for r in records) * 100
-    source_count = len({r["source"] for r in records})
+    credibility = max(
+        credibility_map.get(_credibility_key(_outlet(r)), default_credibility) for r in records
+    ) * 100
+    source_count = len({_credibility_key(_outlet(r)) for r in records})
     confirmation = 100.0 if source_count >= 3 else 50.0 if source_count == 2 else 0.0
     portfolio_relevance = 100.0 if direct else 60.0 if matched else 20.0
     severity_hits = sum(_contains(text, word) for word in rule.get("severity_keywords", []))
     severity = min(100.0, 50.0 + severity_hits * 25.0)
-    newest_record = max(records, key=_record_time)
-    newest = _record_time(newest_record)
+    newest = _record_time(max(records, key=_record_time))
     age_hours = max(0.0, (now - newest).total_seconds() / 3600)
     recency = max(0.0, 100.0 * (1 - age_hours / lookback_hours)) if lookback_hours else 0.0
     market_impact = float(rule.get("impact_score", 30))
@@ -233,19 +284,20 @@ def analyze(
     }
     importance = sum(reasons[name] * weight for name, weight in WEIGHTS.items())
 
+    canonical = _canonical_record(records, credibility_map, default_credibility)
     published = None
-    if newest_record.get("published_utc"):
-        published = datetime.fromisoformat(newest_record["published_utc"])
+    if canonical.get("published_utc"):
+        published = datetime.fromisoformat(canonical["published_utc"])
 
     return NewsEvent(
-        title=newest_record["title"],
-        source=newest_record["source"],
-        url=newest_record["url"],
+        title=canonical["title"],
+        source=_outlet(canonical),
+        url=canonical["url"],
         published=published,
         category=category,
         sentiment=sentiment_score,
         importance=round(importance, 1),
         affected_symbols=sorted(matched),
         impact=impact,
-        summary=_summary(newest_record),
+        summary=_summary(canonical),
     )

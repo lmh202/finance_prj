@@ -81,9 +81,18 @@
     "XLF": ["Banks", "Risk assets"]
   },
   "source_credibility": {
-    "Yahoo Finance": 0.75,
+    "Reuters": 0.95,
+    "The Wall Street Journal": 0.9,
+    "Barrons.com": 0.85,
     "CNBC Top News": 0.85,
     "MarketWatch": 0.85,
+    "Investor's Business Daily": 0.8,
+    "Yahoo Finance": 0.75,
+    "Nasdaq": 0.65,
+    "Benzinga": 0.65,
+    "TheStreet": 0.65,
+    "Seeking Alpha": 0.6,
+    "Motley Fool": 0.55,
     "_default": 0.7
   }
 }

@@ -9,6 +9,7 @@ data/tickers.csv
 data/portfolio.csv
 data/settings.json
 data/news_raw.json
+data/models/
 
 # Secrets
 .streamlit/secrets.toml

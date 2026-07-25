@@ -5,11 +5,13 @@ Live pipeline: collector.py fetches + normalizes RSS into data/news_raw.json
 market feeds) -> this module clusters near-duplicate stories, filters for
 relevance, classifies, scores and maps them to holdings -> NewsEvent.
 
-Classification here is deterministic keyword rules (see analyzer.py +
-rules.json) — no ML/LLM. That keeps the demo working with zero API keys and
-matches this engine's README, which calls this out as the always-available
-fallback path; a batched LLM classification pass can sit in front of it later
-without changing fetch_headlines'/essential_news' signatures or callers.
+Classification (category, relevance, severity) is deterministic keyword
+rules (see analyzer.py + rules.json); sentiment is scored by a local FinBERT
+model (see finbert_sentiment.py), with a keyword fallback if that model
+can't load. Zero API keys required either way, matching this engine's
+README, which calls the keyword path out as the always-available fallback;
+a batched LLM classification pass can sit in front of it later without
+changing fetch_headlines'/essential_news' signatures or callers.
 
 sentiment_features() (the HISTORICAL pipeline feeding Developer 2's ML
 ablation) is a separate concern — untouched stub here, see fnspid_prep.py.
