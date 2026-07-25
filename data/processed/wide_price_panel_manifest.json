@@ -1,0 +1,77 @@
+{
+  "created_utc": "2026-07-25T06:04:57.908768+00:00",
+  "source": "Yahoo Finance via yfinance (auto_adjust=True)",
+  "range": [
+    "2013-01-01",
+    "2023-12-31"
+  ],
+  "rows": 420562,
+  "symbols": 165,
+  "symbols_by_sector": {
+    "information_technology": 24,
+    "industrials": 20,
+    "financials": 19,
+    "health_care": 18,
+    "energy": 14,
+    "consumer_discretionary": 14,
+    "consumer_staples": 13,
+    "utilities": 12,
+    "materials": 10,
+    "real_estate": 10,
+    "communication_services": 9,
+    "commodity_etf": 2
+  },
+  "legacy_21_present": [
+    "AAPL",
+    "ADBE",
+    "AMD",
+    "AMZN",
+    "ASML",
+    "AVGO",
+    "COST",
+    "CSCO",
+    "GLD",
+    "GOOGL",
+    "INTC",
+    "INTU",
+    "MSFT",
+    "MU",
+    "NFLX",
+    "NVDA",
+    "PEP",
+    "QCOM",
+    "SLV",
+    "TSLA",
+    "TXN"
+  ],
+  "download_failed": [
+    "BK",
+    "K"
+  ],
+  "features": [
+    "ret_1d",
+    "mom_20d",
+    "mom_60d",
+    "mom_12_1",
+    "price_vs_sma50",
+    "sma50_vs_sma200",
+    "vol_20d",
+    "rsi_14",
+    "drawdown",
+    "risk_adj_mom",
+    "beta_60d",
+    "rel_str_20d"
+  ],
+  "news": {
+    "reprocessed": false,
+    "source": "sentiment_features.parquet",
+    "symbols_with_news": 21,
+    "policy": "left join; symbols outside FNSPID get sentiment=0/news_count=0/has_news=0"
+  },
+  "caveats": [
+    "Survivorship bias: UNIVERSE is a fixed list of firms that were already large caps in 2013. Membership uses start-of-sample information, but firms delisted or acquired during 2013-2023 are absent, so realised returns are optimistic.",
+    "Cross-sectional rank IC is the primary result; absolute portfolio returns are indicative only.",
+    "Yahoo adjusted closes splice dividends and splits; they are not point-in-time and may be revised."
+  ],
+  "sha256": "5bfce0576f15db1ca5d812e094d609038c0768dbf3981228d47da8af6754bf80"
+}
