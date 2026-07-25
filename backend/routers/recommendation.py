@@ -15,10 +15,15 @@ from serialize import as_dict
 from src import data_loader
 from src import portfolio as pf
 from src.daily_strategy import engine as strategy
+from src.daily_strategy import learned as learned_strategy
 from src.interfaces import NewsEvent
 from src.news_intelligence import engine as news
 from src.portfolio_health import engine as health
 from src.recommendation import engine
+from src.recommendation import decision
+from src.recommendation import gated_news
+from src.recommendation import llm_client
+from src.risk_engine import engine as risk_engine
 
 router = APIRouter(prefix="/recommendation", tags=["recommendation"])
 
@@ -72,10 +77,105 @@ def _event_from_dict(raw: Dict) -> NewsEvent:
 def daily() -> dict:
     holdings, history = load_holdings_history()
     weights, regime = _weights_and_regime(holdings, history)
-    signals = strategy.score_assets(history, holdings)
-    rec = engine.recommend_daily(regime, signals, weights)
+    fusion_results = []
+    decision_meta = {
+        "production_mode": "legacy_signal_fallback",
+        "fallback_reason": None,
+    }
+    explanation_meta = {
+        "source": "legacy_template",
+        "reason": "decision_model_unavailable",
+    }
+    try:
+        if not risk_engine.model_available():
+            raise RuntimeError("risk_model_unavailable")
+        symbols = sorted(set(holdings["symbol"]))
+        ohlc = data_loader.get_ohlc_history(symbols)
+        estimates = risk_engine.risk_estimates(ohlc)
+        signals = strategy.score_assets(history, holdings)
+        if learned_strategy.model_available(require_promoted=True):
+            signals = learned_strategy.enhance_signals(
+                history,
+                signals,
+                require_promoted=True,
+            )
+        health_report = health.compute_health(holdings, history)
+        health_score = health_report.score if health_report.metrics else None
+        max_events = min(50, max(15, len(symbols) * 3))
+        events = news.essential_news(symbols, max_events=max_events)
+        if gated_news.model_available(require_promoted=True):
+            gated = gated_news.recommend_portfolio(
+                history=history,
+                signals=signals,
+                news_events=events,
+                risk_estimates=estimates,
+                current_weights_pct=weights,
+                health_score=health_score,
+            )
+            rec = gated.recommendation
+            decision_meta = gated.metadata
+            explanation_meta = {
+                "source": "gated_news_plus_external_risk",
+                "reason": None,
+            }
+        else:
+            controlled = gated_news.recommend_strategy_risk_control(
+                history=history,
+                signals=signals,
+                risk_estimates=estimates,
+                current_weights_pct=weights,
+                health_score=health_score,
+            )
+            rec = controlled.recommendation
+            decision_meta = controlled.metadata
+            explanation_meta = {
+                "source": "strategy_plus_external_harx_news_risk",
+                "reason": "direct_news_residual_not_promoted",
+            }
+    except (RuntimeError, ValueError, KeyError) as exc:
+        # Preserve the already-validated numeric decision path as the first
+        # fallback. The legacy signal recommendation remains the final
+        # always-available path.
+        try:
+            if not decision.model_available() or not risk_engine.model_available():
+                raise RuntimeError("decision_or_risk_model_unavailable")
+            symbols = sorted(set(holdings["symbol"]))
+            ohlc = data_loader.get_ohlc_history(symbols)
+            estimates = risk_engine.risk_estimates(ohlc)
+            numeric = decision.recommend_portfolio(history, estimates, weights)
+            rec = numeric.recommendation
+            decision_meta = numeric.metadata
+            decision_meta["fallback_reason"] = type(exc).__name__
+            explanation = llm_client.explain_decision(
+                {
+                    "production_mode": decision_meta["production_mode"],
+                    "model_version": decision_meta["model_version"],
+                    "trades": [as_dict(trade) for trade in rec.trades],
+                    "confidence": rec.confidence,
+                    "symbols": decision_meta["symbols"],
+                    "confidence_note": (
+                        "Confidence reflects numeric model availability and "
+                        "constraint feasibility, not certainty about price direction."
+                    ),
+                }
+            )
+            rec.explanation = " ".join(
+                [explanation["summary"], *explanation["reasons"]]
+            )
+            explanation_meta = explanation["_meta"]
+        except (RuntimeError, ValueError, KeyError):
+            signals = strategy.score_assets(history, holdings)
+            rec = engine.recommend_daily(regime, signals, weights)
+            decision_meta["fallback_reason"] = type(exc).__name__
 
-    result = {"recommendation": as_dict(rec), "health_before": None, "health_after": None}
+    result = {
+        "recommendation": as_dict(rec),
+        "fusion_results": fusion_results,
+        "decision_meta": decision_meta,
+        "explanation_meta": explanation_meta,
+        "health_before": None,
+        "health_after": None,
+    }
     if rec.trades:
         result["health_before"] = health.compute_health(holdings, history).score
         result["health_after"] = health.what_if_health(holdings, history, rec.trades).score

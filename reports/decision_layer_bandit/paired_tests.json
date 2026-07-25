@@ -1,0 +1,24 @@
+{
+  "full_vs_strategy_risk": {
+    "mean_daily_return_gain": 6.065688931566083e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.2582894388525888,
+    "newey_west_p": 0.7961835363838154,
+    "block_length": 20,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.15717700874821788,
+    "cer_gain_ci_high": 0.10299219120919459,
+    "probability_cer_gain_positive": 0.3065
+  },
+  "full_vs_same_model_news_zeroed": {
+    "mean_daily_return_gain": 0.00016533070671041834,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.49585328628147046,
+    "newey_west_p": 0.6199979263277453,
+    "block_length": 20,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.28745187503013253,
+    "cer_gain_ci_high": 0.06844053078707206,
+    "probability_cer_gain_positive": 0.0975
+  }
+}

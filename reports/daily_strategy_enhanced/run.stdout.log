@@ -1,0 +1,109 @@
+[historical] rows=48,467 symbols=21 2013-10-16..2023-11-29
+[external] rows=24,175 symbols=39 2024-01-02..2026-06-23
+[search 01/32] xgb_00
+[search 02/32] xgb_01
+[search 03/32] xgb_02
+[search 04/32] xgb_03
+[search 05/32] xgb_04
+[search 06/32] xgb_05
+[search 07/32] xgb_06
+[search 08/32] xgb_07
+[search 09/32] xgb_08
+[search 10/32] xgb_09
+[search 11/32] xgb_10
+[search 12/32] xgb_11
+[search 13/32] xgb_12
+[search 14/32] xgb_13
+[search 15/32] xgb_14
+[search 16/32] xgb_15
+[search 17/32] xgb_16
+[search 18/32] xgb_17
+[search 19/32] xgb_18
+[search 20/32] xgb_19
+[search 21/32] xgb_20
+[search 22/32] xgb_21
+[search 23/32] xgb_22
+[search 24/32] xgb_23
+[search 25/32] xgb_24
+[search 26/32] xgb_25
+[search 27/32] xgb_26
+[search 28/32] xgb_27
+[search 29/32] xgb_28
+[search 30/32] xgb_29
+[search 31/32] xgb_30
+[search 32/32] xgb_31
+[portfolio validation] xgb_03_eta0.05_cap0.1
+[portfolio validation] xgb_03_eta0.1_cap0.1
+[portfolio validation] xgb_03_eta0.25_cap0.1
+[portfolio validation] xgb_03_eta0.25_cap0.25
+[portfolio validation] xgb_03_eta0.5_cap0.25
+[portfolio validation] xgb_03_eta0.5_cap0.5
+[portfolio validation] xgb_03_eta0.75_cap0.5
+[portfolio validation] xgb_13_eta0.05_cap0.1
+[portfolio validation] xgb_13_eta0.1_cap0.1
+[portfolio validation] xgb_13_eta0.25_cap0.1
+[portfolio validation] xgb_13_eta0.25_cap0.25
+[portfolio validation] xgb_13_eta0.5_cap0.25
+[portfolio validation] xgb_13_eta0.5_cap0.5
+[portfolio validation] xgb_13_eta0.75_cap0.5
+[portfolio validation] xgb_01_eta0.05_cap0.1
+[portfolio validation] xgb_01_eta0.1_cap0.1
+[portfolio validation] xgb_01_eta0.25_cap0.1
+[portfolio validation] xgb_01_eta0.25_cap0.25
+[portfolio validation] xgb_01_eta0.5_cap0.25
+[portfolio validation] xgb_01_eta0.5_cap0.5
+[portfolio validation] xgb_01_eta0.75_cap0.5
+[portfolio validation] xgb_28_eta0.05_cap0.1
+[portfolio validation] xgb_28_eta0.1_cap0.1
+[portfolio validation] xgb_28_eta0.25_cap0.1
+[portfolio validation] xgb_28_eta0.25_cap0.25
+[portfolio validation] xgb_28_eta0.5_cap0.25
+[portfolio validation] xgb_28_eta0.5_cap0.5
+[portfolio validation] xgb_28_eta0.75_cap0.5
+[portfolio validation] xgb_26_eta0.05_cap0.1
+[portfolio validation] xgb_26_eta0.1_cap0.1
+[portfolio validation] xgb_26_eta0.25_cap0.1
+[portfolio validation] xgb_26_eta0.25_cap0.25
+[portfolio validation] xgb_26_eta0.5_cap0.25
+[portfolio validation] xgb_26_eta0.5_cap0.5
+[portfolio validation] xgb_26_eta0.75_cap0.5
+[selected] xgb_26 eta=0.75 cap=0.5
+
+# Enhanced Daily Strategy ¡ª XGBoost Residual Alpha
+
+## Selected design
+
+The current rule score remains the prior. `xgb_26` predicts the
+unexplained part of the future five-session beta-adjusted cross-sectional
+return rank. The selected blend is `eta=0.75` with a
+residual cap of `0.50`. HAR-X + News risk and
+Portfolio Health remain external position controls.
+
+## Diagnostic 2021¨C2023 at 25 bps
+
+| strategy | cagr | sharpe | certainty_equivalent | max_drawdown | average_cash_weight |
+| --- | --- | --- | --- | --- | --- |
+| daily_strategy_rule | 0.1081 | 0.8066 | 0.0541 | -0.2071 | 0.3154 |
+| daily_strategy_xgb_residual | 0.1056 | 0.7805 | 0.0504 | -0.2330 | 0.3627 |
+
+## External 2024¨C2026 at 25 bps
+
+| group | strategy | cagr | sharpe | certainty_equivalent | max_drawdown | cer_gain_vs_rule |
+| --- | --- | --- | --- | --- | --- | --- |
+| all | rule | 0.2676 | 1.5855 | 0.1753 | -0.1591 |  |
+| all | xgb_residual | 0.2431 | 1.2553 | 0.1299 | -0.1670 | -0.0454 |
+| seen | rule | 0.3618 | 1.7670 | 0.2239 | -0.1774 |  |
+| seen | xgb_residual | 0.3424 | 1.5661 | 0.1936 | -0.1770 | -0.0303 |
+| unseen | rule | 0.0731 | 0.8017 | 0.0487 | -0.1196 |  |
+| unseen | xgb_residual | 0.0872 | 0.8138 | 0.0533 | -0.1247 | 0.0045 |
+
+## Promotion
+
+- Validation candidate passed: `False`.
+- Diagnostic significance passed: `False`.
+- External generalisation passed: `False`.
+- Status: `experimental_only`.
+
+The model is only loaded by the backend when every gate passes. Otherwise the
+existing rule Daily Strategy remains the production prior.
+

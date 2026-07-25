@@ -1,0 +1,44 @@
+{
+  "panel": "data\\processed\\decision_dataset.parquet",
+  "periods": {
+    "validation": [
+      "2018-01-01",
+      "2020-12-31"
+    ],
+    "locked_test": [
+      "2021-01-01",
+      "2023-12-31"
+    ]
+  },
+  "variants": [
+    "equal_weight",
+    "strategy_only",
+    "strategy_risk",
+    "fusion_no_news",
+    "fusion_full",
+    "fusion_full_no_risk"
+  ],
+  "costs_bps": [
+    0.0,
+    10.0,
+    25.0,
+    50.0
+  ],
+  "primary_cost_bps": 25.0,
+  "rebalance_sessions": 5,
+  "initial_cash_weight": 0.05,
+  "fusion_config": {
+    "strategy_weight": 0.5,
+    "news_weight": 0.3,
+    "health_weight": 0.2,
+    "low_news_weight": 0.1,
+    "minimum_news_articles": 3,
+    "risk_strength": 0.45,
+    "strong_conflict_threshold": 0.6,
+    "extreme_risk_threshold": 90.0,
+    "strategy_stale_business_days": 3,
+    "risk_stale_business_days": 3,
+    "health_stale_business_days": 5
+  },
+  "seed": 20260724
+}

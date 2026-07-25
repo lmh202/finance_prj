@@ -52,6 +52,37 @@ def render() -> None:
         return
     rec = daily["recommendation"]
     st.write(rec["explanation"])
+    fusion_results = daily.get("fusion_results", [])
+    if fusion_results:
+        st.dataframe(
+            pd.DataFrame(
+                [
+                    {
+                        "Asset": item["symbol"],
+                        "AURORA score": f"{item['aurora_score']:.0f}/100",
+                        "Outlook": item["outlook"],
+                        "Risk": item["risk_level"],
+                        "Action": item["action"],
+                        "Confidence": item["confidence_label"],
+                        "News": (
+                            f"{item['news_articles']} article(s), "
+                            f"{item['news_confidence'].lower()} confidence"
+                        ),
+                    }
+                    for item in fusion_results
+                ]
+            ),
+            hide_index=True,
+            width="stretch",
+        )
+        with st.expander("Why these recommendations?"):
+            for item in fusion_results:
+                st.markdown(
+                    f"**{item['symbol']}: {item['outlook']} "
+                    f"({item['aurora_score']:.0f}/100)**"
+                )
+                for reason in item["why"]:
+                    st.markdown(f"- {reason}")
     if rec["trades"]:
         _trades_table(rec["trades"])
         st.metric(

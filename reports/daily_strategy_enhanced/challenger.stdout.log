@@ -1,0 +1,103 @@
+    period  group           strategy  total_return     cagr  benchmark_cagr  annual_return  annual_volatility   sharpe  sortino  certainty_equivalent  max_drawdown  daily_es95  average_one_way_turnover  annual_turnover  total_transaction_cost  optimizer_success_rate  maximum_weight  maximum_change  minimum_active_trade  n_days  average_cash_weight  average_gross_exposure  cer_gain_vs_rule  sharpe_gain_vs_rule
+diagnostic    all               rule      0.347406 0.108106        0.084592       0.112364           0.139304 0.806607 1.198694              0.054147     -0.207052   -0.019828                  0.014843         3.740512                0.027163                     1.0        0.238041            0.05              0.010182     732             0.315379                0.684621          0.000000             0.000000
+diagnostic    all       conservative      0.324430 0.101565        0.084592       0.106366           0.138755 0.766576 1.131864              0.048607     -0.220738   -0.019706                  0.016478         4.152514                0.030155                     1.0        0.251929            0.05              0.010120     732             0.356837                0.643163         -0.005539            -0.040030
+diagnostic    all validation_ceiling      0.329606 0.103045        0.084592       0.107923           0.140274 0.769373 1.137460              0.048893     -0.232882   -0.019844                  0.015796         3.980532                0.028906                     1.0        0.243170            0.05              0.010250     732             0.357813                0.642187         -0.005254            -0.037234
+  external    all               rule      0.792269 0.267640        0.207398       0.249814           0.157557 1.585546 1.761062              0.175341     -0.159054   -0.024464                  0.008710         2.194833                0.013500                     1.0        0.302056            0.05              0.010066     620             0.002177                0.997823          0.000000             0.000000
+  external    all       conservative      0.796760 0.268931        0.207398       0.256594           0.190671 1.345740 1.584578              0.147527     -0.166139   -0.029744                  0.018790         4.735117                0.029125                     1.0        0.308972            0.05              0.010073     620             0.042512                0.957488         -0.027814            -0.239806
+  external    all validation_ceiling      0.796167 0.268760        0.207398       0.256457           0.190659 1.345108 1.583797              0.147404     -0.166141   -0.029744                  0.018788         4.734701                0.029122                     1.0        0.308973            0.05              0.010073     620             0.042512                0.957489         -0.027937            -0.240438
+  external   seen               rule      1.137880 0.361828        0.207398       0.326130           0.184568 1.766987 2.183883              0.223933     -0.177367   -0.028213                  0.012775         3.219361                0.019802                     1.0        0.282010            0.05              0.010216     620             0.085395                0.914605          0.000000             0.000000
+  external   seen       conservative      1.184546 0.373833        0.207398       0.338049           0.200917 1.682533 2.148147              0.216946     -0.175378   -0.029988                  0.016774         4.227008                0.025999                     1.0        0.266814            0.05              0.010169     620             0.145778                0.854222         -0.006987            -0.084453
+  external   seen validation_ceiling      1.184686 0.373869        0.207398       0.338074           0.200910 1.682709 2.148452              0.216979     -0.175410   -0.029986                  0.016773         4.226873                0.025999                     1.0        0.266811            0.05              0.010115     620             0.145777                0.854224         -0.006955            -0.084278
+  external unseen               rule      0.189666 0.073141        0.207398       0.074980           0.093521 0.801744 0.963862              0.048741     -0.119593   -0.014709                  0.006255         1.576171                0.009695                     1.0        0.242912            0.05              0.011814     620             0.000128                0.999872          0.000000             0.000000
+  external unseen       conservative      0.228369 0.087196        0.207398       0.089707           0.110228 0.813829 0.977899              0.053256     -0.124654   -0.017405                  0.012266         3.091027                0.019012                     1.0        0.224635            0.05              0.011016     620             0.003954                0.996047          0.004515             0.012086
+  external unseen validation_ceiling      0.228369 0.087196        0.207398       0.089707           0.110228 0.813829 0.977899              0.053256     -0.124654   -0.017405                  0.012266         3.091027                0.019012                     1.0        0.224635            0.05              0.011016     620             0.003954                0.996047          0.004515             0.012086
+{
+  "diagnostic_all_conservative_vs_rule": {
+    "mean_daily_return_gain": -2.3800532011122052e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": -0.4584289140719524,
+    "newey_west_p": 0.6466443225989325,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.030188833244990353,
+    "cer_gain_ci_high": 0.02028332771279284,
+    "probability_cer_gain_positive": 0.365
+  },
+  "diagnostic_all_validation_ceiling_vs_rule": {
+    "mean_daily_return_gain": -1.7622592139009512e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": -0.2976714256454083,
+    "newey_west_p": 0.7659539543280629,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.03483594237237652,
+    "cer_gain_ci_high": 0.02385758372739246,
+    "probability_cer_gain_positive": 0.407
+  },
+  "external_all_conservative_vs_rule": {
+    "mean_daily_return_gain": 2.690561979995825e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.18099299868669738,
+    "newey_west_p": 0.8563730714974589,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.09414483151810886,
+    "cer_gain_ci_high": 0.04157610123941046,
+    "probability_cer_gain_positive": 0.208
+  },
+  "external_all_validation_ceiling_vs_rule": {
+    "mean_daily_return_gain": 2.636372850681697e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.17731764473204814,
+    "newey_west_p": 0.8592588919066755,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.09410350422421628,
+    "cer_gain_ci_high": 0.041437388491019286,
+    "probability_cer_gain_positive": 0.2065
+  },
+  "external_seen_conservative_vs_rule": {
+    "mean_daily_return_gain": 4.729755478760871e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.3773675132967653,
+    "newey_west_p": 0.7059005059181973,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.06227978530713719,
+    "cer_gain_ci_high": 0.047969901550511264,
+    "probability_cer_gain_positive": 0.3615
+  },
+  "external_seen_validation_ceiling_vs_rule": {
+    "mean_daily_return_gain": 4.7396237669436904e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.3781735015212825,
+    "newey_west_p": 0.705301709016326,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.06225817255751141,
+    "cer_gain_ci_high": 0.04797112810925143,
+    "probability_cer_gain_positive": 0.364
+  },
+  "external_unseen_conservative_vs_rule": {
+    "mean_daily_return_gain": 5.844148705431533e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.7828864875295601,
+    "newey_west_p": 0.4336937731285154,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.0285747829965435,
+    "cer_gain_ci_high": 0.04334280819135919,
+    "probability_cer_gain_positive": 0.617
+  },
+  "external_unseen_validation_ceiling_vs_rule": {
+    "mean_daily_return_gain": 5.844148705431533e-05,
+    "newey_west_lag": 5,
+    "newey_west_t": 0.7828864875295601,
+    "newey_west_p": 0.4336937731285154,
+    "block_length": 10,
+    "bootstrap_samples": 2000,
+    "cer_gain_ci_low": -0.0285747829965435,
+    "cer_gain_ci_high": 0.04334280819135919,
+    "probability_cer_gain_positive": 0.617
+  }
+}

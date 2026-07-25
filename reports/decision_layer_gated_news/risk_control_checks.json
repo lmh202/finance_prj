@@ -1,0 +1,6 @@
+{
+  "normal_average_gross": 0.6836883787530342,
+  "double_sigma_average_gross": 0.4268347647110845,
+  "double_sigma_reduces_gross": true,
+  "no_news_exact_strategy_fallback": true
+}

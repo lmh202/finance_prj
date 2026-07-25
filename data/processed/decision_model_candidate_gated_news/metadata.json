@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "model_version": "gated-news-risk-control-v1",
+  "created_utc": "2026-07-24T14:54:11.633825+00:00",
+  "promotion_status": "experimental_only",
+  "architecture": {
+    "direction_prior": "Daily Strategy",
+    "learned_component": "confidence-gated news residual",
+    "risk_control": "external HAR-X covariance and gross exposure",
+    "health_control": "external risk budget and risk aversion",
+    "risk_is_model_feature": false,
+    "health_is_model_feature": false,
+    "no_news_behavior": "exact Daily Strategy fallback"
+  },
+  "feature_order": [
+    "strategy_score",
+    "mom_20d",
+    "mom_60d",
+    "strategy_trend",
+    "strategy_sharpe",
+    "strategy_drawdown",
+    "rsi_scaled",
+    "benchmark_ret_1d",
+    "news_score_5d",
+    "sent_positive_share",
+    "sent_negative_share",
+    "sent_extreme_share"
+  ],
+  "core_features": [
+    "strategy_score",
+    "mom_20d",
+    "mom_60d",
+    "strategy_trend",
+    "strategy_sharpe",
+    "strategy_drawdown",
+    "rsi_scaled",
+    "benchmark_ret_1d"
+  ],
+  "news_features": [
+    "news_score_5d",
+    "sent_positive_share",
+    "sent_negative_share",
+    "sent_extreme_share"
+  ],
+  "feature_bounds": {
+    "strategy_score": [
+      -0.84593837535014,
+      0.8179271708683475
+    ],
+    "mom_20d": [
+      -0.22123618538928916,
+      0.3247176198076355
+    ],
+    "mom_60d": [
+      -0.3316741776904062,
+      0.6247877718494732
+    ],
+    "strategy_trend": [
+      0.0,
+      1.0
+    ],
+    "strategy_sharpe": [
+      -1.1053090359209388,
+      2.744191611273964
+    ],
+    "strategy_drawdown": [
+      -0.681262196144942,
+      0.0
+    ],
+    "rsi_scaled": [
+      -0.6677060587774415,
+      0.8095330075617814
+    ],
+    "benchmark_ret_1d": [
+      -0.032402281101719055,
+      0.026178397748795268
+    ],
+    "news_score_5d": [
+      -0.7972973966286626,
+      0.7513547964650998
+    ],
+    "sent_positive_share": [
+      0.0,
+      1.0
+    ],
+    "sent_negative_share": [
+      0.0,
+      1.0
+    ],
+    "sent_extreme_share": [
+      0.0,
+      1.0
+    ]
+  },
+  "selected_model": {
+    "name": "mlp_32x16_a001",
+    "kind": "mlp",
+    "alpha": 0.001,
+    "hidden": [
+      32,
+      16
+    ]
+  },
+  "residual_cap": 0.05,
+  "q_margin": 0.5,
+  "return_signal_scale": 0.01,
+  "base_risk_aversion": 6.0,
+  "base_target_annual_volatility": 0.15,
+  "turnover_penalty": 0.0025,
+  "rebalance_sessions": 5,
+  "training_range": [
+    "2014-04-16",
+    "2020-12-31"
+  ],
+  "validation_years": [
+    2018,
+    2019,
+    2020
+  ],
+  "diagnostic_years": [
+    2021,
+    2022,
+    2023
+  ],
+  "training_rows": 34130,
+  "training_symbols": 21,
+  "data_sha256": "7e613ba55ba59bdb4602de60ff71aa897b6a4e9797b7a3cb16ff97eeffbd1ddd",
+  "model_sha256": "887ad9004a1070d47c4e760f656dfaa3473bf80493a5770a20acfbdd0fb3d156",
+  "promotion": {
+    "validation_numerical_gates_passed": false,
+    "numerical_gates_passed": false,
+    "promotion_status": "experimental_only",
+    "promotion_blocker": "The diagnostic news gain is not statistically distinguishable from zero, and 2021-2023 was already observed by earlier decision-layer experiments. At least 60 mature live five-session predictions are required for a fresh promotion decision.",
+    "validation_checks": {
+      "mean_cer_gain_positive": true,
+      "median_cer_gain_positive": false,
+      "positive_in_at_least_2_of_3_years": false,
+      "mean_sharpe_gain_positive": true,
+      "worst_drawdown_not_worse_by_more_than_2pp": true,
+      "no_news_exact_fallback": true,
+      "risk_stress_reduces_gross": true
+    },
+    "diagnostic_statistical_checks": {
+      "newey_west_p_below_005": false,
+      "bootstrap_cer_gain_lower_bound_positive": false
+    },
+    "diagnostic_only": {
+      "gated_news_vs_strategy": {
+        "mean_daily_return_gain": 1.066768615598957e-05,
+        "newey_west_lag": 5,
+        "newey_west_t": 0.5100895804805876,
+        "newey_west_p": 0.6099887045990378,
+        "block_length": 10,
+        "bootstrap_samples": 2000,
+        "cer_gain_ci_low": -0.00830208416248866,
+        "cer_gain_ci_high": 0.012973802186366628,
+        "probability_cer_gain_positive": 0.658
+      },
+      "gated_news_vs_news_unavailable": {
+        "mean_daily_return_gain": 1.066768615598957e-05,
+        "newey_west_lag": 5,
+        "newey_west_t": 0.5100895804805876,
+        "newey_west_p": 0.6099887045990378,
+        "block_length": 10,
+        "bootstrap_samples": 2000,
+        "cer_gain_ci_low": -0.00830208416248866,
+        "cer_gain_ci_high": 0.012973802186366628,
+        "probability_cer_gain_positive": 0.658
+      }
+    }
+  }
+}

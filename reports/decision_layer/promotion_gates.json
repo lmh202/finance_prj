@@ -1,0 +1,32 @@
+{
+  "promoted": false,
+  "production_mode": "risk_only",
+  "selected_model": "xgb_medium",
+  "selected_strategy": "xgb_medium_scaled",
+  "return_signal_scale": 0.03,
+  "checks": {
+    "locked_test_cer_above_risk_only": true,
+    "locked_test_sharpe_above_risk_only": true,
+    "positive_test_years_at_least_2_of_3": true,
+    "bootstrap_utility_gain_lower_bound_positive": false,
+    "max_drawdown_not_worse_by_more_than_2pp": true,
+    "es_not_worse_by_more_than_10pct": true,
+    "external_cer_not_below_risk_only": false,
+    "external_unseen_cer_not_below_risk_only": true,
+    "max_position_constraint": true,
+    "max_change_constraint": true,
+    "minimum_trade_constraint": true
+  },
+  "statistics": {
+    "bootstrap_utility_gain_95": [
+      -0.008003754054736219,
+      0.011338541442004066,
+      0.03352288752798527
+    ],
+    "positive_test_years": 2,
+    "locked_test_cer_gain": 0.011900458702099728,
+    "locked_test_sharpe_gain": 0.07307043381206701,
+    "external_cer_gain": -0.0061137147316027984,
+    "external_unseen_cer_gain": 0.0002018682316877185
+  }
+}

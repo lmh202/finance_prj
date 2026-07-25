@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "model_version": "decision-layer-v1",
+  "created_utc": "2026-07-24T04:44:15.123281+00:00",
+  "production_mode": "risk_only",
+  "selected_model": "xgb_medium",
+  "selected_strategy": "xgb_medium_scaled",
+  "selected_spec": {
+    "name": "xgb_medium",
+    "kind": "xgboost",
+    "max_depth": 3,
+    "learning_rate": 0.025,
+    "n_estimators": 500,
+    "min_child_weight": 32,
+    "subsample": 0.8,
+    "colsample_bytree": 0.85,
+    "reg_alpha": 0.1,
+    "reg_lambda": 30.0
+  },
+  "return_signal_scale": 0.03,
+  "feature_order": [
+    "ret_1d",
+    "mom_20d",
+    "mom_60d",
+    "price_vs_sma50",
+    "sma50_vs_sma200",
+    "vol_20d",
+    "rsi_14",
+    "drawdown",
+    "risk_adj_mom",
+    "beta_60d",
+    "rel_str_20d"
+  ],
+  "target": "excess_ret_20d",
+  "target_definition": "20-session stock return minus SPY return",
+  "risk_input": "formal HAR-X + News five-session sigma",
+  "rebalance_sessions": 5,
+  "risk_aversion": 6.0,
+  "primary_transaction_cost_bps": 25.0,
+  "residual_quantiles": {
+    "q10": -0.08056568033817361,
+    "q90": 0.09749800999851822
+  },
+  "validation_years": [
+    2018,
+    2019,
+    2020
+  ],
+  "locked_test_years": [
+    2021,
+    2022,
+    2023
+  ],
+  "external_range": [
+    "2024-01-02",
+    "2026-06-23"
+  ],
+  "training_range": [
+    "2013-10-16",
+    "2023-11-29"
+  ],
+  "artifacts": {
+    "return_model": "return_model.joblib",
+    "training_data_sha256": "7e613ba55ba59bdb4602de60ff71aa897b6a4e9797b7a3cb16ff97eeffbd1ddd",
+    "external_data_sha256": "6482dbd38f3e51795ba0de4b51fd0da89145f2f35fc5124e47cda095e99b1ab5",
+    "model_sha256": "e257d1bdf178edae79badb49c4bb06a4220ff3d35404e5489c6e34136cd8e8de"
+  },
+  "promotion_gates": {
+    "promoted": false,
+    "production_mode": "risk_only",
+    "selected_model": "xgb_medium",
+    "selected_strategy": "xgb_medium_scaled",
+    "return_signal_scale": 0.03,
+    "checks": {
+      "locked_test_cer_above_risk_only": true,
+      "locked_test_sharpe_above_risk_only": true,
+      "positive_test_years_at_least_2_of_3": true,
+      "bootstrap_utility_gain_lower_bound_positive": false,
+      "max_drawdown_not_worse_by_more_than_2pp": true,
+      "es_not_worse_by_more_than_10pct": true,
+      "external_cer_not_below_risk_only": false,
+      "external_unseen_cer_not_below_risk_only": true,
+      "max_position_constraint": true,
+      "max_change_constraint": true,
+      "minimum_trade_constraint": true
+    },
+    "statistics": {
+      "bootstrap_utility_gain_95": [
+        -0.008003754054736219,
+        0.011338541442004066,
+        0.03352288752798527
+      ],
+      "positive_test_years": 2,
+      "locked_test_cer_gain": 0.011900458702099728,
+      "locked_test_sharpe_gain": 0.07307043381206701,
+      "external_cer_gain": -0.0061137147316027984,
+      "external_unseen_cer_gain": 0.0002018682316877185
+    }
+  },
+  "fallback": "Use the deterministic risk-only optimiser whenever the model artifact, required features, or risk estimates are unavailable.",
+  "llm_policy": "DeepSeek may explain a fixed numeric decision but may not alter actions, target weights, or risk limits.",
+  "random_seed": 20260724
+}

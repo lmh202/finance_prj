@@ -1,3 +1,23 @@
+# Daily Strategy Engine
+
+## Current production and learned candidate
+
+`engine.py` remains the production rule prior. `learned.py` implements the
+optional XGBoost residual-alpha enhancement:
+
+1. the rule engine creates the causal cross-sectional direction rank;
+2. XGBoost predicts the unexplained portion of the future five-session
+   beta-adjusted excess-return rank;
+3. the residual is clipped, blended, and reranked;
+4. HAR-X + News risk and Portfolio Health remain external position controls.
+
+The checkpoint is stored in
+`data/processed/daily_strategy_model_candidate`. The backend applies it only
+when `metadata.json` says `promotion_status: promoted`. The current artifact is
+`experimental_only` because it failed validation consistency, diagnostic
+significance, and 2024-2026 external generalisation. Therefore production
+continues to use the exact rule score.
+
 # Developer 2 — Daily Market Strategy Engine (the predictive ML)
 
 **Mission (Architecture.md §5 + ML upgrade):** answer *"Given market

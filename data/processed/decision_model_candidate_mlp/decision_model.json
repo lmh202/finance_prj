@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "model_version": "decision-mlp-research-candidate-v1",
+  "created_utc": "2026-07-24T07:51:22.872542+00:00",
+  "formal_checkpoint_replaced": false,
+  "selected_family_on_validation": "price_risk",
+  "selected_config": {
+    "name": "small",
+    "hidden": [
+      64,
+      32
+    ],
+    "dropout": 0.2,
+    "learning_rate": 0.0005,
+    "weight_decay": 0.002
+  },
+  "features": [
+    "ret_1d",
+    "mom_20d",
+    "mom_60d",
+    "price_vs_sma50",
+    "sma50_vs_sma200",
+    "vol_20d",
+    "rsi_14",
+    "drawdown",
+    "risk_adj_mom",
+    "beta_60d",
+    "rel_str_20d",
+    "market_mom_20d",
+    "market_mom_60d",
+    "market_vol_20d",
+    "log_risk_sigma_5d",
+    "risk_level_5d_scaled"
+  ],
+  "target": "20-session stock return minus SPY return, divided by formal HAR-X + News risk_sigma_daily_5d * sqrt(20)",
+  "auxiliary_heads": [
+    "conditional q10 of risk-adjusted excess return",
+    "daily cross-sectional target rank"
+  ],
+  "alpha_scale": 1.0,
+  "training_range": [
+    "2018-01-02",
+    "2023-11-29"
+  ],
+  "validation_years": [
+    2019,
+    2020
+  ],
+  "diagnostic_test_years": [
+    2021,
+    2022,
+    2023
+  ],
+  "artifact": {
+    "path": "mlp_bundle.pt",
+    "sha256": "d01c8dc3be9a0598a605687fd9eb0f34bc092c21ec51b28853feb129fb8d02fb",
+    "data_sha256": "7e613ba55ba59bdb4602de60ff71aa897b6a4e9797b7a3cb16ff97eeffbd1ddd"
+  },
+  "conclusion": {
+    "validation_selected_family": "price_risk",
+    "family_results": {
+      "price_risk": {
+        "config": "small",
+        "alpha_scale": 1.0,
+        "validation_robust_score": 0.17451144852612988,
+        "validation_cer_gain": 0.17451144852612988,
+        "test_rank_ic": 0.048055287688846024,
+        "test_q10_coverage": 0.1131318306010929,
+        "test_cer_gain": -0.05419076846946387,
+        "test_sharpe_gain": -0.0476652610888989,
+        "test_positive_years": 2,
+        "test_worst_year_gain": -0.32135565051949244,
+        "bootstrap_utility_gain_95": [
+          -0.20609908348336373,
+          -0.0655759725042388,
+          0.07432291014079183
+        ]
+      },
+      "deployable_news": {
+        "config": "medium",
+        "alpha_scale": 0.02,
+        "validation_robust_score": 0.0002717339038129929,
+        "validation_cer_gain": 0.003592736195231011,
+        "test_rank_ic": 0.005962712954034071,
+        "test_q10_coverage": 0.09665300546448087,
+        "test_cer_gain": -0.001647291070461937,
+        "test_sharpe_gain": -0.009567235525160145,
+        "test_positive_years": 1,
+        "test_worst_year_gain": -0.008189603539340728,
+        "bootstrap_utility_gain_95": [
+          -0.010718906635134577,
+          -0.001825451928690474,
+          0.007368577733073923
+        ]
+      },
+      "research_news": {
+        "config": "small",
+        "alpha_scale": 1.0,
+        "validation_robust_score": 0.07464153276430435,
+        "validation_cer_gain": 0.07464153276430435,
+        "test_rank_ic": 0.04760928961748633,
+        "test_q10_coverage": 0.10425204918032786,
+        "test_cer_gain": -0.011010414387096892,
+        "test_sharpe_gain": 0.08296453087636235,
+        "test_positive_years": 2,
+        "test_worst_year_gain": -0.2659718963505239,
+        "bootstrap_utility_gain_95": [
+          -0.14684562887141767,
+          -0.021576655880166426,
+          0.10560106803520321
+        ]
+      }
+    },
+    "news_increment": {
+      "deployable_news": {
+        "validation_cer_gain_vs_price_risk_mlp": -0.17091871233089886,
+        "test_cer_gain_vs_price_risk_mlp": 0.052543477399001934,
+        "test_rank_ic_gain_vs_price_risk_mlp": -0.042092574734811955
+      },
+      "research_news": {
+        "validation_cer_gain_vs_price_risk_mlp": -0.09986991576182552,
+        "test_cer_gain_vs_price_risk_mlp": 0.04318035408236698,
+        "test_rank_ic_gain_vs_price_risk_mlp": -0.000445998071359692
+      }
+    },
+    "continuation_checks": {
+      "validation_gain_positive": true,
+      "test_cer_gain_positive": false,
+      "test_rank_ic_positive": true,
+      "test_positive_years_at_least_2": true,
+      "bootstrap_lower_bound_positive": false,
+      "q10_coverage_between_7_and_13pct": true
+    },
+    "worth_continuing": false,
+    "automatic_promotion_allowed": false,
+    "limitations": [
+      "The 2021-2023 test years have been observed in earlier experiments and are diagnostic rather than pristine.",
+      "Rich FNSPID news fields have no 2024-2026 live-history parity; only the price_risk family can be evaluated externally.",
+      "The sample has 26,711 correlated stock-days, not 26,711 independent observations."
+    ]
+  },
+  "random_seed": 20260724
+}
