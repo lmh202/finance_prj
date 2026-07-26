@@ -204,18 +204,3 @@ def risk_estimates(horizon: int = 5) -> List[dict]:
 
 def risk_portfolio(horizon: int = 5) -> dict:
     return _get("/risk/portfolio", horizon=horizon)
-
-
-# --------------------------------------------------------------- rule fusion
-
-def fusion_decisions(
-    universe: Optional[List[str]] = None, max_events: int = 8, held_only: bool = False
-) -> dict:
-    params: Dict[str, object] = {"max_events": max_events, "held_only": held_only}
-    if universe:
-        params["universe"] = ",".join(universe)
-    return _get("/fusion/decisions", **params)
-
-
-def fusion_rules() -> dict:
-    return _get("/fusion/rules")
