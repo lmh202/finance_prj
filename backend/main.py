@@ -11,17 +11,7 @@ streamlit anywhere under backend/, no `src` imports anywhere under frontend/.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import (
-    analysis,
-    fusion,
-    health,
-    market,
-    news,
-    portfolio,
-    recommendation,
-    risk,
-    strategy,
-)
+from routers import analysis, health, market, news, portfolio, recommendation, risk, strategy
 
 app = FastAPI(title="AURORA API", version="0.1.0")
 
@@ -46,4 +36,3 @@ app.include_router(strategy.router)
 app.include_router(news.router)
 app.include_router(recommendation.router)
 app.include_router(risk.router)
-app.include_router(fusion.router)
