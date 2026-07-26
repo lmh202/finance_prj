@@ -1,0 +1,90 @@
+Below is the content outline for the poster. Please create a new folder named `./aurora_poster`. Using `./hdbrain_poster` as a reference for the poster structure and layout (not its specific content, as thier hdbrain project is unrelated to our AURORA project), create a viewable poster prototype for the AURORA project.
+
+Note: In hdbrain_poster, the final poster uses a dark theme with a dark background, white text, and orange as the accent color for important information. The AURORA poster can also adopt a dark theme with a dark background and white text. However, **the accent color for key text should be light green** to match the current theme of the ./frontendjs frontend.
+
+
+FORMAT FOR POSTER 
+
+title 
+
+
+problem statement: 
+```
+Imagine you are holding a mix of stocks (a portfolio). Every day, you are flooded with an **overwhelming** amount of financial news, market data, and analyst reports from multiple sources. While financial information is abundant, making sense of it is left entirely to the investor. Analyzing news, market trends, and risk factors **makes investment decisions complex, time-consuming, and often inconsistent**.
+```
+may include a fitting background image
+
+
+our solution 
+```
+Our AI-powered system interprets diverse financial signals together, providing a single, context-aware recommendation supported by market data, technical analysis, and financial news.
+```
+
+
+system architecture/framework  (including our engines) 
+```text
+ INPUT SIGNALS -- recomputed fresh every time a holding is evaluated
+ --------------------------------------------------------------------------
+ [ STRATEGY ]         [ NEWS ]            [ PORTFOLIO HEALTH ]  [ RISK LEVEL ]
+ Trend read on this   Today's headline    Is the whole          How risky is
+ holding: Buy / Add /  tone on this         portfolio in good     this holding
+ Trim / Sell / Hold    holding, incl. an    shape right now:      right now: a
+                       urgent-event         a 0-100 score         0-100 percentile
+                       override
+       |                    |                    |                    |
+       +--------------------+---------+----------+--------------------+
+                                       |
+                                       v
+ --------------------------------------------------------------------------
+ FUSION -- one engine, four ordered steps, nothing ever averaged together
+ --------------------------------------------------------------------------
+  STEP 1   Sets the initial direction: Buy, Add, Trim, Sell, or Hold, plus a starting CONFIDENCE.
+  STEP 2   News moves CONFIDENCE only -- and can flip direction ONLY through a rare, triple-gated "critical event" override (loud enough, relevant enough, and important enough).
+  STEP 3   Portfolio Health nudges CONFIDENCE only. It never touches direction.
+  STEP 4   Risk / Volatility scales POSITION SIZE only. It never touches direction or confidence.
+
+  Every step is logged in a visible ledger, so the final decision is always explainable and never a black box.
+
+
+                                       |
+                                       v
+ --------------------------------------------------------------------------
+ RECOMMENDATION -- one decision per holding
+ --------------------------------------------------------------------------
+  Action       New Buy / Add / Trim / Close / Hold
+  Confidence   0-100%, built from the ledger above
+  Risk band    Low / Moderate / Elevated / High -- with every
+               contributing driver named, not folded into one number
+```
+
+
+Technology stack : 
+Ai model used in risk engine
+traditional quant
+> following for reference 
+```
+tech stack 
+💻 Programming
+Python
+📊 Data Processing
+Pandas
+NumPy
+🤖 AI & Machine Learning
+Scikit-learn
+LLM (FinGPT/Llama)
+📈 Financial Analytics
+HAR Model
+TA-Lib / pandas-ta
+📰 Data Sources
+RSS Feeds
+FNSPID Dataset
+🛠 Development Tools
+Jupyter Notebook
+VS Code
+Git & GitHub
+```
+
+Outcomes visulization (TO BE CONTINUED)
+Accuracy (TO BE CONTINUED)
+
+Include a QR code for GitHub repository (TO BE CONTINUED)

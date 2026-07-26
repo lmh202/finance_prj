@@ -59,4 +59,8 @@ data/processed/sentiment_features.csv
 data/processed/walkforward_report_label_up_20d.csv
 data/processed/walkforward_report_label_up_5d.csv
 scripts/train_model.py
+
+
+# local
 backend/t1/
+hdbrain_poster/
