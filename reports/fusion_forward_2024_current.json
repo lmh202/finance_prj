@@ -1,0 +1,142 @@
+{
+  "generated_at_utc": "2026-07-26T03:27:49.211488+00:00",
+  "data_source": "Yahoo Finance adjusted OHLC",
+  "download_start": "2021-01-01",
+  "download_end_exclusive": "2026-07-27",
+  "evaluation_start": "2024-01-02",
+  "evaluation_end": "2026-07-24",
+  "symbols": [
+    "AAPL",
+    "ADBE",
+    "AMD",
+    "AMZN",
+    "ASML",
+    "AVGO",
+    "COST",
+    "CSCO",
+    "GLD",
+    "GOOGL",
+    "INTC",
+    "INTU",
+    "MSFT",
+    "MU",
+    "NFLX",
+    "NVDA",
+    "PEP",
+    "QCOM",
+    "SLV",
+    "TSLA",
+    "TXN"
+  ],
+  "configuration": {
+    "rebalance_sessions": 5,
+    "transaction_cost_bps": 25,
+    "neutral_core_share": 0.75,
+    "daily_strategy_tilt_share": 0.25,
+    "calm_base_volatility_target": 0.25,
+    "stress_base_volatility_target": 0.15,
+    "maximum_position": 0.2,
+    "maximum_weekly_change": 0.05,
+    "minimum_trade": 0.01,
+    "historical_news_path": "supported_no_news_fallback"
+  },
+  "overall": {
+    "daily_strategy": {
+      "cagr": 0.4255768565261677,
+      "sharpe": 1.5512769319261726,
+      "annual_volatility": 0.2486000498828774,
+      "max_drawdown": -0.2405397406229295,
+      "calmar": 1.769257983832712,
+      "total_return": 1.4677972615632888,
+      "observations": 642
+    },
+    "new_fusion": {
+      "cagr": 0.25628959572360266,
+      "sharpe": 1.326257517230161,
+      "annual_volatility": 0.18503231951092447,
+      "max_drawdown": -0.19119668725126315,
+      "calmar": 1.3404499806358934,
+      "total_return": 0.7883106701426139,
+      "observations": 642
+    }
+  },
+  "by_year": {
+    "2024": {
+      "daily_strategy": {
+        "cagr": 0.3272994058243952,
+        "sharpe": 1.399522698832898,
+        "annual_volatility": 0.21961698994360093,
+        "max_drawdown": -0.16472145222662093,
+        "calmar": 1.9869871313063845,
+        "total_return": 0.3272994058243952,
+        "observations": 252
+      },
+      "new_fusion": {
+        "cagr": 0.1922828184989871,
+        "sharpe": 1.038781385462387,
+        "annual_volatility": 0.18600622374449596,
+        "max_drawdown": -0.14530685090604778,
+        "calmar": 1.3232880438879853,
+        "total_return": 0.1922828184989871,
+        "observations": 252
+      }
+    },
+    "2025": {
+      "daily_strategy": {
+        "cagr": 0.3614809052640755,
+        "sharpe": 1.434091262780723,
+        "annual_volatility": 0.23423897200131982,
+        "max_drawdown": -0.23164354196268855,
+        "calmar": 1.560504999195273,
+        "total_return": 0.35815072869580455,
+        "observations": 250
+      },
+      "new_fusion": {
+        "cagr": 0.2490362589713555,
+        "sharpe": 1.4029464864102805,
+        "annual_volatility": 0.1686989723485969,
+        "max_drawdown": -0.18211824160812862,
+        "calmar": 1.3674426942206985,
+        "total_return": 0.24683382987981206,
+        "observations": 250
+      }
+    },
+    "2026": {
+      "daily_strategy": {
+        "cagr": 0.7599757853876921,
+        "sharpe": 1.9523643276911753,
+        "annual_volatility": 0.3151901297822675,
+        "max_drawdown": -0.15919404650783875,
+        "calmar": 4.773895770972005,
+        "total_return": 0.3689658266131399,
+        "observations": 140
+      },
+      "new_fusion": {
+        "cagr": 0.3946305966135555,
+        "sharpe": 1.685090345680704,
+        "annual_volatility": 0.210615354485165,
+        "max_drawdown": -0.12318937950422282,
+        "calmar": 3.2034465812048993,
+        "total_return": 0.20297085321676933,
+        "observations": 140
+      }
+    }
+  },
+  "paired_bootstrap": {
+    "point_delta_sharpe": -0.2250194146960116,
+    "bootstrap_delta_sharpe_95": [
+      -0.562492586383202,
+      -0.25331717615404714,
+      0.07738378830876352
+    ],
+    "probability_positive": 0.0638
+  },
+  "fusion_decisions": {
+    "count": 128,
+    "mean_base_target": 0.21160283157727983,
+    "mean_effective_volatility_budget": 0.18197843515646067,
+    "mean_risky_gross": 0.8870926582618739,
+    "risk_constraint_binding_share": 0.328125,
+    "optimizer_success_rate": 1.0
+  }
+}

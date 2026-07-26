@@ -21,6 +21,7 @@ from src.news_intelligence import engine as news
 from src.portfolio_health import engine as health
 from src.recommendation import engine
 from src.recommendation import decision
+from src.recommendation import fusion
 from src.recommendation import gated_news
 from src.recommendation import llm_client
 from src.risk_engine import engine as risk_engine
@@ -90,6 +91,12 @@ def daily() -> dict:
         if not risk_engine.model_available():
             raise RuntimeError("risk_model_unavailable")
         symbols = sorted(set(holdings["symbol"]))
+        # News FIRST. The risk engine derives its causal news-attention input
+        # from data/news_raw.json, so the store has to hold today's headlines
+        # before risk_estimates() runs — otherwise HAR-X + News scores the
+        # previous request's news and the whole decision lags a cycle behind.
+        max_events = min(50, max(15, len(symbols) * 3))
+        events = news.essential_news(symbols, max_events=max_events)
         ohlc = data_loader.get_ohlc_history(symbols)
         estimates = risk_engine.risk_estimates(ohlc)
         signals = strategy.score_assets(history, holdings)
@@ -101,8 +108,6 @@ def daily() -> dict:
             )
         health_report = health.compute_health(holdings, history)
         health_score = health_report.score if health_report.metrics else None
-        max_events = min(50, max(15, len(symbols) * 3))
-        events = news.essential_news(symbols, max_events=max_events)
         if gated_news.model_available(require_promoted=True):
             gated = gated_news.recommend_portfolio(
                 history=history,
@@ -132,6 +137,33 @@ def daily() -> dict:
                 "source": "strategy_plus_external_harx_news_risk",
                 "reason": "direct_news_residual_not_promoted",
             }
+        # Explain whichever numeric decision was produced. The fusion layer
+        # never re-decides — it renders what the optimiser did, so the UI and
+        # the trades can never disagree.
+        #
+        # Explanation is strictly presentational: a failure here must degrade
+        # to an unexplained-but-valid recommendation, never discard the
+        # decision and fall through to the fallback path below.
+        try:
+            as_of = history.index[-1] if len(history.index) else None
+            fusion_results = [
+                as_dict(item)
+                for item in fusion.explain_allocation(
+                    decision_meta,
+                    events,
+                    health_score=health_score,
+                    strategy_as_of=as_of,
+                    health_as_of=as_of,
+                    risk_as_of_by_symbol={
+                        str(estimate.symbol): getattr(estimate, "as_of", None)
+                        for estimate in estimates
+                    },
+                )
+            ]
+        except Exception as explain_exc:                       # noqa: BLE001
+            fusion_results = []
+            explanation_meta = dict(explanation_meta)
+            explanation_meta["fusion_error"] = type(explain_exc).__name__
     except (RuntimeError, ValueError, KeyError) as exc:
         # Preserve the already-validated numeric decision path as the first
         # fallback. The legacy signal recommendation remains the final

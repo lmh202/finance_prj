@@ -33,6 +33,20 @@ HORIZON = 5
 EPS = 1e-10
 ACTIONS = np.array([-1.0, 0.0, 1.0])
 
+# Grinold-Kahn alpha scaling: alpha = IC * sigma_horizon * z.  The optimiser
+# needs the Daily Strategy rank expressed as an expected excess return, and
+# that conversion is where an unvalidated signal does the most damage — the
+# assumed information coefficient sets the tilt size directly.
+#
+# Measured cross-sectional rank IC of the Daily Strategy direction against the
+# five-session forward return is ~0.01-0.02 and not distinguishable from zero
+# (t~1) on both the 21-symbol FNSPID panel and the 165-symbol wide panel;
+# quintile forward returns are flat.  The previous hardcoded 0.010 expected
+# return per unit of direction implied an IC near 0.14 — about ten times the
+# measured value — so the optimiser tilted on noise and paid turnover for it.
+# Raise this only with a walk-forward measurement that supports it.
+STRATEGY_INFORMATION_COEFFICIENT = 0.02
+
 CORE_FEATURES = [
     "strategy_score",
     "mom_20d",
@@ -191,6 +205,31 @@ def _normalise_portfolio(
         weights /= total
         cash /= total
     return weights, cash
+
+
+def strategy_alpha(
+    direction: np.ndarray,
+    sigma_daily: np.ndarray,
+    *,
+    information_coefficient: float = STRATEGY_INFORMATION_COEFFICIENT,
+) -> np.ndarray:
+    """Convert a cross-sectional direction rank into an expected horizon return.
+
+    Grinold-Kahn: ``alpha = IC * sigma_h * z``.  ``direction`` is standardised
+    cross-sectionally so the scale of the incoming rank cannot smuggle in an
+    implied information coefficient of its own.  A degenerate cross-section
+    (every asset ranked alike) yields zero alpha, which leaves the optimiser
+    with the covariance term only — the correct behaviour when the signal
+    carries no cross-sectional information.
+    """
+    direction = np.asarray(direction, dtype=float)
+    direction = np.nan_to_num(direction, nan=0.0)
+    spread = float(np.std(direction))
+    if spread <= EPS:
+        return np.zeros_like(direction)
+    standardised = (direction - float(np.mean(direction))) / spread
+    horizon_sigma = np.asarray(sigma_daily, dtype=float) * math.sqrt(HORIZON)
+    return float(information_coefficient) * horizon_sigma * standardised
 
 
 def risk_controlled_allocation(
@@ -712,11 +751,13 @@ def recommend_strategy_risk_control(
         raise RuntimeError("fewer than five held assets have formal risk")
     frame, _ = _runtime_features(held, history, signals, [])
     direction = frame["strategy_score"].to_numpy(dtype=float)
-    expected = direction * 0.010
     sigma = np.asarray(
         [float(risk_map[symbol].sigma_daily) for symbol in held],
         dtype=float,
     )
+    # Size the tilt by the strategy's MEASURED information coefficient rather
+    # than a fixed expected return — see STRATEGY_INFORMATION_COEFFICIENT.
+    expected = strategy_alpha(direction, sigma)
     previous = np.asarray(
         [float(current_weights_pct.get(symbol, 0.0)) / 100.0 for symbol in held],
         dtype=float,
@@ -785,6 +826,10 @@ def recommend_strategy_risk_control(
             "news_via_risk_share": float(news_applied.mean()),
             "risk_is_external_only": True,
             "health_is_external_only": True,
+            "alpha_scaling": "grinold_kahn_ic_times_horizon_sigma",
+            "strategy_information_coefficient": (
+                STRATEGY_INFORMATION_COEFFICIENT
+            ),
             "optimizer_success": allocation.success,
             "cash_before_pct": previous_cash * 100.0,
             "cash_after_pct": allocation.cash_weight * 100.0,
@@ -802,6 +847,13 @@ def recommend_strategy_risk_control(
                         getattr(risk_map[symbol], "risk_level", np.nan)
                     ),
                     "risk_news_applied": bool(news_applied[index]),
+                    # Surfaced so a broken RSS pipeline is visible downstream.
+                    # The risk engine treats missing/stale stores as an
+                    # observed no-news state, which understates risk exactly
+                    # when the news feed has failed.
+                    "risk_news_quality": str(
+                        getattr(risk_map[symbol], "news_quality", "unknown")
+                    ),
                     "weight_before_pct": float(previous[index] * 100.0),
                     "weight_after_pct": float(
                         allocation.weights[index] * 100.0

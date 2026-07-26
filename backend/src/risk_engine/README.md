@@ -40,6 +40,23 @@ count is a real news state and still passes through the joint model. The
 twenty-session price-only estimate remains available only as an explicit
 auxiliary diagnostic because news did not improve it out of sample.
 
+**Observed zero vs unknown.** A *degraded* store — `missing_store`,
+`stale_store`, `invalid_store` — is not an observed zero. Those qualities no
+longer count as the news channel having been applied: `news_applied` is
+`False` and the quality string reaches the caller, so a broken RSS feed is
+visible instead of resembling a calm market. This is a reporting change only:
+the calibrated multiplier at `log_count = 0` is exactly `1.0`, so a degraded
+store already produced the price-only HAR sigma and still does. Nothing is
+imputed — inventing attention to fail conservative would fabricate an input
+the model never observed.
+
+**Callers must refresh the store before estimating.** `routers/_common.py`
+exposes `refresh_news_store(symbols)` for this; `/risk/*` and the
+recommendation path both call it (or `essential_news`, which collects) before
+`risk_estimates`. Refreshing *after* the risk call makes the model score the
+previous request's headlines — a full cycle of lag, and no overlay at all on a
+cold start. The collector throttles per feed, so the call is free when warm.
+
 Run the complete deterministic search from the repository root with:
 
 ```powershell

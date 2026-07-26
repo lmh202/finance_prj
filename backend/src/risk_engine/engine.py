@@ -313,14 +313,22 @@ def _apply_news_overlay(
     if news_features is None:
         return sigma_daily, False, "missing"
     supplied_quality = str(news_features.get("__quality__", "ok")).lower()
+    # An OBSERVED zero is a real news state and must pass through the joint
+    # model. A DEGRADED store is not an observed zero — it is an unknown, and
+    # reporting news_applied=True for it claims a channel that carried no data.
+    #
+    # Numerically this costs nothing: the calibrated multiplier at log_count=0
+    # is exactly 1.0, so a degraded store already produced the price-only HAR
+    # sigma. Excluding these qualities changes only the honesty of the report —
+    # news_applied becomes False and the quality string reaches the caller, so
+    # a broken RSS feed is visible instead of looking like a calm market.
+    # (Deliberately NOT imputing a non-zero count: inventing news attention to
+    # fail conservative would fabricate an input the model never observed.)
     if supplied_quality not in {
         "ok",
         "fresh",
         "complete",
         "no_news",
-        "stale_store",
-        "missing_store",
-        "invalid_store",
     }:
         return sigma_daily, False, supplied_quality
     try:

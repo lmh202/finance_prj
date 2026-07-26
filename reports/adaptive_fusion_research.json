@@ -1,0 +1,1300 @@
+{
+  "method": "causal_adaptive_dual_channel_fusion",
+  "policies": [
+    {
+      "name": "current",
+      "calm_target": 0.15,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 6.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": false,
+      "adaptive_risk_aversion": false,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "relaxed_fixed",
+      "calm_target": 0.3,
+      "stress_target": 0.3,
+      "calm_risk_aversion": 2.0,
+      "stress_risk_aversion": 2.0,
+      "adaptive_target": false,
+      "adaptive_risk_aversion": false,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "adaptive_target",
+      "calm_target": 0.3,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 6.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": true,
+      "adaptive_risk_aversion": false,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "adaptive_balanced",
+      "calm_target": 0.25,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 3.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": true,
+      "adaptive_risk_aversion": true,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "adaptive_growth",
+      "calm_target": 0.3,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 2.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": true,
+      "adaptive_risk_aversion": true,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "bullish_balanced",
+      "calm_target": 0.25,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 3.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": true,
+      "adaptive_risk_aversion": true,
+      "requires_bullish_regime": true,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "bullish_growth",
+      "calm_target": 0.3,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 2.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": true,
+      "adaptive_risk_aversion": true,
+      "requires_bullish_regime": true,
+      "maximum_strategy_sleeve": 0.0
+    },
+    {
+      "name": "strategy_sleeve_25",
+      "calm_target": 0.15,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 6.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": false,
+      "adaptive_risk_aversion": false,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.25
+    },
+    {
+      "name": "strategy_sleeve_40",
+      "calm_target": 0.15,
+      "stress_target": 0.15,
+      "calm_risk_aversion": 6.0,
+      "stress_risk_aversion": 6.0,
+      "adaptive_target": false,
+      "adaptive_risk_aversion": false,
+      "requires_bullish_regime": false,
+      "maximum_strategy_sleeve": 0.4
+    }
+  ],
+  "results": [
+    {
+      "cache": "/private/tmp/claude-501/-Users-yuzuriha-Code-finance-prj/f56f9bf5-54cf-4d65-b07f-4b5e9623b7e0/scratchpad/bt_cache.pkl",
+      "symbols": [
+        "AAPL",
+        "ADBE",
+        "AMD",
+        "AMZN",
+        "ASML",
+        "AVGO",
+        "COST",
+        "CSCO",
+        "GLD",
+        "GOOGL",
+        "INTC",
+        "INTU",
+        "MSFT",
+        "MU",
+        "NFLX",
+        "NVDA",
+        "PEP",
+        "QCOM",
+        "SLV",
+        "TSLA",
+        "TXN"
+      ],
+      "stress_summary": {
+        "mean_modulation": 0.4464288057331557,
+        "full_stress_share": 0.3786764705882353,
+        "calm_share": 0.4834558823529412,
+        "first_full_stress_dates": [
+          "2014-04-16",
+          "2014-10-14",
+          "2014-10-21",
+          "2014-10-28",
+          "2014-11-04",
+          "2014-12-17",
+          "2015-01-09",
+          "2015-01-16",
+          "2015-01-26",
+          "2015-02-02",
+          "2015-02-09",
+          "2015-02-17",
+          "2015-02-24",
+          "2015-03-31",
+          "2015-04-08",
+          "2015-07-24",
+          "2015-08-21",
+          "2015-08-28",
+          "2015-09-04",
+          "2015-09-14"
+        ]
+      },
+      "decision_summary": {
+        "current": {
+          "mean_target": 0.15,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9643850249650976,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "relaxed_fixed": {
+          "mean_target": 0.3,
+          "mean_risk_aversion": 2.0,
+          "mean_gross": 0.9988075017114494,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "adaptive_target": {
+          "mean_target": 0.23303567914002665,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9667065687246309,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "adaptive_balanced": {
+          "mean_target": 0.20535711942668441,
+          "mean_risk_aversion": 4.339286417199467,
+          "mean_gross": 0.966350502249451,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "adaptive_growth": {
+          "mean_target": 0.23303567914002665,
+          "mean_risk_aversion": 3.785715222932623,
+          "mean_gross": 0.9663525476153252,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "bullish_balanced": {
+          "mean_target": 0.19148798019384383,
+          "mean_risk_aversion": 4.755360594184684,
+          "mean_gross": 0.9657670172805074,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "bullish_growth": {
+          "mean_target": 0.2122319702907658,
+          "mean_risk_aversion": 4.340480792246247,
+          "mean_gross": 0.9657550534365039,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "strategy_sleeve_25": {
+          "mean_target": 0.15,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9548088945166597,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.10371995048460965
+        },
+        "strategy_sleeve_40": {
+          "mean_target": 0.15,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9560375651322701,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.16595192077537546
+        }
+      },
+      "periods": {
+        "design_2014_2018": {
+          "period": [
+            2014,
+            2018
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.215710728547859,
+              "sharpe": 1.1511345627311402,
+              "annual_volatility": 0.18459861223018875,
+              "max_drawdown": -0.24012692974730987,
+              "calmar": 0.8983196044477623
+            },
+            "current": {
+              "cagr": 0.14053260775654652,
+              "sharpe": 1.1879714508458368,
+              "annual_volatility": 0.11642669373375834,
+              "max_drawdown": -0.10567441212501283,
+              "calmar": 1.3298641074084845
+            },
+            "relaxed_fixed": {
+              "cagr": 0.20126793027294565,
+              "sharpe": 1.3026428941451318,
+              "annual_volatility": 0.14940547055116934,
+              "max_drawdown": -0.1497150636862049,
+              "calmar": 1.3443398768128831
+            },
+            "adaptive_target": {
+              "cagr": 0.14053260775654652,
+              "sharpe": 1.1879714508458368,
+              "annual_volatility": 0.11642669373375834,
+              "max_drawdown": -0.10567441212501283,
+              "calmar": 1.3298641074084845
+            },
+            "adaptive_balanced": {
+              "cagr": 0.1405949873680008,
+              "sharpe": 1.1748454634905767,
+              "annual_volatility": 0.11792424769372206,
+              "max_drawdown": -0.11343658868978668,
+              "calmar": 1.2394148042699327
+            },
+            "adaptive_growth": {
+              "cagr": 0.13277681394451868,
+              "sharpe": 1.10742798026681,
+              "annual_volatility": 0.11900457374582975,
+              "max_drawdown": -0.11506422172950881,
+              "calmar": 1.153936575147124
+            },
+            "bullish_balanced": {
+              "cagr": 0.13764228738992057,
+              "sharpe": 1.1589346316333797,
+              "annual_volatility": 0.11723461339109065,
+              "max_drawdown": -0.11387234929853884,
+              "calmar": 1.208741966226271
+            },
+            "bullish_growth": {
+              "cagr": 0.1318827886574261,
+              "sharpe": 1.1044914643347539,
+              "annual_volatility": 0.11855752931412285,
+              "max_drawdown": -0.1150658614475567,
+              "calmar": 1.146150448085195
+            },
+            "strategy_sleeve_25": {
+              "cagr": 0.18842015944412438,
+              "sharpe": 1.3072716819916776,
+              "annual_volatility": 0.13956063284069528,
+              "max_drawdown": -0.14539253358276893,
+              "calmar": 1.2959410968436058
+            },
+            "strategy_sleeve_40": {
+              "cagr": 0.1972627564879057,
+              "sharpe": 1.281046410995252,
+              "annual_volatility": 0.14931503146628713,
+              "max_drawdown": -0.15947535501002852,
+              "calmar": 1.236948219839366
+            }
+          },
+          "vs_current": {
+            "daily_strategy": {
+              "point_delta_sharpe": -0.03683688811469654,
+              "bootstrap_delta_sharpe_95": [
+                -0.4893856033571403,
+                -0.02907497385749247,
+                0.5103256406223144
+              ],
+              "probability_positive": 0.4565
+            },
+            "relaxed_fixed": {
+              "point_delta_sharpe": 0.11467144329929502,
+              "bootstrap_delta_sharpe_95": [
+                -0.23880082409222195,
+                0.11467856208686633,
+                0.5313758673773845
+              ],
+              "probability_positive": 0.7245
+            },
+            "adaptive_target": {
+              "point_delta_sharpe": 0.0,
+              "bootstrap_delta_sharpe_95": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "probability_positive": 0.0
+            },
+            "adaptive_balanced": {
+              "point_delta_sharpe": -0.01312598735526005,
+              "bootstrap_delta_sharpe_95": [
+                -0.10524587314610974,
+                -0.011037818259709953,
+                0.08026818732069002
+              ],
+              "probability_positive": 0.4155
+            },
+            "adaptive_growth": {
+              "point_delta_sharpe": -0.08054347057902667,
+              "bootstrap_delta_sharpe_95": [
+                -0.22637252600321484,
+                -0.08445103040826962,
+                0.04990425655189778
+              ],
+              "probability_positive": 0.1105
+            },
+            "bullish_balanced": {
+              "point_delta_sharpe": -0.029036819212457043,
+              "bootstrap_delta_sharpe_95": [
+                -0.12107494294561748,
+                -0.0316544721927674,
+                0.05168244204344876
+              ],
+              "probability_positive": 0.2155
+            },
+            "bullish_growth": {
+              "point_delta_sharpe": -0.0834799865110829,
+              "bootstrap_delta_sharpe_95": [
+                -0.22358126095795822,
+                -0.08676894096252613,
+                0.03709294880261349
+              ],
+              "probability_positive": 0.0855
+            },
+            "strategy_sleeve_25": {
+              "point_delta_sharpe": 0.11930023114584087,
+              "bootstrap_delta_sharpe_95": [
+                -0.19935653463414751,
+                0.11980270976634391,
+                0.4722737516994189
+              ],
+              "probability_positive": 0.7585
+            },
+            "strategy_sleeve_40": {
+              "point_delta_sharpe": 0.09307496014941519,
+              "bootstrap_delta_sharpe_95": [
+                -0.2945727172234535,
+                0.09022836009050522,
+                0.521083452445303
+              ],
+              "probability_positive": 0.6765
+            }
+          }
+        },
+        "validation_2019_2023": {
+          "period": [
+            2019,
+            2023
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.2809000621558164,
+              "sharpe": 1.0716879966470034,
+              "annual_volatility": 0.2637160571814065,
+              "max_drawdown": -0.3892276316205878,
+              "calmar": 0.721685819134323
+            },
+            "current": {
+              "cagr": 0.13732368042057774,
+              "sharpe": 0.9971193421626846,
+              "annual_volatility": 0.13876450981283947,
+              "max_drawdown": -0.20495809939149523,
+              "calmar": 0.6700085570088772
+            },
+            "relaxed_fixed": {
+              "cagr": 0.1862992489680242,
+              "sharpe": 1.0035226406740165,
+              "annual_volatility": 0.1880378806249495,
+              "max_drawdown": -0.25007230713160356,
+              "calmar": 0.7449815259631366
+            },
+            "adaptive_target": {
+              "cagr": 0.1452844170498877,
+              "sharpe": 1.0387511615966964,
+              "annual_volatility": 0.14010339117912787,
+              "max_drawdown": -0.19864909241745,
+              "calmar": 0.7313620982701526
+            },
+            "adaptive_balanced": {
+              "cagr": 0.1544685002828785,
+              "sharpe": 1.0922231209889568,
+              "annual_volatility": 0.1406301892568061,
+              "max_drawdown": -0.19378034163220725,
+              "calmar": 0.7971319432187701
+            },
+            "adaptive_growth": {
+              "cagr": 0.15434426803641177,
+              "sharpe": 1.0992424813490187,
+              "annual_volatility": 0.13948688908161744,
+              "max_drawdown": -0.18904790273841265,
+              "calmar": 0.8164294118088121
+            },
+            "bullish_balanced": {
+              "cagr": 0.14806624518691813,
+              "sharpe": 1.055544014822609,
+              "annual_volatility": 0.14018728201451236,
+              "max_drawdown": -0.19662944909107039,
+              "calmar": 0.753021716082519
+            },
+            "bullish_growth": {
+              "cagr": 0.14242230417441837,
+              "sharpe": 1.0319515505718089,
+              "annual_volatility": 0.13836432739052512,
+              "max_drawdown": -0.19097985427564068,
+              "calmar": 0.7457451714716499
+            },
+            "strategy_sleeve_25": {
+              "cagr": 0.1859250602095588,
+              "sharpe": 1.1965183253749265,
+              "annual_volatility": 0.15228495549081705,
+              "max_drawdown": -0.21925385133987618,
+              "calmar": 0.8479899398498921
+            },
+            "strategy_sleeve_40": {
+              "cagr": 0.20561815605232114,
+              "sharpe": 1.2410575356904925,
+              "annual_volatility": 0.1612320594754902,
+              "max_drawdown": -0.2283772665420304,
+              "calmar": 0.9003442381358011
+            }
+          },
+          "vs_current": {
+            "daily_strategy": {
+              "point_delta_sharpe": 0.07456865448431882,
+              "bootstrap_delta_sharpe_95": [
+                -0.3944897025989553,
+                0.06536825343777208,
+                0.49337732282062186
+              ],
+              "probability_positive": 0.613
+            },
+            "relaxed_fixed": {
+              "point_delta_sharpe": 0.006403298511331923,
+              "bootstrap_delta_sharpe_95": [
+                -0.3292104842126254,
+                0.015399322558832196,
+                0.3761046790259587
+              ],
+              "probability_positive": 0.5325
+            },
+            "adaptive_target": {
+              "point_delta_sharpe": 0.04163181943401184,
+              "bootstrap_delta_sharpe_95": [
+                -0.02304123202347763,
+                0.03952421881803991,
+                0.10364092316739061
+              ],
+              "probability_positive": 0.877
+            },
+            "adaptive_balanced": {
+              "point_delta_sharpe": 0.09510377882627219,
+              "bootstrap_delta_sharpe_95": [
+                0.022124325048978207,
+                0.0938786039098595,
+                0.17191205543528512
+              ],
+              "probability_positive": 0.9935
+            },
+            "adaptive_growth": {
+              "point_delta_sharpe": 0.10212313918633409,
+              "bootstrap_delta_sharpe_95": [
+                0.012702528521628495,
+                0.09682150162830433,
+                0.18715389375892247
+              ],
+              "probability_positive": 0.989
+            },
+            "bullish_balanced": {
+              "point_delta_sharpe": 0.05842467265992435,
+              "bootstrap_delta_sharpe_95": [
+                -0.009568775815018304,
+                0.06028366741321667,
+                0.13487997436927748
+              ],
+              "probability_positive": 0.957
+            },
+            "bullish_growth": {
+              "point_delta_sharpe": 0.034832208409124266,
+              "bootstrap_delta_sharpe_95": [
+                -0.03388899156271332,
+                0.03632744183010006,
+                0.1133406367682008
+              ],
+              "probability_positive": 0.834
+            },
+            "strategy_sleeve_25": {
+              "point_delta_sharpe": 0.19939898321224192,
+              "bootstrap_delta_sharpe_95": [
+                -0.059282406115677755,
+                0.1867313253250334,
+                0.46544770328946844
+              ],
+              "probability_positive": 0.926
+            },
+            "strategy_sleeve_40": {
+              "point_delta_sharpe": 0.24393819352780788,
+              "bootstrap_delta_sharpe_95": [
+                -0.09346793837096685,
+                0.2303714202195774,
+                0.584093328908002
+              ],
+              "probability_positive": 0.9105
+            }
+          }
+        },
+        "full_2014_2023": {
+          "period": [
+            2014,
+            2023
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.24787978097268892,
+              "sharpe": 1.0877597158173797,
+              "annual_volatility": 0.2275866483080376,
+              "max_drawdown": -0.3892276316205875,
+              "calmar": 0.6368504207695047
+            },
+            "current": {
+              "cagr": 0.13892701394485907,
+              "sharpe": 1.0802772956954605,
+              "annual_volatility": 0.12805803015329692,
+              "max_drawdown": -0.20495809939149412,
+              "calmar": 0.6778312950662765
+            },
+            "relaxed_fixed": {
+              "cagr": 0.19376012812129373,
+              "sharpe": 1.128811940856889,
+              "annual_volatility": 0.16979012676832722,
+              "max_drawdown": -0.25007230713160367,
+              "calmar": 0.7748164134756634
+            },
+            "adaptive_target": {
+              "cagr": 0.14290604285778574,
+              "sharpe": 1.1020095956734692,
+              "annual_volatility": 0.12878478994984022,
+              "max_drawdown": -0.19864909241745032,
+              "calmar": 0.7193893569746416
+            },
+            "adaptive_balanced": {
+              "cagr": 0.14751077750795205,
+              "sharpe": 1.1257907514595358,
+              "annual_volatility": 0.129749827521276,
+              "max_drawdown": -0.19378034163220592,
+              "calmar": 0.761226738819187
+            },
+            "adaptive_growth": {
+              "cagr": 0.14350969481740883,
+              "sharpe": 1.0997680417588445,
+              "annual_volatility": 0.1296268385647952,
+              "max_drawdown": -0.18904790273841376,
+              "calmar": 0.759118153328491
+            },
+            "bullish_balanced": {
+              "cagr": 0.14284238162994423,
+              "sharpe": 1.098486530078363,
+              "annual_volatility": 0.12919644082913997,
+              "max_drawdown": -0.19662944909107039,
+              "calmar": 0.7264546703977476
+            },
+            "bullish_growth": {
+              "cagr": 0.13714033587476893,
+              "sharpe": 1.0624801361672878,
+              "annual_volatility": 0.12881702539022566,
+              "max_drawdown": -0.19097985427564135,
+              "calmar": 0.7180879700370605
+            },
+            "strategy_sleeve_25": {
+              "cagr": 0.18717195432802725,
+              "sharpe": 1.2485429615930486,
+              "annual_volatility": 0.14603238109318759,
+              "max_drawdown": -0.21925385133987618,
+              "calmar": 0.8536769282920499
+            },
+            "strategy_sleeve_40": {
+              "cagr": 0.20143319281059835,
+              "sharpe": 1.259606214820392,
+              "annual_volatility": 0.1553571834473252,
+              "max_drawdown": -0.2283772665420304,
+              "calmar": 0.8820194578059141
+            }
+          },
+          "vs_current": {
+            "daily_strategy": {
+              "point_delta_sharpe": 0.007482420121919242,
+              "bootstrap_delta_sharpe_95": [
+                -0.3244816351694834,
+                -0.00560593073329968,
+                0.3359532479389891
+              ],
+              "probability_positive": 0.488
+            },
+            "relaxed_fixed": {
+              "point_delta_sharpe": 0.04853464516142858,
+              "bootstrap_delta_sharpe_95": [
+                -0.20541836446427272,
+                0.049547496118068024,
+                0.31977768015893526
+              ],
+              "probability_positive": 0.646
+            },
+            "adaptive_target": {
+              "point_delta_sharpe": 0.02173229997800874,
+              "bootstrap_delta_sharpe_95": [
+                -0.01764588522102527,
+                0.019335061331097136,
+                0.05397662533235487
+              ],
+              "probability_positive": 0.874
+            },
+            "adaptive_balanced": {
+              "point_delta_sharpe": 0.045513455764075283,
+              "bootstrap_delta_sharpe_95": [
+                -0.017783979356530165,
+                0.04141531658557013,
+                0.0986808977625605
+              ],
+              "probability_positive": 0.928
+            },
+            "adaptive_growth": {
+              "point_delta_sharpe": 0.019490746063383968,
+              "bootstrap_delta_sharpe_95": [
+                -0.06700094051011986,
+                0.01295928445082467,
+                0.09261095776618943
+              ],
+              "probability_positive": 0.6325
+            },
+            "bullish_balanced": {
+              "point_delta_sharpe": 0.01820923438290256,
+              "bootstrap_delta_sharpe_95": [
+                -0.037390126345794444,
+                0.017310347708398066,
+                0.06967237836661902
+              ],
+              "probability_positive": 0.7295
+            },
+            "bullish_growth": {
+              "point_delta_sharpe": -0.017797159528172735,
+              "bootstrap_delta_sharpe_95": [
+                -0.09039963672742156,
+                -0.01836673425632901,
+                0.0494111052435913
+              ],
+              "probability_positive": 0.297
+            },
+            "strategy_sleeve_25": {
+              "point_delta_sharpe": 0.16826566589758807,
+              "bootstrap_delta_sharpe_95": [
+                -0.04996415266519206,
+                0.155885057280979,
+                0.3763976088108321
+              ],
+              "probability_positive": 0.925
+            },
+            "strategy_sleeve_40": {
+              "point_delta_sharpe": 0.17932891912493143,
+              "bootstrap_delta_sharpe_95": [
+                -0.09551212334357195,
+                0.1646073686161147,
+                0.44026743938097546
+              ],
+              "probability_positive": 0.9025
+            }
+          }
+        }
+      }
+    },
+    {
+      "cache": "/private/tmp/claude-501/-Users-yuzuriha-Code-finance-prj/f56f9bf5-54cf-4d65-b07f-4b5e9623b7e0/scratchpad/oos_cache.pkl",
+      "symbols": [
+        "XLB",
+        "XLE",
+        "XLF",
+        "XLI",
+        "XLK",
+        "XLP",
+        "XLU",
+        "XLV",
+        "XLY"
+      ],
+      "stress_summary": {
+        "mean_modulation": 0.20798322201200467,
+        "full_stress_share": 0.155,
+        "calm_share": 0.7366666666666667,
+        "first_full_stress_dates": [
+          "2001-09-21",
+          "2001-09-28",
+          "2001-10-05",
+          "2001-10-12",
+          "2001-10-19",
+          "2002-07-10",
+          "2002-07-17",
+          "2002-07-24",
+          "2002-07-31",
+          "2002-08-07",
+          "2002-08-14",
+          "2002-08-21",
+          "2002-08-28",
+          "2002-09-05",
+          "2002-09-12",
+          "2002-09-19",
+          "2002-09-26",
+          "2002-10-03",
+          "2002-10-10",
+          "2002-10-17"
+        ]
+      },
+      "decision_summary": {
+        "current": {
+          "mean_target": 0.14999999999999997,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9146059563145009,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "relaxed_fixed": {
+          "mean_target": 0.29999999999999993,
+          "mean_risk_aversion": 2.0,
+          "mean_gross": 0.9881914363871257,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "adaptive_target": {
+          "mean_target": 0.26880251669819927,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9454807110404969,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "adaptive_balanced": {
+          "mean_target": 0.22920167779879952,
+          "mean_risk_aversion": 3.6239496660360144,
+          "mean_gross": 0.9401997284387856,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "adaptive_growth": {
+          "mean_target": 0.26880251669819927,
+          "mean_risk_aversion": 2.831932888048019,
+          "mean_gross": 0.9443458882807414,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "bullish_balanced": {
+          "mean_target": 0.19370456566488167,
+          "mean_risk_aversion": 4.6888630300535485,
+          "mean_gross": 0.919240148033247,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "bullish_growth": {
+          "mean_target": 0.21555684849732254,
+          "mean_risk_aversion": 4.251817373404733,
+          "mean_gross": 0.9197497312909017,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.0
+        },
+        "strategy_sleeve_25": {
+          "mean_target": 0.14999999999999997,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9138765595187878,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.10926141416220425
+        },
+        "strategy_sleeve_40": {
+          "mean_target": 0.14999999999999997,
+          "mean_risk_aversion": 6.0,
+          "mean_gross": 0.9152106507889548,
+          "optimizer_success_rate": 1.0,
+          "mean_strategy_sleeve": 0.17481826265952677
+        }
+      },
+      "periods": {
+        "external_2000_2013": {
+          "period": [
+            2000,
+            2013
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.046329122027304104,
+              "sharpe": 0.33627625560136476,
+              "annual_volatility": 0.18642357854681926,
+              "max_drawdown": -0.5165102290372001,
+              "calmar": 0.08969642694911156
+            },
+            "current": {
+              "cagr": 0.07131092019832708,
+              "sharpe": 0.6363816855600355,
+              "annual_volatility": 0.11948947523973977,
+              "max_drawdown": -0.342336354065062,
+              "calmar": 0.20830659481982516
+            },
+            "relaxed_fixed": {
+              "cagr": 0.059480655621270584,
+              "sharpe": 0.45372325875043445,
+              "annual_volatility": 0.1532895680609062,
+              "max_drawdown": -0.43588734603609336,
+              "calmar": 0.1364587803756646
+            },
+            "adaptive_target": {
+              "cagr": 0.07216878782065628,
+              "sharpe": 0.605470260419421,
+              "annual_volatility": 0.12882841357459163,
+              "max_drawdown": -0.3585541422830756,
+              "calmar": 0.20127723908340628
+            },
+            "adaptive_balanced": {
+              "cagr": 0.06769546701601614,
+              "sharpe": 0.571364236043709,
+              "annual_volatility": 0.12930625846576915,
+              "max_drawdown": -0.3593597130898333,
+              "calmar": 0.18837800830248752
+            },
+            "adaptive_growth": {
+              "cagr": 0.06984845817838203,
+              "sharpe": 0.5825433554997079,
+              "annual_volatility": 0.13056640521561463,
+              "max_drawdown": -0.3464625723638931,
+              "calmar": 0.20160462846480137
+            },
+            "bullish_balanced": {
+              "cagr": 0.06643716732110239,
+              "sharpe": 0.5928507669822828,
+              "annual_volatility": 0.12084945469535842,
+              "max_drawdown": -0.34364836996773573,
+              "calmar": 0.19332891736788974
+            },
+            "bullish_growth": {
+              "cagr": 0.06738392552596473,
+              "sharpe": 0.5990873305593538,
+              "annual_volatility": 0.12113091900943743,
+              "max_drawdown": -0.3409222904464315,
+              "calmar": 0.19765186206430418
+            },
+            "strategy_sleeve_25": {
+              "cagr": 0.06049619252520477,
+              "sharpe": 0.5234774202009049,
+              "annual_volatility": 0.1278570140287947,
+              "max_drawdown": -0.34572180000035024,
+              "calmar": 0.17498518324601886
+            },
+            "strategy_sleeve_40": {
+              "cagr": 0.058913328592477665,
+              "sharpe": 0.5065929932122409,
+              "annual_volatility": 0.1296176409690341,
+              "max_drawdown": -0.34504679811638994,
+              "calmar": 0.17074011094751626
+            }
+          },
+          "vs_current": {
+            "daily_strategy": {
+              "point_delta_sharpe": -0.30010542995867073,
+              "bootstrap_delta_sharpe_95": [
+                -0.5107099552807373,
+                -0.2940952908015654,
+                -0.08098828938128
+              ],
+              "probability_positive": 0.0045
+            },
+            "relaxed_fixed": {
+              "point_delta_sharpe": -0.18265842680960104,
+              "bootstrap_delta_sharpe_95": [
+                -0.37797811843554296,
+                -0.1758381381264998,
+                0.02102577037058503
+              ],
+              "probability_positive": 0.0355
+            },
+            "adaptive_target": {
+              "point_delta_sharpe": -0.030911425140614512,
+              "bootstrap_delta_sharpe_95": [
+                -0.12648865822276875,
+                -0.031846063369431354,
+                0.05998417828371043
+              ],
+              "probability_positive": 0.262
+            },
+            "adaptive_balanced": {
+              "point_delta_sharpe": -0.06501744951632649,
+              "bootstrap_delta_sharpe_95": [
+                -0.17234749880087177,
+                -0.06429043168296639,
+                0.03833486647087238
+              ],
+              "probability_positive": 0.1125
+            },
+            "adaptive_growth": {
+              "point_delta_sharpe": -0.053838330060327566,
+              "bootstrap_delta_sharpe_95": [
+                -0.16141167782940985,
+                -0.054083524484220546,
+                0.05151151098797599
+              ],
+              "probability_positive": 0.167
+            },
+            "bullish_balanced": {
+              "point_delta_sharpe": -0.04353091857775271,
+              "bootstrap_delta_sharpe_95": [
+                -0.09874393343314739,
+                -0.04170853607197113,
+                0.007872136478332953
+              ],
+              "probability_positive": 0.0485
+            },
+            "bullish_growth": {
+              "point_delta_sharpe": -0.03729435500068168,
+              "bootstrap_delta_sharpe_95": [
+                -0.09515411803053161,
+                -0.03547381132536115,
+                0.01745124630859046
+              ],
+              "probability_positive": 0.0855
+            },
+            "strategy_sleeve_25": {
+              "point_delta_sharpe": -0.11290426535913056,
+              "bootstrap_delta_sharpe_95": [
+                -0.23101528797808532,
+                -0.11629625637318611,
+                -0.01040546244527394
+              ],
+              "probability_positive": 0.0135
+            },
+            "strategy_sleeve_40": {
+              "point_delta_sharpe": -0.12978869234779455,
+              "bootstrap_delta_sharpe_95": [
+                -0.25927156621784725,
+                -0.13217390424291228,
+                -0.01959563884391189
+              ],
+              "probability_positive": 0.009
+            }
+          }
+        },
+        "external_2014_2023": {
+          "period": [
+            2014,
+            2023
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.08531458416248539,
+              "sharpe": 0.5782330898498085,
+              "annual_volatility": 0.1653409164501822,
+              "max_drawdown": -0.33735330887057047,
+              "calmar": 0.2528938709630897
+            },
+            "current": {
+              "cagr": 0.08702825775549439,
+              "sharpe": 0.7553185902498588,
+              "annual_volatility": 0.12006185463555623,
+              "max_drawdown": -0.19691890482748298,
+              "calmar": 0.44194973474861765
+            },
+            "relaxed_fixed": {
+              "cagr": 0.11477904349108936,
+              "sharpe": 0.8164023021593376,
+              "annual_volatility": 0.14629633545565895,
+              "max_drawdown": -0.28143004299542573,
+              "calmar": 0.40784218440017417
+            },
+            "adaptive_target": {
+              "cagr": 0.08982629802933473,
+              "sharpe": 0.7329253016712666,
+              "annual_volatility": 0.12872350713397188,
+              "max_drawdown": -0.24370092805715804,
+              "calmar": 0.36859235106510024
+            },
+            "adaptive_balanced": {
+              "cagr": 0.09137351151413031,
+              "sharpe": 0.7468679605697247,
+              "annual_volatility": 0.1281183754152297,
+              "max_drawdown": -0.23807715531648854,
+              "calmar": 0.3837978969156561
+            },
+            "adaptive_growth": {
+              "cagr": 0.08782192999140759,
+              "sharpe": 0.7178357903564118,
+              "annual_volatility": 0.1288957448867577,
+              "max_drawdown": -0.2420351833948039,
+              "calmar": 0.36284778419240754
+            },
+            "bullish_balanced": {
+              "cagr": 0.08822332172048819,
+              "sharpe": 0.7599036820229527,
+              "annual_volatility": 0.12091958914489759,
+              "max_drawdown": -0.19976121215173814,
+              "calmar": 0.441643904590817
+            },
+            "bullish_growth": {
+              "cagr": 0.088467669637601,
+              "sharpe": 0.7621077171259768,
+              "annual_volatility": 0.12085424954700745,
+              "max_drawdown": -0.19969030448143932,
+              "calmar": 0.44302436148483026
+            },
+            "strategy_sleeve_25": {
+              "cagr": 0.07830219301196473,
+              "sharpe": 0.6555124141715905,
+              "annual_volatility": 0.1274465576664223,
+              "max_drawdown": -0.2203683148108624,
+              "calmar": 0.355324190227483
+            },
+            "strategy_sleeve_40": {
+              "cagr": 0.07516490275052234,
+              "sharpe": 0.6290684106585367,
+              "annual_volatility": 0.12835548110187983,
+              "max_drawdown": -0.21857037420434877,
+              "calmar": 0.34389337083830107
+            }
+          },
+          "vs_current": {
+            "daily_strategy": {
+              "point_delta_sharpe": -0.17708550040005033,
+              "bootstrap_delta_sharpe_95": [
+                -0.3800622134501059,
+                -0.15911677565433707,
+                0.0797971097388208
+              ],
+              "probability_positive": 0.101
+            },
+            "relaxed_fixed": {
+              "point_delta_sharpe": 0.06108371190947881,
+              "bootstrap_delta_sharpe_95": [
+                -0.14912897313699233,
+                0.07618084983559595,
+                0.3140061885694454
+              ],
+              "probability_positive": 0.7395
+            },
+            "adaptive_target": {
+              "point_delta_sharpe": -0.02239328857859224,
+              "bootstrap_delta_sharpe_95": [
+                -0.15894575347356166,
+                -0.014646670142598295,
+                0.14624016905292903
+              ],
+              "probability_positive": 0.4175
+            },
+            "adaptive_balanced": {
+              "point_delta_sharpe": -0.008450629680134103,
+              "bootstrap_delta_sharpe_95": [
+                -0.1395808004008475,
+                -0.0033545559876444198,
+                0.14894382020276972
+              ],
+              "probability_positive": 0.4795
+            },
+            "adaptive_growth": {
+              "point_delta_sharpe": -0.03748279989344705,
+              "bootstrap_delta_sharpe_95": [
+                -0.1778144014537866,
+                -0.03141269049876855,
+                0.13210667302232842
+              ],
+              "probability_positive": 0.3435
+            },
+            "bullish_balanced": {
+              "point_delta_sharpe": 0.004585091773093852,
+              "bootstrap_delta_sharpe_95": [
+                -0.05167332945608798,
+                0.002697382415401295,
+                0.06161430448354196
+              ],
+              "probability_positive": 0.541
+            },
+            "bullish_growth": {
+              "point_delta_sharpe": 0.00678912687611799,
+              "bootstrap_delta_sharpe_95": [
+                -0.04780278434360028,
+                0.0050674264079791365,
+                0.06208624031690379
+              ],
+              "probability_positive": 0.582
+            },
+            "strategy_sleeve_25": {
+              "point_delta_sharpe": -0.09980617607826836,
+              "bootstrap_delta_sharpe_95": [
+                -0.24325024168458764,
+                -0.09474743607493974,
+                0.05983712781065641
+              ],
+              "probability_positive": 0.1235
+            },
+            "strategy_sleeve_40": {
+              "point_delta_sharpe": -0.12625017959132212,
+              "bootstrap_delta_sharpe_95": [
+                -0.28439890829422904,
+                -0.12434115354085071,
+                0.043687963056060784
+              ],
+              "probability_positive": 0.0755
+            }
+          }
+        },
+        "external_full": {
+          "period": [
+            2000,
+            2023
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.06251444422123087,
+              "sharpe": 0.4300984822303703,
+              "annual_volatility": 0.1778702132889347,
+              "max_drawdown": -0.5165102290372001,
+              "calmar": 0.12103234496974202
+            },
+            "current": {
+              "cagr": 0.07787825669369375,
+              "sharpe": 0.6864781099701917,
+              "annual_volatility": 0.11972085041130104,
+              "max_drawdown": -0.342336354065062,
+              "calmar": 0.22749046593775651
+            },
+            "relaxed_fixed": {
+              "cagr": 0.08234247790644411,
+              "sharpe": 0.6016589278426802,
+              "annual_volatility": 0.15039035860471897,
+              "max_drawdown": -0.43588734603609336,
+              "calmar": 0.18890770437650145
+            },
+            "adaptive_target": {
+              "cagr": 0.07954300344251442,
+              "sharpe": 0.6589765432735085,
+              "annual_volatility": 0.1287746676454611,
+              "max_drawdown": -0.3585541422830756,
+              "calmar": 0.22184377214561884
+            },
+            "adaptive_balanced": {
+              "cagr": 0.07756787935097798,
+              "sharpe": 0.6446517259748483,
+              "annual_volatility": 0.1288002137976591,
+              "max_drawdown": -0.3593597130898333,
+              "calmar": 0.21585023731245978
+            },
+            "adaptive_growth": {
+              "cagr": 0.07735391518195223,
+              "sharpe": 0.6389251893802856,
+              "annual_volatility": 0.129858213301042,
+              "max_drawdown": -0.3464625723638931,
+              "calmar": 0.22326773900618227
+            },
+            "bullish_balanced": {
+              "cagr": 0.07552530282586845,
+              "sharpe": 0.6630182565953946,
+              "annual_volatility": 0.12087044328381169,
+              "max_drawdown": -0.34364836996773573,
+              "calmar": 0.2197749485410314
+            },
+            "bullish_growth": {
+              "cagr": 0.07618074921184137,
+              "sharpe": 0.6674488451826821,
+              "annual_volatility": 0.12100634022782059,
+              "max_drawdown": -0.3409222904464315,
+              "calmar": 0.22345487915173887
+            },
+            "strategy_sleeve_25": {
+              "cagr": 0.06793173676918363,
+              "sharpe": 0.5788204261419393,
+              "annual_volatility": 0.12767534777726738,
+              "max_drawdown": -0.34572180000035024,
+              "calmar": 0.1964924883797169
+            },
+            "strategy_sleeve_40": {
+              "cagr": 0.06570257319320016,
+              "sharpe": 0.5577298427528588,
+              "annual_volatility": 0.1290796433978856,
+              "max_drawdown": -0.34504679811638994,
+              "calmar": 0.19041641177912802
+            }
+          },
+          "vs_current": {
+            "daily_strategy": {
+              "point_delta_sharpe": -0.25637962773982137,
+              "bootstrap_delta_sharpe_95": [
+                -0.41475284091486503,
+                -0.2510218493627927,
+                -0.0847942495186274
+              ],
+              "probability_positive": 0.0005
+            },
+            "relaxed_fixed": {
+              "point_delta_sharpe": -0.0848191821275115,
+              "bootstrap_delta_sharpe_95": [
+                -0.23516982002289089,
+                -0.07915369595680316,
+                0.0631037324218152
+              ],
+              "probability_positive": 0.1515
+            },
+            "adaptive_target": {
+              "point_delta_sharpe": -0.027501566696683133,
+              "bootstrap_delta_sharpe_95": [
+                -0.11065493287779225,
+                -0.028887518945364343,
+                0.056109091516937916
+              ],
+              "probability_positive": 0.256
+            },
+            "adaptive_balanced": {
+              "point_delta_sharpe": -0.04182638399534333,
+              "bootstrap_delta_sharpe_95": [
+                -0.1261670485036591,
+                -0.043652754500611624,
+                0.04294653114596078
+              ],
+              "probability_positive": 0.167
+            },
+            "adaptive_growth": {
+              "point_delta_sharpe": -0.04755292058990601,
+              "bootstrap_delta_sharpe_95": [
+                -0.1348025820944174,
+                -0.04770309244210791,
+                0.039141003823592105
+              ],
+              "probability_positive": 0.1465
+            },
+            "bullish_balanced": {
+              "point_delta_sharpe": -0.023459853374797057,
+              "bootstrap_delta_sharpe_95": [
+                -0.06251672390348201,
+                -0.023917925718974442,
+                0.01398839698484668
+              ],
+              "probability_positive": 0.107
+            },
+            "bullish_growth": {
+              "point_delta_sharpe": -0.019029264787509548,
+              "bootstrap_delta_sharpe_95": [
+                -0.05960197796823017,
+                -0.01911271427272132,
+                0.020670311938787267
+              ],
+              "probability_positive": 0.159
+            },
+            "strategy_sleeve_25": {
+              "point_delta_sharpe": -0.10765768382825236,
+              "bootstrap_delta_sharpe_95": [
+                -0.20195665897395523,
+                -0.10740982798781074,
+                -0.017900813928830892
+              ],
+              "probability_positive": 0.0105
+            },
+            "strategy_sleeve_40": {
+              "point_delta_sharpe": -0.1287482672173329,
+              "bootstrap_delta_sharpe_95": [
+                -0.23040695527804725,
+                -0.12794888285197886,
+                -0.029989371263933882
+              ],
+              "probability_positive": 0.007
+            }
+          }
+        }
+      }
+    }
+  ]
+}

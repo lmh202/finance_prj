@@ -1,0 +1,1431 @@
+{
+  "method": "systemic_risk_gross_only_overlay",
+  "policies": [
+    {
+      "name": "systemic_gross_tilt_25",
+      "strategy_strength": 0.25,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.35,
+      "stress_release_speed": 0.3
+    },
+    {
+      "name": "systemic_gross_tilt_50",
+      "strategy_strength": 0.5,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.35,
+      "stress_release_speed": 0.3
+    },
+    {
+      "name": "systemic_gross_strategy_100",
+      "strategy_strength": 1.0,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.35,
+      "stress_release_speed": 0.3
+    },
+    {
+      "name": "systemic_gross_strategy_100_light_trend",
+      "strategy_strength": 1.0,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.15,
+      "stress_release_speed": 0.3
+    },
+    {
+      "name": "systemic_gross_strategy_100_no_trend",
+      "strategy_strength": 1.0,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.0,
+      "stress_release_speed": 0.3
+    },
+    {
+      "name": "systemic_gross_strategy_100_fast_release",
+      "strategy_strength": 1.0,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.0,
+      "stress_release_speed": 0.7
+    },
+    {
+      "name": "systemic_gross_strategy_100_immediate_release",
+      "strategy_strength": 1.0,
+      "calm_base_target": 0.3,
+      "stress_base_target": 0.15,
+      "non_bullish_defence_floor": 0.0,
+      "stress_release_speed": 1.0
+    }
+  ],
+  "results": [
+    {
+      "label": "historical_21",
+      "cache": "/private/tmp/claude-501/-Users-yuzuriha-Code-finance-prj/f56f9bf5-54cf-4d65-b07f-4b5e9623b7e0/scratchpad/bt_cache.pkl",
+      "symbols": [
+        "AAPL",
+        "ADBE",
+        "AMD",
+        "AMZN",
+        "ASML",
+        "AVGO",
+        "COST",
+        "CSCO",
+        "GLD",
+        "GOOGL",
+        "INTC",
+        "INTU",
+        "MSFT",
+        "MU",
+        "NFLX",
+        "NVDA",
+        "PEP",
+        "QCOM",
+        "SLV",
+        "TSLA",
+        "TXN"
+      ],
+      "decision_summary": {
+        "systemic_gross_tilt_25": {
+          "mean_gross": 0.8618567547137408,
+          "mean_base_target": 0.23230187349493903,
+          "mean_turnover_per_rebalance": 0.03804201364572945,
+          "full_stress_share": 0.3180147058823529
+        },
+        "systemic_gross_tilt_50": {
+          "mean_gross": 0.8615880493503401,
+          "mean_base_target": 0.23230187349493903,
+          "mean_turnover_per_rebalance": 0.056789037619398165,
+          "full_stress_share": 0.3180147058823529
+        },
+        "systemic_gross_strategy_100": {
+          "mean_gross": 0.8603259190331078,
+          "mean_base_target": 0.23230187349493903,
+          "mean_turnover_per_rebalance": 0.11907321684708373,
+          "full_stress_share": 0.3180147058823529
+        },
+        "systemic_gross_strategy_100_light_trend": {
+          "mean_gross": 0.8619210139759146,
+          "mean_base_target": 0.237102331433917,
+          "mean_turnover_per_rebalance": 0.11917623063238268,
+          "full_stress_share": 0.3180147058823529
+        },
+        "systemic_gross_strategy_100_no_trend": {
+          "mean_gross": 0.8630665767886321,
+          "mean_base_target": 0.24070267488815061,
+          "mean_turnover_per_rebalance": 0.1205535844681533,
+          "full_stress_share": 0.3180147058823529
+        },
+        "systemic_gross_strategy_100_fast_release": {
+          "mean_gross": 0.8744664632358448,
+          "mean_base_target": 0.24741008523725672,
+          "mean_turnover_per_rebalance": 0.12534091322752006,
+          "full_stress_share": 0.2867647058823529
+        },
+        "systemic_gross_strategy_100_immediate_release": {
+          "mean_gross": 0.8780644332455433,
+          "mean_base_target": 0.24949390901960455,
+          "mean_turnover_per_rebalance": 0.12865993607302775,
+          "full_stress_share": 0.2775735294117647
+        }
+      },
+      "periods": {
+        "design_2014_2018": {
+          "period": [
+            "2014-01-01",
+            "2018-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.215710728547859,
+              "sharpe": 1.1511345627311402,
+              "annual_volatility": 0.18459861223018875,
+              "max_drawdown": -0.24012692974730987,
+              "calmar": 0.8983196044477623
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.20266850477329257,
+              "sharpe": 1.278122020510567,
+              "annual_volatility": 0.15370775434321826,
+              "max_drawdown": -0.1697172732226503,
+              "calmar": 1.1941536705425022
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.19883648231927942,
+              "sharpe": 1.2396936330786346,
+              "annual_volatility": 0.15621242006163144,
+              "max_drawdown": -0.17643653342945997,
+              "calmar": 1.1269575436244617
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.19457644313257938,
+              "sharpe": 1.164339614936895,
+              "annual_volatility": 0.16439971242852586,
+              "max_drawdown": -0.19480269345108103,
+              "calmar": 0.9988385667852253
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.19622773018580597,
+              "sharpe": 1.170371515830406,
+              "annual_volatility": 0.16478746878052705,
+              "max_drawdown": -0.19406010976940158,
+              "calmar": 1.0111698402055946
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.19558854865108688,
+              "sharpe": 1.1667789080049626,
+              "annual_volatility": 0.1648445446520863,
+              "max_drawdown": -0.19274742365967856,
+              "calmar": 1.0147401450948819
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.19363961931180373,
+              "sharpe": 1.1509828357359082,
+              "annual_volatility": 0.16582897323412057,
+              "max_drawdown": -0.1951388416534453,
+              "calmar": 0.9923171505532246
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.19075160755561837,
+              "sharpe": 1.1315684277061324,
+              "annual_volatility": 0.1666545820406436,
+              "max_drawdown": -0.19643049584637617,
+              "calmar": 0.97108957921076
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": 0.12698745777942677,
+              "bootstrap_delta_sharpe_95": [
+                -0.09046289075066158,
+                0.11198319723004074,
+                0.31892086215081117
+              ],
+              "probability_positive": 0.8593333333333333
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": 0.08855907034749433,
+              "bootstrap_delta_sharpe_95": [
+                -0.09215127272855475,
+                0.0770974341333801,
+                0.25494447081707056
+              ],
+              "probability_positive": 0.818
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": 0.013205052205754741,
+              "bootstrap_delta_sharpe_95": [
+                -0.13749682636224655,
+                0.004121254415283923,
+                0.15187043990509083
+              ],
+              "probability_positive": 0.5256666666666666
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": 0.019236953099265763,
+              "bootstrap_delta_sharpe_95": [
+                -0.12616923886974932,
+                0.0095910120109024,
+                0.15103897149889542
+              ],
+              "probability_positive": 0.5433333333333333
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": 0.015644345273822413,
+              "bootstrap_delta_sharpe_95": [
+                -0.12879962286345367,
+                0.00702734736606736,
+                0.14804868204172686
+              ],
+              "probability_positive": 0.5373333333333333
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": -0.0001517269952320266,
+              "bootstrap_delta_sharpe_95": [
+                -0.1445282424048135,
+                -0.0108024503894113,
+                0.1205996288232849
+              ],
+              "probability_positive": 0.43233333333333335
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": -0.019566135025007814,
+              "bootstrap_delta_sharpe_95": [
+                -0.16147196261619085,
+                -0.02929991456581854,
+                0.10681755095641882
+              ],
+              "probability_positive": 0.32366666666666666
+            }
+          }
+        },
+        "validation_2019_2023": {
+          "period": [
+            "2019-01-01",
+            "2023-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.2809000621558164,
+              "sharpe": 1.0716879966470034,
+              "annual_volatility": 0.2637160571814065,
+              "max_drawdown": -0.3892276316205878,
+              "calmar": 0.721685819134323
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.21305867758817199,
+              "sharpe": 1.1795696740850916,
+              "annual_volatility": 0.17712995670452553,
+              "max_drawdown": -0.27514177812791785,
+              "calmar": 0.7743596012130065
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.21240364253297273,
+              "sharpe": 1.1750334269983405,
+              "annual_volatility": 0.17739146744878523,
+              "max_drawdown": -0.28442144385512014,
+              "calmar": 0.7467919424569402
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.21323314142000815,
+              "sharpe": 1.1630596220025402,
+              "annual_volatility": 0.18024670702237547,
+              "max_drawdown": -0.2883278311667532,
+              "calmar": 0.7395510192586495
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.21571315396787738,
+              "sharpe": 1.168896000883996,
+              "annual_volatility": 0.18124893966815908,
+              "max_drawdown": -0.2907937559948294,
+              "calmar": 0.7418080667857015
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.21433204374781223,
+              "sharpe": 1.1582570771603877,
+              "annual_volatility": 0.18205817228372287,
+              "max_drawdown": -0.2901191907091524,
+              "calmar": 0.7387723756705306
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.2106144265214278,
+              "sharpe": 1.1147518616478411,
+              "annual_volatility": 0.1872887842850208,
+              "max_drawdown": -0.32610538303367476,
+              "calmar": 0.6458477457873765
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.2061803958746551,
+              "sharpe": 1.0864007796950226,
+              "annual_volatility": 0.1891163799277105,
+              "max_drawdown": -0.3360190468884352,
+              "calmar": 0.6135973474834329
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": 0.10788167743808819,
+              "bootstrap_delta_sharpe_95": [
+                -0.2033049503437949,
+                0.08775365857571127,
+                0.3959761767121853
+              ],
+              "probability_positive": 0.717
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": 0.10334543035133703,
+              "bootstrap_delta_sharpe_95": [
+                -0.20867608318988334,
+                0.08034342939175632,
+                0.37223128539809525
+              ],
+              "probability_positive": 0.716
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": 0.09137162535553678,
+              "bootstrap_delta_sharpe_95": [
+                -0.21306666818711836,
+                0.0752330178783665,
+                0.36007160375940833
+              ],
+              "probability_positive": 0.6976666666666667
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": 0.0972080042369925,
+              "bootstrap_delta_sharpe_95": [
+                -0.20919499777819184,
+                0.08036106009185218,
+                0.3620242879535775
+              ],
+              "probability_positive": 0.7086666666666667
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": 0.0865690805133843,
+              "bootstrap_delta_sharpe_95": [
+                -0.2255111754747699,
+                0.07052942269525919,
+                0.3589162199413511
+              ],
+              "probability_positive": 0.6823333333333333
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": 0.0430638650008377,
+              "bootstrap_delta_sharpe_95": [
+                -0.2611147355794317,
+                0.0279923993031877,
+                0.3264714644396648
+              ],
+              "probability_positive": 0.566
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": 0.014712783048019151,
+              "bootstrap_delta_sharpe_95": [
+                -0.2892806254044713,
+                -0.005081706097897876,
+                0.29386682094987737
+              ],
+              "probability_positive": 0.49266666666666664
+            }
+          }
+        },
+        "full_2014_2023": {
+          "period": [
+            "2014-01-01",
+            "2023-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.24787978097268892,
+              "sharpe": 1.0877597158173797,
+              "annual_volatility": 0.2275866483080376,
+              "max_drawdown": -0.3892276316205875,
+              "calmar": 0.6368504207695047
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.2078524189557407,
+              "sharpe": 1.2225375448628986,
+              "annual_volatility": 0.16580038484438633,
+              "max_drawdown": -0.27514177812791785,
+              "calmar": 0.7554375070553871
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.20560097792151377,
+              "sharpe": 1.2031239350893401,
+              "annual_volatility": 0.16710516462502345,
+              "max_drawdown": -0.28442144385512036,
+              "calmar": 0.7228743906744372
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.20386865179224567,
+              "sharpe": 1.1626667534943904,
+              "annual_volatility": 0.17247193299199629,
+              "max_drawdown": -0.2883278311667523,
+              "calmar": 0.7070724007712585
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.20593108705598118,
+              "sharpe": 1.1685028281487495,
+              "annual_volatility": 0.1731804624770561,
+              "max_drawdown": -0.2907937559948307,
+              "calmar": 0.7081688750553568
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.20492385060839235,
+              "sharpe": 1.1611025588970403,
+              "annual_volatility": 0.1736312185399282,
+              "max_drawdown": -0.2901191907091524,
+              "calmar": 0.7063436586441837
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.20209706064294797,
+              "sharpe": 1.129901134013931,
+              "annual_volatility": 0.17685035034345872,
+              "max_drawdown": -0.3261053830336741,
+              "calmar": 0.6197292996604081
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.19844117310355158,
+              "sharpe": 1.1055728186505474,
+              "annual_volatility": 0.17820501704142702,
+              "max_drawdown": -0.3360190468884352,
+              "calmar": 0.5905652520032231
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": 0.13477782904551883,
+              "bootstrap_delta_sharpe_95": [
+                -0.0708161685361592,
+                0.12231503877550576,
+                0.33401211979057077
+              ],
+              "probability_positive": 0.8893333333333333
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": 0.11536421927196039,
+              "bootstrap_delta_sharpe_95": [
+                -0.08365187363579245,
+                0.10223473093445568,
+                0.30174989069156183
+              ],
+              "probability_positive": 0.8546666666666667
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": 0.07490703767701068,
+              "bootstrap_delta_sharpe_95": [
+                -0.12685499141543635,
+                0.06404447353555903,
+                0.26808139546078413
+              ],
+              "probability_positive": 0.7386666666666667
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": 0.08074311233136977,
+              "bootstrap_delta_sharpe_95": [
+                -0.1166014264086716,
+                0.0685006765458665,
+                0.26943304823044856
+              ],
+              "probability_positive": 0.7603333333333333
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": 0.07334284307966055,
+              "bootstrap_delta_sharpe_95": [
+                -0.12496170559468679,
+                0.062347591313718476,
+                0.2644226507120447
+              ],
+              "probability_positive": 0.7376666666666667
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": 0.04214141819655137,
+              "bootstrap_delta_sharpe_95": [
+                -0.1529445691089615,
+                0.02977225494873431,
+                0.2242334227329739
+              ],
+              "probability_positive": 0.6096666666666667
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": 0.017813102833167616,
+              "bootstrap_delta_sharpe_95": [
+                -0.17818547869848628,
+                0.006306497610636841,
+                0.20226685392049906
+              ],
+              "probability_positive": 0.521
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "forward_21",
+      "cache": "/tmp/fusion_forward_cache_20260724.pkl",
+      "symbols": [
+        "AAPL",
+        "ADBE",
+        "AMD",
+        "AMZN",
+        "ASML",
+        "AVGO",
+        "COST",
+        "CSCO",
+        "GLD",
+        "GOOGL",
+        "INTC",
+        "INTU",
+        "MSFT",
+        "MU",
+        "NFLX",
+        "NVDA",
+        "PEP",
+        "QCOM",
+        "SLV",
+        "TSLA",
+        "TXN"
+      ],
+      "decision_summary": {
+        "systemic_gross_tilt_25": {
+          "mean_gross": 0.943997699509824,
+          "mean_base_target": 0.2718946838679909,
+          "mean_turnover_per_rebalance": 0.031300763611693205,
+          "full_stress_share": 0.0228310502283105
+        },
+        "systemic_gross_tilt_50": {
+          "mean_gross": 0.9468562702174096,
+          "mean_base_target": 0.2718946838679909,
+          "mean_turnover_per_rebalance": 0.05119094123316811,
+          "full_stress_share": 0.0228310502283105
+        },
+        "systemic_gross_strategy_100": {
+          "mean_gross": 0.9511951595931206,
+          "mean_base_target": 0.2718946838679909,
+          "mean_turnover_per_rebalance": 0.12177475489949359,
+          "full_stress_share": 0.0228310502283105
+        },
+        "systemic_gross_strategy_100_light_trend": {
+          "mean_gross": 0.9723482122392941,
+          "mean_base_target": 0.2855861988199965,
+          "mean_turnover_per_rebalance": 0.1235265661236237,
+          "full_stress_share": 0.0228310502283105
+        },
+        "systemic_gross_strategy_100_no_trend": {
+          "mean_gross": 0.980596499590635,
+          "mean_base_target": 0.2958548350340008,
+          "mean_turnover_per_rebalance": 0.12457941107800015,
+          "full_stress_share": 0.0228310502283105
+        },
+        "systemic_gross_strategy_100_fast_release": {
+          "mean_gross": 0.9820464969274705,
+          "mean_base_target": 0.29656846692083294,
+          "mean_turnover_per_rebalance": 0.12342646514021981,
+          "full_stress_share": 0.0228310502283105
+        },
+        "systemic_gross_strategy_100_immediate_release": {
+          "mean_gross": 0.982237899829156,
+          "mean_base_target": 0.2967649936619192,
+          "mean_turnover_per_rebalance": 0.12329236457163711,
+          "full_stress_share": 0.0228310502283105
+        }
+      },
+      "periods": {
+        "diagnostic_2024": {
+          "period": [
+            "2024-01-01",
+            "2024-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.3272994058243952,
+              "sharpe": 1.399522698832898,
+              "annual_volatility": 0.21961698994360093,
+              "max_drawdown": -0.16472145222662093,
+              "calmar": 1.9869871313063845
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.2542308001580964,
+              "sharpe": 1.1935619072179608,
+              "annual_volatility": 0.20796323658721916,
+              "max_drawdown": -0.16849020114525315,
+              "calmar": 1.5088758778258413
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.2811560508703015,
+              "sharpe": 1.2834059613438025,
+              "annual_volatility": 0.2103550820199554,
+              "max_drawdown": -0.16568910887180033,
+              "calmar": 1.69688914850669
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.3539094209912086,
+              "sharpe": 1.4937957556787747,
+              "annual_volatility": 0.21896339916361984,
+              "max_drawdown": -0.16417468953197079,
+              "calmar": 2.1556880783519894
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.34045221475210186,
+              "sharpe": 1.4436908132913182,
+              "annual_volatility": 0.21975429954001263,
+              "max_drawdown": -0.1641017519571193,
+              "calmar": 2.0746409510671397
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.3404467602831118,
+              "sharpe": 1.4436717316083185,
+              "annual_volatility": 0.219754398287043,
+              "max_drawdown": -0.1641026176866449,
+              "calmar": 2.0745967680612947
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.3404467602831118,
+              "sharpe": 1.4436717316083185,
+              "annual_volatility": 0.219754398287043,
+              "max_drawdown": -0.1641026176866449,
+              "calmar": 2.0745967680612947
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.3404467602831118,
+              "sharpe": 1.4436717316083185,
+              "annual_volatility": 0.219754398287043,
+              "max_drawdown": -0.1641026176866449,
+              "calmar": 2.0745967680612947
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": -0.20596079161493708,
+              "bootstrap_delta_sharpe_95": [
+                -0.5854258726991871,
+                -0.18535820977867234,
+                0.2983558967483839
+              ],
+              "probability_positive": 0.21433333333333332
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": -0.11611673748909546,
+              "bootstrap_delta_sharpe_95": [
+                -0.34951444573132645,
+                -0.1096300004738804,
+                0.17808812808404303
+              ],
+              "probability_positive": 0.21766666666666667
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": 0.09427305684587672,
+              "bootstrap_delta_sharpe_95": [
+                -0.00201970192736824,
+                0.09214981636773356,
+                0.19347751409413821
+              ],
+              "probability_positive": 0.972
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": 0.04416811445842028,
+              "bootstrap_delta_sharpe_95": [
+                -0.013012609378421046,
+                0.048718947331752416,
+                0.10954225901044205
+              ],
+              "probability_positive": 0.9403333333333334
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": 0.044149032775420594,
+              "bootstrap_delta_sharpe_95": [
+                -0.013016296216060208,
+                0.0487092637116891,
+                0.10954012335974231
+              ],
+              "probability_positive": 0.9403333333333334
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": 0.044149032775420594,
+              "bootstrap_delta_sharpe_95": [
+                -0.013016296216060208,
+                0.0487092637116891,
+                0.10954012335974231
+              ],
+              "probability_positive": 0.9403333333333334
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": 0.044149032775420594,
+              "bootstrap_delta_sharpe_95": [
+                -0.013016296216060208,
+                0.0487092637116891,
+                0.10954012335974231
+              ],
+              "probability_positive": 0.9403333333333334
+            }
+          }
+        },
+        "post_diagnostic_2025_current": {
+          "period": [
+            "2025-01-01",
+            "2026-07-24"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.4929162677029082,
+              "sharpe": 1.64072976783966,
+              "annual_volatility": 0.2658780168935779,
+              "max_drawdown": -0.23164354196268855,
+              "calmar": 2.1279085249970127
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.32553214347051074,
+              "sharpe": 1.3996448889658668,
+              "annual_volatility": 0.2185490836845074,
+              "max_drawdown": -0.21595735311322084,
+              "calmar": 1.5073908749930023
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.3739414612456511,
+              "sharpe": 1.512806727813269,
+              "annual_volatility": 0.22721520919035884,
+              "max_drawdown": -0.22001628080899738,
+              "calmar": 1.699608137500882
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.4090726351172742,
+              "sharpe": 1.5229790008271444,
+              "annual_volatility": 0.24504562444152422,
+              "max_drawdown": -0.22902285481866214,
+              "calmar": 1.7861651206870754
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.4055585982769525,
+              "sharpe": 1.5054197602269732,
+              "annual_volatility": 0.2464785103157144,
+              "max_drawdown": -0.2304109924376967,
+              "calmar": 1.7601529943785814
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.4190175710855659,
+              "sharpe": 1.5346584154912593,
+              "annual_volatility": 0.24828467233070484,
+              "max_drawdown": -0.23038845372488315,
+              "calmar": 1.8187437968828637
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.44283193434778,
+              "sharpe": 1.5921387913825205,
+              "annual_volatility": 0.2500676293946407,
+              "max_drawdown": -0.2303884271635881,
+              "calmar": 1.9221101502348712
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.44490111837534485,
+              "sharpe": 1.5971618002186465,
+              "annual_volatility": 0.2502001204369882,
+              "max_drawdown": -0.2303884221696053,
+              "calmar": 1.9310914766707394
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": -0.24108487887379315,
+              "bootstrap_delta_sharpe_95": [
+                -0.6879800028897429,
+                -0.27268896875702253,
+                0.1421219742532869
+              ],
+              "probability_positive": 0.103
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": -0.12792304002639088,
+              "bootstrap_delta_sharpe_95": [
+                -0.5341338553278949,
+                -0.15502329279888882,
+                0.17030019322781426
+              ],
+              "probability_positive": 0.197
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": -0.11775076701251552,
+              "bootstrap_delta_sharpe_95": [
+                -0.4494351922565639,
+                -0.12825431778570162,
+                0.07565755811629535
+              ],
+              "probability_positive": 0.15233333333333332
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": -0.13531000761268674,
+              "bootstrap_delta_sharpe_95": [
+                -0.4371683927611393,
+                -0.13241010037150358,
+                0.057339701298412614
+              ],
+              "probability_positive": 0.11966666666666667
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": -0.1060713523484007,
+              "bootstrap_delta_sharpe_95": [
+                -0.4131494130374806,
+                -0.11026194624396746,
+                0.07843233792101284
+              ],
+              "probability_positive": 0.16966666666666666
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": -0.0485909764571395,
+              "bootstrap_delta_sharpe_95": [
+                -0.3326898302568053,
+                -0.04680130058075749,
+                0.13429972569759385
+              ],
+              "probability_positive": 0.3463333333333333
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": -0.04356796762101345,
+              "bootstrap_delta_sharpe_95": [
+                -0.32207674063733566,
+                -0.043498741477725034,
+                0.13718364535251829
+              ],
+              "probability_positive": 0.361
+            }
+          }
+        },
+        "forward_full": {
+          "period": [
+            "2024-01-01",
+            "2026-07-24"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.4255768565261677,
+              "sharpe": 1.5512769319261726,
+              "annual_volatility": 0.2486000498828774,
+              "max_drawdown": -0.2405397406229295,
+              "calmar": 1.769257983832712
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.29707377247312006,
+              "sharpe": 1.321759295575869,
+              "annual_volatility": 0.2142997389535469,
+              "max_drawdown": -0.21595735311322095,
+              "calmar": 1.3756131393098332
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.3367456744537545,
+              "sharpe": 1.4269512376131295,
+              "annual_volatility": 0.22059583120949622,
+              "max_drawdown": -0.2200162808089975,
+              "calmar": 1.5305488903618598
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.38715676941964783,
+              "sharpe": 1.5111732530341786,
+              "annual_volatility": 0.23498232923017762,
+              "max_drawdown": -0.23557976277270687,
+              "calmar": 1.6434211702351793
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.37963406542664835,
+              "sharpe": 1.481658873753798,
+              "annual_volatility": 0.23617939274644822,
+              "max_drawdown": -0.2386329934427981,
+              "calmar": 1.5908699796687968
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.3876420446109541,
+              "sharpe": 1.5000287183318872,
+              "annual_volatility": 0.2373270789983911,
+              "max_drawdown": -0.23861069299091353,
+              "calmar": 1.6245795180089257
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.40174260890958013,
+              "sharpe": 1.5364560259388307,
+              "annual_volatility": 0.2384653264416105,
+              "max_drawdown": -0.23861066671338949,
+              "calmar": 1.6836741393130545
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.40296344975814513,
+              "sharpe": 1.5396474047377964,
+              "annual_volatility": 0.23855012586273935,
+              "max_drawdown": -0.23861066177276047,
+              "calmar": 1.6887906297410344
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": -0.22951763635030353,
+              "bootstrap_delta_sharpe_95": [
+                -0.529160048456297,
+                -0.2348486130748525,
+                0.08700005102151429
+              ],
+              "probability_positive": 0.074
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": -0.12432569431304308,
+              "bootstrap_delta_sharpe_95": [
+                -0.381346682597077,
+                -0.13271776094850685,
+                0.09845048751212235
+              ],
+              "probability_positive": 0.14466666666666667
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": -0.040103678891993955,
+              "bootstrap_delta_sharpe_95": [
+                -0.25731709868206826,
+                -0.04302206194426117,
+                0.09445887298240857
+              ],
+              "probability_positive": 0.314
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": -0.06961805817237465,
+              "bootstrap_delta_sharpe_95": [
+                -0.26967405999593896,
+                -0.06372284543164808,
+                0.057785316670776486
+              ],
+              "probability_positive": 0.19433333333333333
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": -0.05124821359428533,
+              "bootstrap_delta_sharpe_95": [
+                -0.2503132125386398,
+                -0.04889559771155577,
+                0.07159954507362708
+              ],
+              "probability_positive": 0.26566666666666666
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": -0.01482090598734187,
+              "bootstrap_delta_sharpe_95": [
+                -0.1965090641810709,
+                -0.010747927447202432,
+                0.10340491433808165
+              ],
+              "probability_positive": 0.443
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": -0.011629527188376176,
+              "bootstrap_delta_sharpe_95": [
+                -0.19212672135290715,
+                -0.007585124227972639,
+                0.10742660727636545
+              ],
+              "probability_positive": 0.45766666666666667
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "external_etf",
+      "cache": "/private/tmp/claude-501/-Users-yuzuriha-Code-finance-prj/f56f9bf5-54cf-4d65-b07f-4b5e9623b7e0/scratchpad/oos_cache.pkl",
+      "symbols": [
+        "XLB",
+        "XLE",
+        "XLF",
+        "XLI",
+        "XLK",
+        "XLP",
+        "XLU",
+        "XLV",
+        "XLY"
+      ],
+      "decision_summary": {
+        "systemic_gross_tilt_25": {
+          "mean_gross": 0.9294709059071409,
+          "mean_base_target": 0.25360522786622985,
+          "mean_turnover_per_rebalance": 0.038607868872268955,
+          "full_stress_share": 0.12666666666666668
+        },
+        "systemic_gross_tilt_50": {
+          "mean_gross": 0.9307485391958384,
+          "mean_base_target": 0.25360522786622985,
+          "mean_turnover_per_rebalance": 0.0856640074687279,
+          "full_stress_share": 0.12666666666666668
+        },
+        "systemic_gross_strategy_100": {
+          "mean_gross": 0.9328947489211559,
+          "mean_base_target": 0.25360522786622985,
+          "mean_turnover_per_rebalance": 0.15837818767362977,
+          "full_stress_share": 0.12666666666666668
+        },
+        "systemic_gross_strategy_100_light_trend": {
+          "mean_gross": 0.9362395770953106,
+          "mean_base_target": 0.26510787825991144,
+          "mean_turnover_per_rebalance": 0.15814664679028312,
+          "full_stress_share": 0.12666666666666668
+        },
+        "systemic_gross_strategy_100_no_trend": {
+          "mean_gross": 0.9375209615336628,
+          "mean_base_target": 0.2737348660551728,
+          "mean_turnover_per_rebalance": 0.15900920480730296,
+          "full_stress_share": 0.12666666666666668
+        },
+        "systemic_gross_strategy_100_fast_release": {
+          "mean_gross": 0.9425839861641574,
+          "mean_base_target": 0.2770936660908013,
+          "mean_turnover_per_rebalance": 0.16068604927776306,
+          "full_stress_share": 0.10916666666666666
+        },
+        "systemic_gross_strategy_100_immediate_release": {
+          "mean_gross": 0.9443272993080245,
+          "mean_base_target": 0.27811184562268215,
+          "mean_turnover_per_rebalance": 0.16177649640745387,
+          "full_stress_share": 0.10416666666666667
+        }
+      },
+      "periods": {
+        "external_2000_2013": {
+          "period": [
+            "2000-01-01",
+            "2013-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.046329122027304104,
+              "sharpe": 0.33627625560136476,
+              "annual_volatility": 0.18642357854681926,
+              "max_drawdown": -0.5165102290372001,
+              "calmar": 0.08969642694911156
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.07283714683965203,
+              "sharpe": 0.5554814445740673,
+              "annual_volatility": 0.1457293355658345,
+              "max_drawdown": -0.35454410278134096,
+              "calmar": 0.2054388897410969
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.06649462783674354,
+              "sharpe": 0.5175916193557871,
+              "annual_volatility": 0.14463371663532126,
+              "max_drawdown": -0.3675276826786168,
+              "calmar": 0.1809241343457916
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.0585618147133975,
+              "sharpe": 0.46871271655878904,
+              "annual_volatility": 0.14340997921525805,
+              "max_drawdown": -0.3749277523489709,
+              "calmar": 0.15619493181419658
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.05801445943746253,
+              "sharpe": 0.4627929686639155,
+              "annual_volatility": 0.14445291827590107,
+              "max_drawdown": -0.37549798096502296,
+              "calmar": 0.15450005693337265
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.058167432985573475,
+              "sharpe": 0.46262377580255354,
+              "annual_volatility": 0.14498660945880057,
+              "max_drawdown": -0.3751233855540417,
+              "calmar": 0.15506213482175363
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.056968275155208525,
+              "sharpe": 0.4514356117640509,
+              "annual_volatility": 0.14658198185822652,
+              "max_drawdown": -0.38285743600521727,
+              "calmar": 0.14879761968220517
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.05593365670882933,
+              "sharpe": 0.4434960786537681,
+              "annual_volatility": 0.14720287102409607,
+              "max_drawdown": -0.3868740901948098,
+              "calmar": 0.14457845104246714
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": 0.21920518897270258,
+              "bootstrap_delta_sharpe_95": [
+                0.03179072357853935,
+                0.21138612133624812,
+                0.41232665141586833
+              ],
+              "probability_positive": 0.9906666666666667
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": 0.18131536375442237,
+              "bootstrap_delta_sharpe_95": [
+                -0.001396997789429509,
+                0.1729402082733817,
+                0.37018117277906304
+              ],
+              "probability_positive": 0.9723333333333334
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": 0.13243646095742428,
+              "bootstrap_delta_sharpe_95": [
+                -0.04865980073118883,
+                0.12357263825303105,
+                0.30723495062405914
+              ],
+              "probability_positive": 0.9136666666666666
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": 0.12651671306255075,
+              "bootstrap_delta_sharpe_95": [
+                -0.05084703803045029,
+                0.11793747814097501,
+                0.3008349707135491
+              ],
+              "probability_positive": 0.907
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": 0.12634752020118878,
+              "bootstrap_delta_sharpe_95": [
+                -0.0552083922683097,
+                0.1181441795647859,
+                0.3044913871420086
+              ],
+              "probability_positive": 0.906
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": 0.11515935616268613,
+              "bootstrap_delta_sharpe_95": [
+                -0.06549851753807703,
+                0.10587668059843644,
+                0.295465713346746
+              ],
+              "probability_positive": 0.8836666666666667
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": 0.10721982305240335,
+              "bootstrap_delta_sharpe_95": [
+                -0.07275405240743614,
+                0.09760598818521038,
+                0.2872002453682268
+              ],
+              "probability_positive": 0.8656666666666667
+            }
+          }
+        },
+        "external_2014_2023": {
+          "period": [
+            "2014-01-01",
+            "2023-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.08531458416248539,
+              "sharpe": 0.5782330898498085,
+              "annual_volatility": 0.1653409164501822,
+              "max_drawdown": -0.33735330887057047,
+              "calmar": 0.2528938709630897
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.08600220568467742,
+              "sharpe": 0.6619562693653259,
+              "annual_volatility": 0.1393859075053895,
+              "max_drawdown": -0.2593617720401833,
+              "calmar": 0.3315916798692792
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.07926571435021112,
+              "sharpe": 0.619856521187516,
+              "annual_volatility": 0.13864101609416624,
+              "max_drawdown": -0.25084777124979585,
+              "calmar": 0.3159913040298764
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.06743968811474854,
+              "sharpe": 0.5408560749228777,
+              "annual_volatility": 0.13846668494778355,
+              "max_drawdown": -0.23938101831241843,
+              "calmar": 0.28172529547322905
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.06698294522273729,
+              "sharpe": 0.5311468803427827,
+              "annual_volatility": 0.1408237558702527,
+              "max_drawdown": -0.2531980925919388,
+              "calmar": 0.26454759013800666
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.06654751512039048,
+              "sharpe": 0.5281734418765861,
+              "annual_volatility": 0.14085141144944938,
+              "max_drawdown": -0.2531980926744902,
+              "calmar": 0.26282786895217064
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.06811394739428911,
+              "sharpe": 0.536779071757281,
+              "annual_volatility": 0.1414978229857076,
+              "max_drawdown": -0.25319809279807926,
+              "calmar": 0.2690144567898018
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.06872287447914527,
+              "sharpe": 0.539913848810922,
+              "annual_volatility": 0.14181504053924743,
+              "max_drawdown": -0.2531980927970846,
+              "calmar": 0.27141940020148747
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": 0.08372317951551744,
+              "bootstrap_delta_sharpe_95": [
+                -0.08923101712981087,
+                0.07574342107185583,
+                0.24398199733278433
+              ],
+              "probability_positive": 0.818
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": 0.04162343133770752,
+              "bootstrap_delta_sharpe_95": [
+                -0.1200666334351498,
+                0.0322808772321026,
+                0.1879345813582672
+              ],
+              "probability_positive": 0.656
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": -0.037377014926930796,
+              "bootstrap_delta_sharpe_95": [
+                -0.18851084711586905,
+                -0.05014934920430658,
+                0.10008881223752258
+              ],
+              "probability_positive": 0.26266666666666666
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": -0.0470862095070258,
+              "bootstrap_delta_sharpe_95": [
+                -0.1855240184385004,
+                -0.05587165635038041,
+                0.07205533726158675
+              ],
+              "probability_positive": 0.204
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": -0.050059647973222376,
+              "bootstrap_delta_sharpe_95": [
+                -0.18863560963492254,
+                -0.0587921450115487,
+                0.07008783737657935
+              ],
+              "probability_positive": 0.188
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": -0.04145401809252747,
+              "bootstrap_delta_sharpe_95": [
+                -0.17691419944000117,
+                -0.0505839284551764,
+                0.07770739609989513
+              ],
+              "probability_positive": 0.23
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": -0.03831924103888651,
+              "bootstrap_delta_sharpe_95": [
+                -0.17471736965193763,
+                -0.04777610445676411,
+                0.08094516118421186
+              ],
+              "probability_positive": 0.24266666666666667
+            }
+          }
+        },
+        "external_full": {
+          "period": [
+            "2000-01-01",
+            "2023-12-31"
+          ],
+          "metrics": {
+            "daily_strategy": {
+              "cagr": 0.06251444422123087,
+              "sharpe": 0.4300984822303703,
+              "annual_volatility": 0.1778702132889347,
+              "max_drawdown": -0.5165102290372001,
+              "calmar": 0.12103234496974202
+            },
+            "systemic_gross_tilt_25": {
+              "cagr": 0.07834183184308996,
+              "sharpe": 0.5989140307034493,
+              "annual_volatility": 0.14309046126633834,
+              "max_drawdown": -0.35454410278134096,
+              "calmar": 0.2209649835620195
+            },
+            "systemic_gross_tilt_50": {
+              "cagr": 0.07183503698519367,
+              "sharpe": 0.559376426472165,
+              "annual_volatility": 0.14213858902849516,
+              "max_drawdown": -0.3675276826786168,
+              "calmar": 0.1954547653707205
+            },
+            "systemic_gross_strategy_100": {
+              "cagr": 0.06227805984364121,
+              "sharpe": 0.49833667382252045,
+              "annual_volatility": 0.14134530333551829,
+              "max_drawdown": -0.3749277523489709,
+              "calmar": 0.1661068284581792
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "cagr": 0.06176853717551589,
+              "sharpe": 0.4910538265655149,
+              "annual_volatility": 0.14292968312051862,
+              "max_drawdown": -0.37549798096502296,
+              "calmar": 0.16449765459929205
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "cagr": 0.06167577731049456,
+              "sharpe": 0.48965861574337816,
+              "annual_volatility": 0.14325430318591714,
+              "max_drawdown": -0.3751233855540417,
+              "calmar": 0.16441464244998216
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "cagr": 0.061630912357070855,
+              "sharpe": 0.48648096115794615,
+              "annual_volatility": 0.14445879714232107,
+              "max_drawdown": -0.38285743600521727,
+              "calmar": 0.1609761403621556
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "cagr": 0.06128143711465506,
+              "sharpe": 0.4830385107004656,
+              "annual_volatility": 0.1449549299617793,
+              "max_drawdown": -0.3868740901948098,
+              "calmar": 0.15840150236940628
+            }
+          },
+          "vs_daily_strategy": {
+            "systemic_gross_tilt_25": {
+              "point_delta_sharpe": 0.168815548473079,
+              "bootstrap_delta_sharpe_95": [
+                0.03294853993312818,
+                0.1617590511850499,
+                0.3019764513224491
+              ],
+              "probability_positive": 0.995
+            },
+            "systemic_gross_tilt_50": {
+              "point_delta_sharpe": 0.12927794424179473,
+              "bootstrap_delta_sharpe_95": [
+                -2.9224644435726692e-05,
+                0.12257971008732238,
+                0.2547098634021317
+              ],
+              "probability_positive": 0.9746666666666667
+            },
+            "systemic_gross_strategy_100": {
+              "point_delta_sharpe": 0.06823819159215017,
+              "bootstrap_delta_sharpe_95": [
+                -0.05664411591287037,
+                0.062186990246915444,
+                0.19481614338746278
+              ],
+              "probability_positive": 0.841
+            },
+            "systemic_gross_strategy_100_light_trend": {
+              "point_delta_sharpe": 0.0609553443351446,
+              "bootstrap_delta_sharpe_95": [
+                -0.06265472469192164,
+                0.05396428418334935,
+                0.18764456624494827
+              ],
+              "probability_positive": 0.8143333333333334
+            },
+            "systemic_gross_strategy_100_no_trend": {
+              "point_delta_sharpe": 0.059560133513007874,
+              "bootstrap_delta_sharpe_95": [
+                -0.06432851048128449,
+                0.05258951679216964,
+                0.18703359193051458
+              ],
+              "probability_positive": 0.8056666666666666
+            },
+            "systemic_gross_strategy_100_fast_release": {
+              "point_delta_sharpe": 0.05638247892757586,
+              "bootstrap_delta_sharpe_95": [
+                -0.06538759981449024,
+                0.05032593657968623,
+                0.18242221181626403
+              ],
+              "probability_positive": 0.7926666666666666
+            },
+            "systemic_gross_strategy_100_immediate_release": {
+              "point_delta_sharpe": 0.052940028470095324,
+              "bootstrap_delta_sharpe_95": [
+                -0.06827386240999493,
+                0.046659174574286755,
+                0.17984268002411344
+              ],
+              "probability_positive": 0.771
+            }
+          }
+        }
+      }
+    }
+  ]
+}

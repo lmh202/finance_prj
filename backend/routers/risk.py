@@ -7,7 +7,7 @@ Serves the model trained offline (data/processed/risk_model.json). Markers:
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 
-from routers._common import NO_HISTORY, load_holdings
+from routers._common import NO_HISTORY, load_holdings, refresh_news_store
 from serialize import as_dict
 from src import data_loader
 from src import portfolio as pf
@@ -22,6 +22,10 @@ def _ohlc_and_weights():
     if not engine.model_available():
         raise HTTPException(status_code=503, detail=NO_MODEL)
     symbols = sorted(set(holdings["symbol"]))
+    # The formal five-session model is HAR-X + News: it reads live RSS
+    # attention from data/news_raw.json. Refresh before estimating so these
+    # endpoints report the same news state the recommendation path uses.
+    refresh_news_store(symbols)
     ohlc = data_loader.get_ohlc_history(symbols)
     if not ohlc:
         raise HTTPException(status_code=502, detail=NO_HISTORY)

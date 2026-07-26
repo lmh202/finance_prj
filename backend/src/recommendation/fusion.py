@@ -23,7 +23,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import numpy as np
 import pandas as pd
 
-from src.interfaces import AssetSignal, ProposedTrade, Recommendation
+from src.interfaces import CONSTRAINTS, AssetSignal, ProposedTrade, Recommendation
 from src.recommendation.engine import apply_constraints
 
 MODEL_VERSION = "aurora-rule-fusion-v1"
@@ -649,6 +649,368 @@ def fuse_scores(
         unavailable_inputs=unavailable,
         as_of=dict(as_of or {}),
         why=why,
+    )
+
+
+EXPLAIN_MODEL_VERSION = "aurora-allocation-explainer-v1"
+
+
+def _magnitude_action(change_pct: float, risk_name: str, min_trade: float) -> str:
+    """Describe what the optimiser actually did, not a parallel opinion."""
+    if abs(change_pct) < min_trade:
+        return "Hold"
+    if change_pct > 0:
+        if risk_name in {"High", "Extreme"}:
+            return "Cautious Increase"
+        return "Increase" if change_pct >= 3.0 else "Small Increase"
+    return "Reduce" if change_pct <= -3.0 else "Small Reduction"
+
+
+def _ordinal(value: float) -> str:
+    """1 -> 1st, 41 -> 41st, 88 -> 88th (11/12/13 stay 'th')."""
+    number = int(round(value))
+    if 10 <= number % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
+    return f"{number}{suffix}"
+
+
+def _binding_constraint(
+    change_pct: float,
+    weight_before_pct: float,
+    weight_after_pct: float,
+    constraints: Mapping[str, float],
+) -> Optional[str]:
+    """Name the §9 rule that limited this trade, when one actually bound it."""
+    max_change = float(constraints["max_weight_change_pct"])
+    max_weight = float(constraints["max_stock_weight_pct"])
+    min_trade = float(constraints["min_trade_pct"])
+    tolerance = 1e-6
+
+    # A trade sits exactly ON a cap when that cap bound it. A move larger than
+    # the cap did not come from this optimiser, so never claim it was capped.
+    at_max_weight = change_pct > 0 and abs(weight_after_pct - max_weight) <= tolerance
+    at_max_change = abs(abs(change_pct) - max_change) <= tolerance
+
+    if at_max_weight and at_max_change:
+        return (
+            f"Two limits bound at once: the {max_change:.0f}pp maximum weekly "
+            f"change and the {max_weight:.0f}% maximum single-position size."
+        )
+    if at_max_weight:
+        return (
+            f"The increase stopped at the {max_weight:.0f}% maximum single-"
+            "position limit."
+        )
+    if at_max_change:
+        return (
+            f"The move was capped at the {max_change:.0f}pp maximum weekly "
+            "change; the unconstrained target was larger."
+        )
+    if tolerance < abs(change_pct) < min_trade:
+        return (
+            f"The target moved by less than the {min_trade:.0f}pp minimum "
+            "trade size, so no trade is proposed — holding avoids paying "
+            "costs for a change too small to matter."
+        )
+    return None
+
+
+def explain_allocation(
+    decision_metadata: Mapping,
+    news_events: Iterable[object] = (),
+    *,
+    health_score: Optional[float] = None,
+    strategy_as_of: object = None,
+    health_as_of: object = None,
+    risk_as_of_by_symbol: Optional[Mapping[str, object]] = None,
+    now: Optional[datetime] = None,
+    constraints: Mapping[str, float] = CONSTRAINTS,
+    config: FusionConfig = DEFAULT_CONFIG,
+) -> list[AssetFusionResult]:
+    """Explain an already-decided risk-controlled allocation, per asset.
+
+    This is the production fusion path. It does NOT compute an allocation —
+    ``gated_news.recommend_strategy_risk_control`` already did that, with Daily
+    Strategy supplying direction and the HAR-X + News risk forecast supplying
+    position size, gross exposure and cash. This function turns that numeric
+    decision into the per-asset record the UI renders, so what the user reads
+    always matches what the optimiser actually did.
+
+    News is deliberately context-only here: it reaches the decision through the
+    risk forecast, which is validated, and casts no directional vote, which is
+    not. ``component_weights`` records that split explicitly.
+    """
+    now_utc = _to_utc(now or datetime.now(timezone.utc)) or datetime.now(timezone.utc)
+    event_list = list(news_events)
+    per_symbol: Mapping[str, Mapping] = decision_metadata.get("symbols", {}) or {}
+    risk_as_of_by_symbol = risk_as_of_by_symbol or {}
+
+    optimizer_success = bool(decision_metadata.get("optimizer_success", True))
+    target_gross = float(decision_metadata.get("target_gross_pct", 100.0))
+    cash_after = float(decision_metadata.get("cash_after_pct", 0.0))
+    predicted_vol = decision_metadata.get("predicted_annual_volatility")
+    target_vol = decision_metadata.get("target_annual_volatility")
+    information_coefficient = decision_metadata.get(
+        "strategy_information_coefficient"
+    )
+    min_trade = float(constraints["min_trade_pct"])
+
+    health_available = health_score is not None
+    displayed_health = 50.0 if health_score is None else _clip(
+        float(health_score), 0.0, 100.0
+    )
+    health_value = normalize_health(health_score)
+
+    strategy_stale = _is_stale(
+        strategy_as_of, now_utc, config.strategy_stale_business_days
+    )
+    health_stale = health_available and _is_stale(
+        health_as_of, now_utc, config.health_stale_business_days
+    )
+
+    results: list[AssetFusionResult] = []
+    for symbol, block in per_symbol.items():
+        # recommend_strategy_risk_control names it strategy_direction; the
+        # gated-news path names the same quantity direction_signal.
+        raw_direction = block.get(
+            "strategy_direction",
+            block.get("direction_signal", 0.0),
+        )
+        try:
+            direction = _clip(float(raw_direction), -1.0, 1.0)
+        except (TypeError, ValueError):
+            direction = 0.0
+        if not math.isfinite(direction):
+            direction = 0.0
+        risk_percentile = block.get("risk_level_5d")
+        risk_available = risk_percentile is not None and math.isfinite(
+            float(risk_percentile)
+        )
+        displayed_risk = float(risk_percentile) if risk_available else 100.0
+        displayed_risk = _clip(displayed_risk, 0.0, 100.0)
+        sigma_daily = block.get("risk_sigma_daily_5d")
+        weight_before = float(block.get("weight_before_pct", 0.0))
+        weight_after = float(block.get("weight_after_pct", weight_before))
+        change = weight_after - weight_before
+
+        risk_as_of = risk_as_of_by_symbol.get(symbol)
+        stale = ["strategy"] if strategy_stale else []
+        if risk_available and _is_stale(
+            risk_as_of, now_utc, config.risk_stale_business_days
+        ):
+            stale.append("risk")
+        if health_stale:
+            stale.append("health")
+        unavailable = [] if risk_available else ["risk"]
+        if not health_available:
+            unavailable.append("health")
+
+        factor = risk_factor(displayed_risk, config.risk_strength)
+        adjusted = direction * factor
+        score = _clip(50.0 + 50.0 * adjusted, 0.0, 100.0)
+        extreme = displayed_risk > config.extreme_risk_threshold
+        if extreme and score > 74.0:
+            score = 74.0
+        risk_name = _risk_level(displayed_risk)
+        outlook = _outlook(score) if optimizer_success else "Input Unavailable"
+        action = (
+            _magnitude_action(change, risk_name, min_trade)
+            if optimizer_success
+            else "Hold"
+        )
+
+        news = aggregate_news(
+            event_list,
+            symbol,
+            now=now_utc,
+            minimum_articles=config.minimum_news_articles,
+        )
+
+        # Confidence describes how reproducible this decision is, NOT how
+        # certain the price direction is — the direction input is not
+        # statistically distinguishable from noise.
+        confidence = (0.45 + 0.30 * abs(direction)) * factor
+        if not optimizer_success:
+            confidence = 0.0
+        if stale:
+            confidence = min(confidence, 0.40)
+        if unavailable:
+            confidence = min(confidence, 0.35)
+        if extreme:
+            confidence = min(confidence, 0.45)
+        confidence = _clip(confidence, 0.0, 1.0)
+
+        why = [
+            _direction(direction, "Daily strategy direction")
+            + (
+                " It is scaled by a measured information coefficient of "
+                f"{float(information_coefficient):.2f}, so it tilts the target "
+                "weight rather than setting it."
+                if information_coefficient is not None
+                else ""
+            )
+        ]
+        if risk_available:
+            sigma_note = (
+                f" (five-session sigma {float(sigma_daily) * math.sqrt(5) * 100:.1f}%)"
+                if sigma_daily is not None and math.isfinite(float(sigma_daily))
+                else ""
+            )
+            why.append(
+                f"{risk_name} near-term risk — the {_ordinal(displayed_risk)} "
+                f"percentile of this asset's own history{sigma_note}. It set "
+                f"the position size and cut directional conviction by "
+                f"{(1.0 - factor):.0%} without voting bearish."
+            )
+        else:
+            why.append(
+                "No formal risk estimate was available for this asset, so it "
+                "was held rather than sized."
+            )
+        if predicted_vol is not None and target_vol is not None:
+            why.append(
+                f"Portfolio-level: predicted {float(predicted_vol):.1%} annual "
+                f"volatility against a {float(target_vol):.1%} target, so total "
+                f"risky exposure was set to {target_gross:.0f}% with "
+                f"{cash_after:.0f}% in cash."
+            )
+        why.append(
+            f"Portfolio health {displayed_health:.0f}/100 "
+            f"({health_value:+.2f} normalized) scaled the volatility target and "
+            "risk aversion; it does not vote on direction."
+            if health_available
+            else "Portfolio health was unavailable, so the default risk budget "
+            "was used."
+        )
+        # Whether live RSS attention actually reached the risk forecast for
+        # this asset. The recommendation path refreshes the news store before
+        # calling the risk engine, so a False here means the model genuinely
+        # saw no qualifying stories — not that the pipeline skipped them.
+        news_in_risk = bool(
+            block.get("risk_news_applied", block.get("news_available", False))
+        )
+        news_quality = str(block.get("risk_news_quality", "")).lower()
+        risk_news_note = (
+            " The HAR-X risk forecast for this asset used that live news "
+            "attention channel."
+            if news_in_risk
+            else " The HAR-X risk forecast fell back to its supported "
+            "no-news path for this asset."
+        )
+        # A degraded store is scored as "no news", which understates risk.
+        # Say so rather than letting a broken feed look like a calm market.
+        if news_quality in {"missing_store", "stale_store", "invalid_store"}:
+            degraded = {
+                "missing_store": "the news store was missing",
+                "stale_store": "the news store had not been refreshed recently",
+                "invalid_store": "the news store could not be read",
+            }[news_quality]
+            risk_news_note += (
+                f" Caution: {degraded}, so the risk model scored this asset as"
+                " having no news. Treat the risk figure as a lower bound until"
+                " the feed recovers."
+            )
+            if "news" not in stale:
+                stale.append("news")
+        if news.unique_articles:
+            why.append(
+                f"{news.unique_articles} recent relevant article"
+                + ("" if news.unique_articles == 1 else "s")
+                + " reviewed for context. News reaches this recommendation only "
+                "through the HAR-X risk forecast, which is validated; it casts "
+                "no directional vote."
+                + risk_news_note
+            )
+        else:
+            why.append(
+                "No current relevant news. The recommendation is unchanged — "
+                "news is a risk input here, not a directional one."
+                + risk_news_note
+            )
+        if abs(change) >= min_trade:
+            why.append(
+                f"Net effect: {weight_before:.1f}% -> {weight_after:.1f}% "
+                f"({change:+.1f}pp)."
+            )
+        else:
+            why.append(
+                f"Net effect: hold at {weight_before:.1f}% — the risk-controlled "
+                "target did not move enough to justify a trade."
+            )
+        binding = _binding_constraint(change, weight_before, weight_after, constraints)
+        if binding:
+            why.append(binding)
+        if extreme:
+            why.append("Extreme volatility capped positive exposure.")
+        if stale:
+            why.append("Stale inputs: " + ", ".join(stale) + ".")
+        if unavailable:
+            why.append("Unavailable inputs: " + ", ".join(unavailable) + ".")
+        if not optimizer_success:
+            why.append(
+                "The allocation optimiser did not converge, so the portfolio "
+                "was left unchanged."
+            )
+
+        results.append(
+            AssetFusionResult(
+                symbol=symbol,
+                aurora_score=round(score, 1),
+                outlook=outlook,
+                risk_level=risk_name,
+                action=action,
+                confidence=round(confidence, 4),
+                confidence_label=_confidence_label(confidence),
+                strategy_score=round(direction, 6),
+                news_score=round(news.score, 6),
+                health_score=round(displayed_health, 2),
+                health_normalized=round(health_value, 6),
+                risk_percentile=round(displayed_risk, 2),
+                risk_factor=round(factor, 6),
+                raw_score=round(direction, 6),
+                adjusted_score=round(adjusted, 6),
+                # Direction is strategy-only by design; news and health act on
+                # risk sizing, which is why their directional weight is zero.
+                component_weights={"strategy": 1.0, "news": 0.0, "health": 0.0},
+                news_articles=int(news.unique_articles),
+                news_confidence=news.confidence,
+                news_titles=news.titles[:5],
+                position_change_pct=round(change, 2),
+                conflict=False,
+                extreme_volatility=extreme,
+                stale_inputs=stale,
+                unavailable_inputs=unavailable,
+                as_of={
+                    "strategy": (
+                        _to_utc(strategy_as_of).isoformat()
+                        if _to_utc(strategy_as_of)
+                        else None
+                    ),
+                    "news": (
+                        latest.isoformat()
+                        if (latest := _latest_relevant_news_time(event_list, symbol))
+                        else None
+                    ),
+                    "health": (
+                        _to_utc(health_as_of).isoformat()
+                        if _to_utc(health_as_of)
+                        else None
+                    ),
+                    "risk": (
+                        _to_utc(risk_as_of).isoformat()
+                        if _to_utc(risk_as_of)
+                        else None
+                    ),
+                },
+                why=why,
+            )
+        )
+
+    return sorted(
+        results,
+        key=lambda item: (-abs(item.position_change_pct), -item.aurora_score),
     )
 
 

@@ -89,3 +89,47 @@ Until promotion, the production path is Daily Strategy plus external
 HAR-X + News position control. News therefore still changes the formal output
 through estimated volatility, covariance, risky gross exposure, and cash, but
 it does not cast an unvalidated directional vote.
+
+## Alpha scaling (why the tilts are small)
+
+`risk_controlled_allocation` is a mean-variance optimiser, so the conversion
+from Daily Strategy's direction rank to an expected return decides how hard it
+tilts. That conversion now uses Grinold-Kahn:
+
+```text
+alpha = IC * sigma_horizon * z(direction)      # strategy_alpha()
+```
+
+`STRATEGY_INFORMATION_COEFFICIENT = 0.02` is the assumed forward information
+coefficient. It replaced a hardcoded `expected = direction * 0.010`, which
+implied an IC near **0.14** — about ten times any measured value.
+
+Measurements behind the constant:
+
+| panel | Daily Strategy direction, rank IC vs 5d/20d forward return |
+|---|---|
+| 21-symbol FNSPID | +0.010 / +0.029, t ≈ 0.8 / 1.2 |
+| best cheap reformulation (21) | +0.029 / +0.049, but quintile returns are flat and a long-only tilt *lowers* out-of-sample Sharpe |
+| 165-symbol wide panel | −0.010 / −0.009; sector-neutral +0.005 |
+
+The 21-symbol positive IC is a sector artifact: the panel is 17/21 tech, and
+neutralising sector removes it. Effective breadth is the binding limit —
+average pairwise return correlation is 0.33 (21 names) and 0.37 (165 names),
+so `N_eff = N/(1+(N-1)rho)` sits at its `1/rho` ceiling of ~2.7 either way.
+Adding names does not buy independent bets.
+
+The setting is deliberately asymmetric. Backtested on the 21-symbol universe
+at 25 bps, five-session rebalancing:
+
+| assumed IC | Sharpe (signal works) | Sharpe (signal shuffled) | turnover | cost/yr |
+|---|---|---|---|---|
+| 0.02 | 1.076 | 1.025 | 0.64 | 0.16% |
+| 0.05 | 1.298 | 1.033 | 3.04 | 0.76% |
+| 0.14 (old) | 1.324 | 0.775 | 7.69 | 1.92% |
+
+Being too conservative costs ~0.25 Sharpe when the signal is real. Being too
+aggressive costs ~0.25 Sharpe **and** 1.9%/yr in fees when it is not — and the
+shuffled-signal turnover reaches 22x/yr. Given the direction signal is not
+statistically distinguishable from noise, the conservative side is the
+defensible one. Raise the constant only with a walk-forward IC measurement
+that supports it.
