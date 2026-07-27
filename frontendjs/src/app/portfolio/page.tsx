@@ -148,6 +148,17 @@ function toHolding(r: EditRow): BackendHolding {
   };
 }
 
+/** A blank or zero avg cost means "I don't know my cost basis — use today's
+ *  market price", the same rule confirmAdd() applies to the add-holding panel
+ *  and the Streamlit builder's "leave at 0" help. Persisting the literal 0
+ *  instead books the entire position as profit, since build_view() computes
+ *  pnl = market_value − shares × buy_price, and leaves P/L % undefined.
+ *  Written to also catch the null the backend sends for a cost-less holding
+ *  (a CSV imported without a buy_price column). */
+function wantsMarketCost(h: BackendHolding): boolean {
+  return !(h.buy_price > 0);
+}
+
 function sameRows(a: EditRow[], b: EditRow[]): boolean {
   if (a.length !== b.length) return false;
   return a.every(
@@ -544,6 +555,52 @@ function PortfolioPageInner() {
 
   /* ------------------------------- actions ------------------------------- */
 
+  /* Resolve every "use the market price" cost basis (see wantsMarketCost) to
+     a real number — the last stop before holdings are persisted, so it covers
+     typed edits and CSV imports alike. The price already on screen wins, so
+     the row's Avg cost lands exactly on the Price column beside it and P/L
+     reads 0; only symbols the view doesn't cover yet (freshly imported ones)
+     cost a lookup — a null current_price means the backend already tried and
+     failed, so re-asking would just stall the save. Anything still unpriceable
+     keeps its 0 and is reported rather than blocking the save. */
+  async function withMarketCost(
+    holdings: BackendHolding[]
+  ): Promise<{ holdings: BackendHolding[]; problems: string[] }> {
+    const wanted = holdings.filter(wantsMarketCost);
+    if (wanted.length === 0) return { holdings, problems: [] };
+
+    const prices = new Map<string, number>();
+    for (const h of wanted) {
+      const p = viewBy.get(h.symbol)?.current_price;
+      if (p != null && p > 0) prices.set(h.symbol, p);
+    }
+    const unseen = wanted
+      .filter((h) => !viewBy.has(h.symbol))
+      .map((h) => h.symbol);
+    if (unseen.length > 0) {
+      // A failed lookup is not fatal — those rows fall through to the note.
+      const fetched = await fetchLatestPrices(unseen).catch(() => ({}));
+      for (const [symbol, p] of Object.entries(fetched)) {
+        if (p > 0) prices.set(symbol, p);
+      }
+    }
+
+    const unpriced = wanted.filter((h) => !prices.has(h.symbol)).map((h) => h.symbol);
+    return {
+      holdings: holdings.map((h) => {
+        const price = wantsMarketCost(h) ? prices.get(h.symbol) : undefined;
+        return price === undefined ? h : { ...h, buy_price: price };
+      }),
+      problems:
+        unpriced.length > 0
+          ? [
+              `No live price for ${unpriced.join(", ")} — saved without a cost ` +
+                `basis, so their P/L stays blank until you enter an average cost.`,
+            ]
+          : [],
+    };
+  }
+
   function startAdd(info: StockInfo) {
     setPending({ info, shares: "1", buyPrice: "", error: null });
   }
@@ -583,6 +640,16 @@ function PortfolioPageInner() {
 
   function editRow(symbol: string, field: "shares" | "buy_price", value: string) {
     setRows((rs) => rs.map((r) => (r.symbol === symbol ? { ...r, [field]: value } : r)));
+  }
+
+  /** Leaving Avg cost blank or at 0 resolves to the market price on save
+   *  (withMarketCost) — fill it in on blur so the row shows the cost basis it
+   *  is actually going to be saved with instead of a 0 that reads as a 100%
+   *  gain. A row with no live price keeps its 0 and is reported on save. */
+  function commitBuyPrice(r: EditRow) {
+    if (Number.parseFloat(r.buy_price) > 0) return;
+    const price = viewBy.get(r.symbol)?.current_price;
+    if (price != null && price > 0) editRow(r.symbol, "buy_price", trimNum(price));
   }
 
   function removeRow(symbol: string) {
@@ -631,9 +698,10 @@ function PortfolioPageInner() {
 
   async function saveRows() {
     await run("save", async () => {
-      const { holdings, problems } = await savePortfolio(rows.map(toHolding));
+      const priced = await withMarketCost(rows.map(toHolding));
+      const { holdings, problems } = await savePortfolio(priced.holdings);
       applySaved(holdings);
-      setProblems(problems);
+      setProblems([...priced.problems, ...problems]);
       await refreshView();
     });
   }
@@ -681,9 +749,10 @@ function PortfolioPageInner() {
   async function confirmImport() {
     if (!importPrev) return;
     await run("import", async () => {
-      const { holdings, problems } = await savePortfolio(importPrev.holdings);
+      const priced = await withMarketCost(importPrev.holdings);
+      const { holdings, problems } = await savePortfolio(priced.holdings);
       applySaved(holdings);
-      setProblems(problems);
+      setProblems([...priced.problems, ...problems]);
       setImportPrev(null);
       await refreshView();
     });
@@ -1059,6 +1128,12 @@ function PortfolioPageInner() {
                 <div className="text-xs text-warn/90">
                   {importPrev.holdings.length} holdings found in file.
                 </div>
+                {importPrev.holdings.some(wantsMarketCost) && (
+                  <div className="mt-1.5 text-[11px] leading-relaxed text-warn/70">
+                    {importPrev.holdings.filter(wantsMarketCost).length} without a buy
+                    price — today&apos;s market price becomes their cost basis.
+                  </div>
+                )}
                 {importPrev.problems.map((p) => (
                   <div key={p} className="mt-1.5 text-[11px] leading-relaxed text-warn/70">
                     {p}
@@ -1226,7 +1301,12 @@ function PortfolioPageInner() {
                         <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
                           <th className="px-3 py-3 font-medium">Position</th>
                           <th className="px-3 py-3 text-right font-medium">Shares</th>
-                          <th className="px-3 py-3 text-right font-medium">Avg cost</th>
+                          <th
+                            className="px-3 py-3 text-right font-medium"
+                            title="Leave at 0 to use the latest market price as your cost basis"
+                          >
+                            Avg cost
+                          </th>
                           <th className="px-3 py-3 text-right font-medium">Price</th>
                           <th className="px-3 py-3 text-right font-medium">Value</th>
                           <th className="px-3 py-3 text-right font-medium">P/L</th>
@@ -1252,7 +1332,7 @@ function PortfolioPageInner() {
                                   <span className="font-mono text-sm font-semibold text-accent">
                                     {r.symbol}
                                   </span>
-                                  <span className="max-w-[180px] truncate text-xs text-mut">
+                                  <span className="max-w-[100px] truncate text-xs text-mut">
                                     {r.name}
                                   </span>
                                 </div>
@@ -1279,8 +1359,10 @@ function PortfolioPageInner() {
                                   step="any"
                                   value={r.buy_price}
                                   onChange={(e) => editRow(r.symbol, "buy_price", e.target.value)}
+                                  onBlur={() => commitBuyPrice(r)}
                                   className={`${INPUT} w-24 text-right`}
                                   aria-label={`${r.symbol} average cost`}
+                                  title="Leave at 0 to use the latest market price as your cost basis"
                                 />
                               </td>
                               <td className="px-3 py-2.5 text-right font-mono text-xs tabular text-mut">

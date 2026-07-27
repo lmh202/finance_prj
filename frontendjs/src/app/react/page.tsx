@@ -562,7 +562,7 @@ export default function ReactPage() {
             )}
           </Section>
 
-          <Section title="Per-asset decision">
+          {/*<Section title="Per-asset decision">
             {data.daily.fusion_results?.length > 0 ? (
               <FusionTable
                 results={data.daily.fusion_results}
@@ -578,7 +578,7 @@ export default function ReactPage() {
                 presentational and never blocks the decision.
               </Note>
             )}
-          </Section>
+          </Section>*/}
 
           <Section
             title="React to an event"
