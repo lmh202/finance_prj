@@ -180,9 +180,10 @@ user-facing decision. Each input controls exactly one dimension:
 | Daily Strategy | direction + all relative stock weights | — |
 | HAR-X + News risk | per-stock size, gross exposure, cash, covariance | vote on direction |
 | Portfolio Health | the volatility budget / risk aversion | vote on direction |
+| Market stress (SPY 60d realised-vol percentile) | the base risk aversion only | vote on direction |
 | News | reaches the decision **only** through the risk forecast | cast a directional vote |
 
-Two properties of this are easy to break:
+Three properties of this are easy to break:
 
 1. **News must be collected before risk is estimated.** `risk_engine` derives
    its causal news-attention input from `data/news_raw.json`. Refreshing the
@@ -197,6 +198,13 @@ Two properties of this are easy to break:
    decision. It is wrapped in its own try/except: an explanation failure must
    empty `fusion_results` and set `explanation_meta.fusion_error`, never
    discard a valid recommendation.
+3. **The market-stress signal needs its own, longer history.** It ranks a
+   60-session realised volatility over 504 observations of itself, so it needs
+   ~564 sessions — the two-year frame from `load_holdings_history()` is not
+   enough and would silently produce a *different* signal. Use
+   `routers/_common.load_benchmark_close()` (5y, memoised 6h), never
+   `history["SPY"]`. An unknown state falls back to the stressed setting, so a
+   broken fetch narrows the risk budget rather than widening it.
 
 Fallback chain: gated-news / strategy-risk-control → `decision.recommend_portfolio`
 (+ DeepSeek text) → `engine.recommend_daily` (legacy signal path).

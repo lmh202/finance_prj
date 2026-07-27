@@ -15,6 +15,10 @@ import api_client as api
 from theme import apply_theme
 from views._common import call, portfolio_key
 
+# A degraded store is scored as "no news", which understates risk exactly when
+# the feed has failed. Surface it instead of letting it look like calm markets.
+DEGRADED_NEWS_QUALITY = {"missing_store", "stale_store", "invalid_store"}
+
 
 @st.cache_data(ttl=1800, show_spinner="Estimating risk…")
 def _estimates(pkey: str, horizon: int) -> List[dict]:
@@ -72,12 +76,31 @@ def render() -> None:
         return
     ests.sort(key=lambda e: e["risk_level"], reverse=True)
 
+    degraded = sorted(
+        e["symbol"]
+        for e in ests
+        if str(e.get("news_quality", "")).lower() in DEGRADED_NEWS_QUALITY
+    )
+    if degraded:
+        st.warning(
+            f"News feed degraded for {', '.join(degraded)} — the model scored "
+            "these as having no news, so their risk figures are a lower bound "
+            "until the feed recovers."
+        )
+
     table = pd.DataFrame([
         {"Ticker": e["symbol"],
          "Danger (0-100)": e["risk_level"],
          "Typical swing": e["sigma_h"] * 100,
          "Worst-case loss (95%)": e["var_95"] * 100,
-         "Severe loss (1%)": e["var_99"] * 100}
+         "Expected shortfall (95%)": e["es_95"] * 100,
+         "Severe loss (1%)": e["var_99"] * 100,
+         "News in risk": "✓ live" if e.get("news_applied") else "—",
+         "Feed": (
+             e.get("news_quality", "")
+             if str(e.get("news_quality", "")).lower() in DEGRADED_NEWS_QUALITY
+             else ""
+         )}
         for e in ests
     ])
     st.dataframe(
@@ -88,11 +111,20 @@ def render() -> None:
                 help="How risky this stock is right now vs. its own last 2 years."),
             "Typical swing": st.column_config.NumberColumn(format="±%.1f%%"),
             "Worst-case loss (95%)": st.column_config.NumberColumn(format="%.1f%%"),
+            "Expected shortfall (95%)": st.column_config.NumberColumn(
+                format="%.1f%%",
+                help="Average loss on the days that breach the 95% line — the "
+                "size of a bad day, not just its threshold."),
             "Severe loss (1%)": st.column_config.NumberColumn(format="%.1f%%"),
+            "News in risk": st.column_config.TextColumn(
+                help="Whether live news attention fed this stock's volatility "
+                "forecast. '—' means the model saw no qualifying stories."),
         },
     )
     st.caption(
         "Danger = today's expected swing ranked against the stock's own history "
         "(90+ = unusually turbulent). Losses are downside thresholds, validated on "
-        "3 years of held-out data (95% line breached ~5% of the time, as intended)."
+        "3 years of held-out data (95% line breached ~5% of the time, as intended). "
+        "News in risk shows whether the live RSS attention channel reached the "
+        "forecast; a value in Feed means the news store was degraded."
     )

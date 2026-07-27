@@ -11,7 +11,7 @@
 import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Shield } from "lucide-react";
-import { EngineShell, Metric, Note, Section, ThinBar } from "@/components/EngineShell";
+import { Chip, EngineShell, Metric, Note, Section, ThinBar } from "@/components/EngineShell";
 import { fetchPortfolioRisk, fetchRiskEstimates } from "@/lib/api-client";
 import { useEngine } from "@/lib/use-engine";
 import { fmtPct, signClass } from "@/lib/format";
@@ -32,17 +32,23 @@ function dangerColor(level: number): string {
   return "var(--color-gain)";
 }
 
+/** A degraded store is scored as "no news", which understates risk exactly
+ *  when the feed has failed — surface it rather than hiding it. */
+const DEGRADED_FEED = new Set(["missing_store", "stale_store", "invalid_store"]);
+
 function RiskTable({ estimates }: { estimates: RiskEstimate[] }) {
   return (
     <div className="scroll-slim overflow-x-auto">
-      <table className="w-full min-w-[620px] border-collapse">
+      <table className="w-full min-w-[820px] border-collapse">
         <thead>
           <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
             <th className="px-4 py-3 font-medium">Ticker</th>
             <th className="px-4 py-3 text-right font-medium">Danger (0–100)</th>
             <th className="px-4 py-3 text-right font-medium">Typical swing</th>
             <th className="px-4 py-3 text-right font-medium">Worst-case loss (95%)</th>
+            <th className="px-4 py-3 text-right font-medium">Expected shortfall</th>
             <th className="px-4 py-3 text-right font-medium">Severe loss (1%)</th>
+            <th className="px-4 py-3 font-medium">News</th>
           </tr>
         </thead>
         <tbody>
@@ -73,8 +79,20 @@ function RiskTable({ estimates }: { estimates: RiskEstimate[] }) {
               <td className="px-4 py-3 text-right font-mono text-xs tabular text-ink/85">
                 {fmtPct(e.var_95, 1, false)}
               </td>
+              <td className="px-4 py-3 text-right font-mono text-xs tabular text-ink/85">
+                {fmtPct(e.es_95, 1, false)}
+              </td>
               <td className="px-4 py-3 text-right font-mono text-xs tabular text-mut">
                 {fmtPct(e.var_99, 1, false)}
+              </td>
+              <td className="px-4 py-3">
+                {DEGRADED_FEED.has(e.news_quality) ? (
+                  <Chip tone="amber">{e.news_quality.replace(/_/g, " ")}</Chip>
+                ) : e.news_applied ? (
+                  <Chip tone="accent">live</Chip>
+                ) : (
+                  <span className="text-xs text-mut">—</span>
+                )}
               </td>
             </motion.tr>
           ))}
@@ -84,6 +102,10 @@ function RiskTable({ estimates }: { estimates: RiskEstimate[] }) {
         Danger = today&apos;s expected swing ranked against the stock&apos;s own history
         (90+ = unusually turbulent). Losses are downside thresholds, validated on 3 years
         of held-out data (the 95% line was breached ~5% of the time, as intended).
+        Expected shortfall is the average loss on the days that breach the 95% line —
+        the size of a bad day, not just its threshold. News shows whether live attention
+        reached the forecast; a degraded feed means the model saw no news and the figures
+        are a lower bound.
       </div>
     </div>
   );
@@ -107,6 +129,10 @@ export default function RiskPage() {
   const rows = (data?.estimates ?? [])
     .filter((e) => e.has_history)
     .sort((a, b) => b.risk_level - a.risk_level);
+  const degradedFeeds = rows
+    .filter((e) => DEGRADED_FEED.has(e.news_quality))
+    .map((e) => e.symbol)
+    .sort();
   const diversificationOffset = data ? 1 - data.portfolio.diversification_ratio : 0;
 
   return (
@@ -179,6 +205,15 @@ export default function RiskPage() {
           </Section>
 
           <Section title="Each holding">
+            {degradedFeeds.length > 0 && (
+              <div className="mb-3">
+                <Note tone="amber">
+                  News feed degraded for {degradedFeeds.join(", ")} — the model scored
+                  these as having no news, so their risk figures are a lower bound
+                  until the feed recovers.
+                </Note>
+              </div>
+            )}
             {rows.length === 0 ? (
               <Note>No holding has enough price history to score yet.</Note>
             ) : (

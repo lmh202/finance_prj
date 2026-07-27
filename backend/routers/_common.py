@@ -6,7 +6,8 @@ empty. That dance now lives here, server-side; the frontend translates the
 two marker details back into its st.info / st.error messages.
 """
 
-from typing import Iterable, Tuple
+import time
+from typing import Iterable, Optional, Tuple
 
 import pandas as pd
 from fastapi import HTTPException
@@ -17,6 +18,15 @@ from src.interfaces import BENCHMARK
 
 EMPTY_PORTFOLIO = "empty_portfolio"
 NO_HISTORY = "no_history"
+
+# The market-stress signal needs a 60-session rolling volatility PLUS 252-504
+# observations of that volatility to rank it — roughly 312 sessions minimum and
+# 564 for a full reference window. `load_holdings_history()` deliberately stays
+# at two years because four engines consume that frame and widening it would
+# silently change all of them, so the benchmark is fetched separately.
+BENCHMARK_HISTORY_PERIOD = "5y"
+BENCHMARK_CACHE_MAX_AGE_SECONDS = 6 * 3600
+_BENCHMARK_CACHE: Optional[Tuple[float, pd.Series]] = None
 
 
 def refresh_news_store(symbols: Iterable[str]) -> dict:
@@ -56,3 +66,41 @@ def load_holdings_history() -> Tuple[pd.DataFrame, pd.DataFrame]:
     if history.empty:
         raise HTTPException(status_code=502, detail=NO_HISTORY)
     return holdings, history
+
+
+def load_benchmark_close() -> Optional[pd.Series]:
+    """Long benchmark close series for the causal market-stress signal.
+
+    Deliberately separate from `load_holdings_history()`: that frame is two
+    years and is consumed by score_assets, compute_health, classify_regime
+    (whose volatility median spans the whole frame) and the decision layer's
+    runtime features. Widening it to satisfy one signal would silently move
+    four engines, so this pays for one extra single-ticker download instead.
+
+    Memoised in-process for BENCHMARK_CACHE_MAX_AGE_SECONDS — a daily bar
+    changes once per session. Returns None on any failure: a missing stress
+    signal must degrade the risk budget to its conservative default, never
+    fail the recommendation.
+    """
+    global _BENCHMARK_CACHE
+
+    now = time.monotonic()
+    cached = _BENCHMARK_CACHE
+    if cached is not None and now - cached[0] < BENCHMARK_CACHE_MAX_AGE_SECONDS:
+        return cached[1]
+
+    try:
+        frame = data_loader.get_history(
+            [BENCHMARK],
+            period=BENCHMARK_HISTORY_PERIOD,
+        )
+        if frame is None or frame.empty or BENCHMARK not in frame.columns:
+            return cached[1] if cached is not None else None
+        close = frame[BENCHMARK].dropna()
+        if close.empty:
+            return cached[1] if cached is not None else None
+    except Exception:                                          # noqa: BLE001
+        return cached[1] if cached is not None else None
+
+    _BENCHMARK_CACHE = (now, close)
+    return close

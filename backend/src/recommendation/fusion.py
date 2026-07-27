@@ -755,6 +755,22 @@ def explain_allocation(
     information_coefficient = decision_metadata.get(
         "strategy_information_coefficient"
     )
+    # Adaptive risk budget. Absent on the fallback decision paths, which is why
+    # every read below is guarded — the narrative simply omits the sentence.
+    stress_block = decision_metadata.get("market_stress") or {}
+    stress_state = str(stress_block.get("state", "")).lower()
+    stress_percentile = stress_block.get("volatility_percentile")
+    stress_threshold = stress_block.get("stress_threshold", 0.75)
+    stress_window = stress_block.get("volatility_window_sessions", 60)
+    base_risk_aversion = decision_metadata.get("base_risk_aversion")
+    if base_risk_aversion is None:
+        stress_state = ""
+    # Holdings outside the managed sleeve — the benchmark, or anything without
+    # a risk estimate. Their weight is not cash and must not read as such.
+    locked_weight = float(decision_metadata.get("locked_weight_pct", 0.0) or 0.0)
+    locked_names = ", ".join(
+        sorted((decision_metadata.get("locked_positions") or {}).keys())
+    )
     min_trade = float(constraints["min_trade_pct"])
 
     health_available = health_score is not None
@@ -870,16 +886,39 @@ def explain_allocation(
                 "was held rather than sized."
             )
         if predicted_vol is not None and target_vol is not None:
-            why.append(
+            sentence = (
                 f"Portfolio-level: predicted {float(predicted_vol):.1%} annual "
                 f"volatility against a {float(target_vol):.1%} target, so total "
-                f"risky exposure was set to {target_gross:.0f}% with "
+                f"managed exposure was set to {target_gross:.0f}% with "
                 f"{cash_after:.0f}% in cash."
+            )
+            if locked_weight > 0.005:
+                sentence += (
+                    f" A further {locked_weight:.0f}% sits in positions this "
+                    f"optimiser does not manage ({locked_names}), which is "
+                    "held as-is rather than treated as spendable."
+                )
+            why.append(sentence)
+        if stress_state in {"calm", "stressed"} and stress_percentile is not None:
+            why.append(
+                f"Market state: {stress_state} — the benchmark's "
+                f"{stress_window}-session realised volatility sits at the "
+                f"{_ordinal(float(stress_percentile) * 100.0)} percentile of "
+                f"its own history (stressed at or above the "
+                f"{_ordinal(float(stress_threshold) * 100.0)}), so the "
+                f"optimiser used a base risk aversion of "
+                f"{float(base_risk_aversion):.1f}."
+            )
+        elif stress_state == "unknown":
+            why.append(
+                "The market-stress signal was unavailable, so the conservative "
+                "stressed-market risk aversion was used for the risk budget."
             )
         why.append(
             f"Portfolio health {displayed_health:.0f}/100 "
             f"({health_value:+.2f} normalized) scaled the volatility target and "
-            "risk aversion; it does not vote on direction."
+            "the risk aversion the market state had already set; it does not "
+            "vote on direction."
             if health_available
             else "Portfolio health was unavailable, so the default risk budget "
             "was used."

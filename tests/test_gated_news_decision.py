@@ -6,18 +6,22 @@ from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from src.recommendation.gated_news import (  # noqa: E402
+    CALM_RISK_AVERSION,
     CORE_FEATURES,
     FEATURES,
     NEWS_FEATURES,
+    STRESSED_RISK_AVERSION,
     gated_direction_signal,
     recommend_strategy_risk_control,
     risk_controlled_allocation,
 )
+from src.recommendation import market_stress  # noqa: E402
 from src.interfaces import AssetSignal  # noqa: E402
 
 
@@ -186,3 +190,178 @@ def test_production_baseline_uses_news_affected_risk_externally() -> None:
     assert result.metadata["direct_news_residual_applied"] is False
     assert result.metadata["risk_is_external_only"] is True
     assert result.metadata["news_via_risk_share"] == 0.5
+
+
+# ------------------------------------------------- adaptive risk aversion
+
+
+def _adaptive_inputs(*, starting_weight_pct: float = 6.0):
+    """Ten holdings with a deliberately low starting gross, so the
+    max_change=0.05 band does not clamp the second solve and mask the
+    risk-aversion effect."""
+    rng = np.random.default_rng(41)
+    symbols = [f"S{index}" for index in range(10)]
+    dates = pd.bdate_range("2024-01-01", periods=320)
+    prices = pd.DataFrame(index=dates)
+    for symbol in symbols + ["SPY"]:
+        prices[symbol] = 100.0 * np.cumprod(
+            1.0 + rng.normal(0.0002, 0.012, len(dates))
+        )
+    signals = [
+        AssetSignal(
+            symbol=symbol,
+            score=50.0,
+            action="hold",
+            indicators={
+                "momentum": 0.05,
+                "trend": 1.0,
+                "sharpe": 0.8,
+                "volatility": 0.2,
+                "drawdown": -0.1,
+            },
+            rationale="test",
+        )
+        for symbol in symbols
+    ]
+    risks = [
+        SimpleNamespace(
+            symbol=symbol,
+            horizon=5,
+            has_history=True,
+            sigma_daily=0.02 + 0.002 * index,
+            risk_level=50.0,
+            news_applied=True,
+            news_quality="fresh",
+        )
+        for index, symbol in enumerate(symbols)
+    ]
+    weights = {symbol: starting_weight_pct for symbol in symbols}
+    return prices, signals, risks, weights
+
+
+def _benchmark(segments: list[tuple[int, float]], seed: int = 5) -> pd.Series:
+    rng = np.random.default_rng(seed)
+    returns = np.concatenate(
+        [rng.normal(0.0, sigma, sessions) for sessions, sigma in segments]
+    )
+    dates = pd.bdate_range("2014-01-01", periods=len(returns))
+    return pd.Series(100.0 * np.cumprod(1.0 + returns), index=dates)
+
+
+def _decide(benchmark_close, *, health_score: float = 60.0):
+    prices, signals, risks, weights = _adaptive_inputs()
+    return recommend_strategy_risk_control(
+        history=prices,
+        signals=signals,
+        risk_estimates=risks,
+        current_weights_pct=weights,
+        health_score=health_score,
+        benchmark_close=benchmark_close,
+    )
+
+
+def test_missing_benchmark_falls_back_to_the_stressed_risk_aversion() -> None:
+    """Fail closed: no benchmark must never widen the risk budget. This also
+    keeps the pre-adaptive behaviour byte-identical for callers that omit it."""
+    result = _decide(None)
+    assert result.metadata["base_risk_aversion"] == STRESSED_RISK_AVERSION
+    assert result.metadata["market_stress"]["state"] == market_stress.UNKNOWN
+    assert result.metadata["market_stress"]["unavailable_reason"] is not None
+    assert result.metadata["risk_aversion_policy"] == "adaptive_market_stress_v1"
+
+
+def test_calm_market_lowers_the_base_risk_aversion() -> None:
+    calm = _decide(_benchmark([(700, 0.012), (90, 0.004)]))
+    assert calm.metadata["market_stress"]["state"] == market_stress.CALM
+    assert calm.metadata["base_risk_aversion"] == CALM_RISK_AVERSION
+
+
+def test_stressed_market_raises_the_base_risk_aversion() -> None:
+    stressed = _decide(_benchmark([(700, 0.012), (90, 0.004), (90, 0.040)]))
+    assert stressed.metadata["market_stress"]["state"] == market_stress.STRESSED
+    assert stressed.metadata["base_risk_aversion"] == STRESSED_RISK_AVERSION
+
+
+def test_calm_market_builds_a_less_minimum_variance_portfolio() -> None:
+    """What the state actually changes is COMPOSITION, not gross exposure.
+
+    A lower risk aversion moves the relative portfolio away from minimum
+    variance, so its predicted volatility rises — and the volatility target
+    then compensates by holding MORE cash, not less. Asserting on gross would
+    get the sign backwards; the distinguishing quantity is the predicted
+    volatility of the relative portfolio.
+    """
+    calm = _decide(_benchmark([(700, 0.012), (90, 0.004)]))
+    stressed = _decide(_benchmark([(700, 0.012), (90, 0.004), (90, 0.040)]))
+    assert calm.metadata["optimizer_success"]
+    assert stressed.metadata["optimizer_success"]
+    assert (
+        calm.metadata["predicted_annual_volatility"]
+        > stressed.metadata["predicted_annual_volatility"]
+    )
+    # The risk budget itself is unchanged by the market state — only health
+    # scales the target — so both must aim at the same volatility.
+    assert calm.metadata["target_annual_volatility"] == pytest.approx(
+        stressed.metadata["target_annual_volatility"]
+    )
+
+
+def test_effective_risk_aversion_applies_the_health_multiplier() -> None:
+    health = 40.0
+    result = _decide(_benchmark([(700, 0.012), (90, 0.004)]), health_score=health)
+    base = result.metadata["base_risk_aversion"]
+    expected = base * (1.0 + 0.75 * (1.0 - health / 100.0))
+    assert result.metadata["effective_risk_aversion"] == pytest.approx(expected)
+
+
+def test_market_stress_metadata_is_json_serialisable() -> None:
+    import json
+
+    json.dumps(_decide(_benchmark([(700, 0.012), (90, 0.004)])).metadata)
+
+
+# ------------------------------------------- unmanaged holdings are not cash
+
+
+def test_unmanaged_holdings_are_locked_not_spent_as_cash() -> None:
+    """Regression: the benchmark (and anything without a risk estimate) used to
+    fall out of the managed sleeve and be counted as cash, so the optimiser
+    funded increases from a sale it never proposed."""
+    prices, signals, risks, weights = _adaptive_inputs()
+    weights = dict(weights)
+    weights["SPY"] = 20.0  # held, but excluded from the decision universe
+    result = recommend_strategy_risk_control(
+        history=prices,
+        signals=signals,
+        risk_estimates=risks,
+        current_weights_pct=weights,
+        health_score=60.0,
+        benchmark_close=_benchmark([(700, 0.012), (90, 0.004)]),
+    )
+    meta = result.metadata
+
+    assert meta["locked_positions"] == {"SPY": pytest.approx(20.0)}
+    assert meta["locked_weight_pct"] == pytest.approx(20.0)
+    # The managed sleeve may never exceed what is actually available.
+    assert meta["target_gross_pct"] <= 100.0 - meta["locked_weight_pct"] + 1e-6
+    # Cash reported must be TRUE cash, not cash + the locked position.
+    managed_before = sum(
+        block["weight_before_pct"] for block in meta["symbols"].values()
+    )
+    assert meta["cash_before_pct"] == pytest.approx(
+        100.0 - managed_before - meta["locked_weight_pct"], abs=1e-6
+    )
+    # Everything adds up.
+    managed_after = sum(
+        block["weight_after_pct"] for block in meta["symbols"].values()
+    )
+    assert managed_after + meta["locked_weight_pct"] + meta[
+        "cash_after_pct"
+    ] == pytest.approx(100.0, abs=1e-4)
+
+
+def test_no_unmanaged_holdings_leaves_the_gross_budget_untouched() -> None:
+    """With nothing locked the cap is 1.0, i.e. the previous behaviour."""
+    result = _decide(_benchmark([(700, 0.012), (90, 0.004)]))
+    assert result.metadata["locked_weight_pct"] == pytest.approx(0.0)
+    assert result.metadata["locked_positions"] == {}

@@ -10,7 +10,11 @@ from typing import Dict
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from routers._common import load_holdings, load_holdings_history
+from routers._common import (
+    load_benchmark_close,
+    load_holdings,
+    load_holdings_history,
+)
 from serialize import as_dict
 from src import data_loader
 from src import portfolio as pf
@@ -130,6 +134,9 @@ def daily() -> dict:
                 risk_estimates=estimates,
                 current_weights_pct=weights,
                 health_score=health_score,
+                # Long benchmark series for the adaptive risk budget. Never
+                # raises; None degrades to the conservative risk aversion.
+                benchmark_close=load_benchmark_close(),
             )
             rec = controlled.recommendation
             decision_meta = controlled.metadata

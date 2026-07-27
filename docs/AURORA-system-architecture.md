@@ -142,6 +142,7 @@ Each input touches exactly one thing:
 | **Daily Strategy** | direction, and 100% of the relative stock weights | — |
 | **HAR-X + News risk** | covariance, per-stock sizing, risky gross exposure, cash | vote on direction |
 | **Portfolio Health** | the volatility budget and risk aversion | vote on direction |
+| **Market stress** (SPY 60d realised-vol percentile) | the base risk aversion, nothing else | vote on direction |
 | **News** | reaches the decision *only* through the risk forecast | cast a directional vote |
 
 ```mermaid
@@ -153,7 +154,7 @@ flowchart LR
     KERNEL --> S1["3 . daily_strategy<br/>score_assets to AssetSignal"]
     KERNEL --> H1["4 . portfolio_health<br/>compute_health to HealthReport"]
 
-    R1 --> OPT["5 . gated_news.recommend_strategy_risk_control<br/>THE numeric decision<br/>Grinold-Kahn alpha = IC x sigma_h x z, IC = 0.02<br/>mean-variance optimiser, long-only<br/>gross / cash set by predicted vol vs budget"]
+    R1 --> OPT["5 . gated_news.recommend_strategy_risk_control<br/>THE numeric decision<br/>Grinold-Kahn alpha = IC x sigma_h x z, IC = 0.02<br/>mean-variance optimiser, long-only<br/>risk aversion 2.0 calm / 6.0 stressed<br/>gross / cash set by predicted vol vs budget"]
     S1 --> OPT
     H1 --> OPT
 
@@ -372,7 +373,12 @@ and explain it. Five modules, in the order the daily path uses them:
   in which Daily Strategy supplies direction (scaled by
   `strategy_alpha()`'s Grinold-Kahn conversion, IC = 0.02), HAR-X + News
   supplies covariance, per-stock sizing, risky gross exposure and cash, and
-  Health scales only the risk budget. `recommend_portfolio()` — the same path
+  Health scales only the risk budget. The optimiser's **base risk aversion is
+  adaptive**: `market_stress.assess()` ranks SPY's 60-session realised
+  volatility against 504 observations of itself and returns calm / stressed /
+  unknown. Calm uses 2.0; stressed *and* unknown use the conservative 6.0, so
+  a missing benchmark narrows the budget rather than widening it. The state is
+  recorded in `decision_meta.market_stress`. `recommend_portfolio()` — the same path
   plus a direct confidence-gated news residual — runs only if its checkpoint
   is `promoted`; today it is `experimental_only`, so news reaches the decision
   through risk alone. Per-symbol metadata now also surfaces

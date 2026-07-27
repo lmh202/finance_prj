@@ -133,3 +133,61 @@ shuffled-signal turnover reaches 22x/yr. Given the direction signal is not
 statistically distinguishable from noise, the conservative side is the
 defensible one. Raise the constant only with a walk-forward IC measurement
 that supports it.
+
+## Adaptive risk aversion (the market-stress state)
+
+Risk aversion decides how far the mean-variance solution sits from minimum
+variance. It is no longer fixed: `recommend_strategy_risk_control` picks it
+from a causal market-stress state.
+
+```text
+rv   = SPY.pct_change().rolling(60).std() * sqrt(252)
+pct  = rv.rolling(504, min_periods=252).rank(pct=True)   # current obs included
+stressed = pct[-1] >= 0.75
+
+CALM_RISK_AVERSION     = 2.0    # calm  -> further from minimum variance
+STRESSED_RISK_AVERSION = 6.0    # stressed / unknown -> toward minimum variance
+```
+
+`src/recommendation/market_stress.py` owns the rule; the caller in
+`gated_news.py` maps the state to the constant. **The rolling-rank expression
+is pinned** — it is what was backtested, and it includes the current
+observation in its own window.
+
+**Fail closed.** `unknown` uses the stressed setting, so a missing or broken
+benchmark fetch can never silently widen the risk budget. That also means
+omitting `benchmark_close` reproduces the previous fixed-6.0 behaviour exactly,
+which is what keeps the research scripts and the existing tests unchanged.
+
+**What the state actually changes is composition, not exposure.** A lower risk
+aversion moves the relative portfolio away from minimum variance, so its
+predicted volatility rises — and the volatility target then compensates by
+holding *more* cash. Do not expect calm markets to show a higher gross weight;
+the distinguishing quantity is `predicted_annual_volatility`.
+
+Measured on the production code path with the real HAR-X + News risk engine
+(5-session rebalance, 25 bps one-way), adaptive vs the Daily Strategy baseline:
+
+| Sample | Sharpe | Calmar | Max drawdown |
+|---|---|---|---|
+| 2024-2026, 21 stocks | 1.766 vs 1.586 | 2.31 vs 1.92 | −14.4% vs −22.8% |
+| 2014-2023, 21 stocks | 1.328 vs 1.193 | 0.87 vs 0.70 | −23.7% vs −38.9% |
+| 2000-2023, sector ETFs | 0.653 vs 0.430 | 0.23 vs 0.12 | −32.8% vs −51.7% |
+
+Capital was preserved in 7 of 7 crises. **The significance caveat matters:**
+against the Daily Strategy the gain is significant on the 24-year sample
+(moving-block bootstrap ΔSharpe +0.220, 95% CI [+0.063, +0.383]); against a
+*fixed* risk aversion of 6.0 nothing is significant on any sample. The
+configuration is defensible, not proven superior to the fixed one.
+
+The benchmark series comes from `routers/_common.load_benchmark_close()` — a
+separate 5-year fetch, memoised for six hours. The two-year frame the other
+engines share is too short: the signal needs ~312 sessions minimum and 564 for
+a full reference window.
+
+Known behaviour: the backtest rebalanced every five sessions while the endpoint
+recomputes per request, so a percentile hovering near 0.75 could churn trades.
+The turnover penalty, `max_change=0.05` and `min_trade=0.01` damp this, and
+60-session realised volatility moves slowly. **Do not add hysteresis** — it
+would deviate from the validated configuration. `volatility_percentile` is
+recorded in `decision_meta` so boundary-hovering is observable after the fact.

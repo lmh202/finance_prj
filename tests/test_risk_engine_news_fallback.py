@@ -49,13 +49,53 @@ def test_official_primary_output_is_changed_by_news_attention():
     assert explicit_no_news.news_applied is True
 
 
-def test_default_batch_output_is_the_news_integrated_five_day_risk():
-    estimates = engine.risk_estimates(
-        {"TEST": synthetic_backend_ohlc()}
+def test_default_batch_output_is_the_news_integrated_five_day_risk(monkeypatch):
+    """The default batch output is the joint HAR-News model at h=5.
+
+    Pinned to an explicit store reading rather than whatever happens to be in
+    data/news_raw.json, so the result does not depend on whether the collector
+    has run on this machine.
+    """
+    monkeypatch.setattr(
+        engine,
+        "_news_features_from_store",
+        lambda symbol, as_of: {
+            "log_count": 3.0,
+            "news_count": 19.0,
+            "__quality__": "fresh",
+        },
     )
+    estimates = engine.risk_estimates({"TEST": synthetic_backend_ohlc()})
     assert [estimate.horizon for estimate in estimates] == [5]
     assert estimates[0].news_applied is True
+    assert estimates[0].news_quality == "fresh"
     assert estimates[0].model_version == "risk-har-news-5d-v1"
+
+
+def test_degraded_store_is_reported_as_unknown_not_as_observed_no_news():
+    """An OBSERVED zero is a real news state; a DEGRADED store is an unknown.
+
+    The calibrated multiplier at log_count=0 is exactly 1.0, so both produce
+    the price-only sigma — the difference is honesty. Reporting
+    news_applied=True for a missing store would claim a channel that carried
+    no data, which is what makes a broken RSS feed look like a calm market.
+    """
+    ohlc = synthetic_backend_ohlc()
+    price_only = engine.risk_estimate(
+        "TEST", ohlc, 5, news_features={"log_count": 0.0, "__quality__": "no_news"}
+    )
+    for quality in ("missing_store", "stale_store", "invalid_store"):
+        degraded = engine.risk_estimate(
+            "TEST",
+            ohlc,
+            5,
+            news_features={"log_count": 0.0, "__quality__": quality},
+        )
+        assert degraded.news_applied is False, quality
+        assert degraded.news_quality == quality
+        # Reporting-only change: the number itself must not move.
+        assert degraded.sigma_daily == price_only.sigma_daily
+    assert price_only.news_applied is True
 
 
 def test_configured_overlay_applies_only_to_complete_fresh_features():

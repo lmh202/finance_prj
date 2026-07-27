@@ -1,0 +1,5 @@
+/opt/miniconda3/envs/aurora/bin/python -m uvicorn main:app --app-dir backend --port 8000
+
+/opt/miniconda3/envs/aurora/bin/streamlit run frontend/app.py
+
+cd frontendjs && PATH=/opt/miniconda3/envs/aurora/bin:$PATH npm run dev

@@ -170,9 +170,118 @@ export interface Recommendation {
   reaction_risk: ReactionRisk | null;
 }
 
+/** Timestamps behind one fusion result; any input may be missing. */
+export interface FusionAsOf {
+  strategy: string | null;
+  news: string | null;
+  health: string | null;
+  risk: string | null;
+}
+
+/** One per-asset explanation of the risk-controlled allocation.
+ *  NOTE: aurora_score is 0..100 and every *_pct is already in percentage
+ *  points — do NOT pass them through fmtPct(), which multiplies by 100. */
+export interface FusionResult {
+  symbol: string;
+  aurora_score: number; // 0..100, 50 = neutral
+  outlook: string;
+  risk_level: "Low" | "Moderate" | "High" | "Extreme" | string;
+  action: string;
+  confidence: number; // 0..1
+  confidence_label: "High" | "Medium" | "Low" | string;
+  strategy_score: number; // -1..1
+  news_score: number; // -1..1, context only
+  health_score: number; // 0..100
+  health_normalized: number;
+  risk_percentile: number; // 0..100
+  risk_factor: number;
+  raw_score: number;
+  adjusted_score: number;
+  component_weights: Record<string, number>;
+  news_articles: number;
+  news_confidence: string;
+  news_titles: string[];
+  position_change_pct: number; // percentage points
+  conflict: boolean;
+  extreme_volatility: boolean;
+  stale_inputs: string[];
+  unavailable_inputs: string[];
+  as_of: FusionAsOf;
+  why: string[];
+}
+
+/** Causal market-stress state driving the adaptive risk budget. */
+export interface MarketStress {
+  state: "calm" | "stressed" | "unknown" | string;
+  stressed: boolean;
+  benchmark: string;
+  volatility_percentile: number | null; // 0..1 fraction
+  realised_volatility_annualised: number | null; // fraction
+  stress_threshold: number; // 0..1 fraction
+  volatility_window_sessions: number;
+  percentile_window_sessions: number;
+  percentile_min_periods: number;
+  observations: number;
+  as_of: string | null;
+  unavailable_reason: string | null;
+}
+
+export interface DecisionSymbolMeta {
+  strategy_direction?: number;
+  direction_signal?: number;
+  expected_return_5d_proxy: number;
+  risk_sigma_daily_5d: number;
+  risk_level_5d: number;
+  risk_news_applied?: boolean;
+  risk_news_quality?: string;
+  news_available?: boolean;
+  weight_before_pct: number;
+  weight_after_pct: number;
+}
+
+/** Audit trail for the numeric decision. Only production_mode is guaranteed —
+ *  the fallback decision paths emit a much smaller block. */
+export interface DecisionMeta {
+  production_mode: string;
+  model_version?: string;
+  fallback_reason?: string | null;
+  optimizer_success?: boolean;
+  direct_news_residual_applied?: boolean;
+  news_via_risk_share?: number; // 0..1 fraction
+  alpha_scaling?: string;
+  strategy_information_coefficient?: number;
+  risk_aversion_policy?: string;
+  calm_risk_aversion?: number;
+  stressed_risk_aversion?: number;
+  base_risk_aversion?: number;
+  effective_risk_aversion?: number;
+  cash_before_pct?: number; // TRUE cash, percentage points
+  cash_after_pct?: number;
+  /** Held weight the optimiser does not manage — the benchmark, or a holding
+   *  with no risk estimate. Not cash: it caps the gross budget instead. */
+  locked_weight_pct?: number;
+  locked_positions?: Record<string, number>;
+  target_gross_pct?: number;
+  predicted_annual_volatility?: number; // fraction
+  target_annual_volatility?: number; // fraction
+  market_stress?: MarketStress;
+  symbols?: Record<string, DecisionSymbolMeta>;
+}
+
+export interface ExplanationMeta {
+  source: string;
+  reason: string | null;
+  /** Set when the explanation layer failed. The recommendation is still
+   *  valid — explanation is presentational and never blocks the decision. */
+  fusion_error?: string;
+}
+
 /** GET /recommendation/daily */
 export interface DailyRecommendation {
   recommendation: Recommendation;
+  fusion_results: FusionResult[];
+  decision_meta: DecisionMeta;
+  explanation_meta: ExplanationMeta;
   health_before: number | null;
   health_after: number | null;
 }
@@ -204,6 +313,11 @@ export interface RiskEstimate {
   risk_level: number; // 0..100, sigma percentile vs. the stock's own history
   as_of: string | null;
   has_history: boolean;
+  model_version: string;
+  /** Whether live news attention reached this forecast. False on a degraded
+   *  store — an observed zero is a real state, a broken feed is not. */
+  news_applied: boolean;
+  news_quality: string; // fresh | no_news | missing_store | stale_store | ...
 }
 
 /** GET /risk/portfolio — aggregate portfolio downside risk for one horizon. */

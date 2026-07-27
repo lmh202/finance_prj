@@ -22,13 +22,13 @@ from scipy.optimize import minimize
 
 from src.config import DATA_DIR
 from src.interfaces import AssetSignal, ProposedTrade, Recommendation
-from src.recommendation import fusion
+from src.recommendation import fusion, market_stress
 
 MODEL_DIR = DATA_DIR / "processed" / "decision_model_candidate_gated_news"
 METADATA_PATH = MODEL_DIR / "metadata.json"
 MODEL_PATH = MODEL_DIR / "q_model.joblib"
 MODEL_VERSION = "gated-news-risk-control-v1"
-BASELINE_MODEL_VERSION = "strategy-external-harx-news-risk-v1"
+BASELINE_MODEL_VERSION = "strategy-external-harx-news-risk-adaptive-v1"
 HORIZON = 5
 EPS = 1e-10
 ACTIONS = np.array([-1.0, 0.0, 1.0])
@@ -46,6 +46,28 @@ ACTIONS = np.array([-1.0, 0.0, 1.0])
 # measured value — so the optimiser tilted on noise and paid turnover for it.
 # Raise this only with a walk-forward measurement that supports it.
 STRATEGY_INFORMATION_COEFFICIENT = 0.02
+
+# Adaptive risk budget. Risk aversion decides how far the mean-variance solution
+# sits from minimum variance, and backtesting settled on making it depend on the
+# market state rather than holding it fixed: stay closer to the directional
+# strategy while the market is calm, fall back to minimum variance under stress.
+# The state is `market_stress.assess()` — SPY's 60-session realised-volatility
+# percentile, stressed at or above the 75th.
+#
+# Measured on the production code path with the real HAR-X + News risk engine
+# (5-session rebalance, 25 bps one-way), adaptive vs the Daily Strategy baseline:
+#
+#   2024-2026, 21 stocks     Sharpe 1.766 vs 1.586   Calmar 2.31 vs 1.92   MaxDD -14.4% vs -22.8%
+#   2014-2023, 21 stocks     Sharpe 1.328 vs 1.193   Calmar 0.87 vs 0.70   MaxDD -23.7% vs -38.9%
+#   2000-2023, sector ETFs   Sharpe 0.653 vs 0.430   Calmar 0.23 vs 0.12   MaxDD -32.8% vs -51.7%
+#
+# Capital was preserved in 7 of 7 crises. Against the DAILY STRATEGY the gain is
+# significant on the 24-year sample (moving-block bootstrap ΔSharpe +0.220, 95%
+# CI [+0.063, +0.383]); against a fixed risk aversion of 6.0 it is not
+# significant on any sample. Re-tune only with equivalent evidence.
+CALM_RISK_AVERSION = 2.0
+STRESSED_RISK_AVERSION = 6.0
+RISK_AVERSION_POLICY = "adaptive_market_stress_v1"
 
 CORE_FEATURES = [
     "strategy_score",
@@ -207,6 +229,30 @@ def _normalise_portfolio(
     return weights, cash
 
 
+def _locked_positions(
+    current_weights_pct: Mapping[str, float],
+    managed: Sequence[str],
+) -> dict[str, float]:
+    """Held weight (as a 0..1 fraction) the optimiser must not spend.
+
+    Anything the caller holds but the decision universe excludes: the
+    benchmark, and any symbol without a formal risk estimate. Treating these
+    as cash lets the optimiser fund increases from a sale it never proposed.
+    """
+    managed_set = set(managed)
+    locked: dict[str, float] = {}
+    for symbol, weight in current_weights_pct.items():
+        if symbol in managed_set:
+            continue
+        try:
+            value = float(weight) / 100.0
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(value) and value > 0:
+            locked[str(symbol)] = value
+    return locked
+
+
 def strategy_alpha(
     direction: np.ndarray,
     sigma_daily: np.ndarray,
@@ -248,8 +294,17 @@ def risk_controlled_allocation(
     max_change: float = 0.05,
     min_trade: float = 0.01,
     minimum_gross: float = 0.35,
+    maximum_gross: float = 1.0,
 ) -> AllocationResult:
-    """Use HAR-X sigma externally to choose risky weights and cash exposure."""
+    """Use HAR-X sigma externally to choose risky weights and cash exposure.
+
+    `maximum_gross` is the largest share of the TOTAL portfolio these symbols
+    may occupy. It defaults to 1.0 — everything outside `symbols` is spendable
+    cash. Pass `1 - locked_weight` when the portfolio also holds positions this
+    optimiser does not manage (the benchmark, or a holding with no risk
+    estimate); otherwise their value is treated as cash and silently
+    reallocated into the managed names, which is a trade nobody proposed.
+    """
     symbols = list(symbols)
     if len(symbols) < 5:
         raise ValueError("at least five assets are required")
@@ -319,17 +374,22 @@ def risk_controlled_allocation(
         if predicted_annual_volatility <= EPS
         else target_annual_volatility / predicted_annual_volatility
     )
+    # Unmanaged holdings are not spendable. Their weight is carved out of the
+    # gross budget here rather than left to look like cash.
+    cap = float(np.clip(maximum_gross, 0.0, 1.0))
     raw_target_gross = float(
-        np.clip(raw_target_gross, minimum_gross, 1.0)
+        np.clip(raw_target_gross, min(minimum_gross, cap), cap)
     )
 
     lower = np.maximum(0.0, previous - max_change)
     upper = np.minimum(max_position, previous + max_change)
     upper = np.where(previous > max_position, previous, upper)
     feasible_low = float(lower.sum())
-    feasible_high = float(min(1.0, upper.sum()))
+    feasible_high = float(min(cap, upper.sum()))
+    # An overweight book cannot always be cut to the cap in one step —
+    # max_change bounds how fast it shrinks, so feasibility wins over the cap.
     target_gross = float(
-        np.clip(raw_target_gross, feasible_low, feasible_high)
+        np.clip(raw_target_gross, feasible_low, max(feasible_high, feasible_low))
     )
 
     def objective(weights: np.ndarray) -> float:
@@ -652,6 +712,9 @@ def recommend_portfolio(
         previous,
         previous_cash,
         health_score=50.0 if health_score is None else float(health_score),
+        # The adaptive market-stress policy deliberately does NOT apply here:
+        # this path's risk aversion is a calibrated property of the trained
+        # checkpoint. It is experimental_only and never runs in production.
         base_risk_aversion=float(metadata["base_risk_aversion"]),
         base_target_annual_volatility=float(
             metadata["base_target_annual_volatility"]
@@ -733,8 +796,14 @@ def recommend_strategy_risk_control(
     risk_estimates: Iterable[object],
     current_weights_pct: Mapping[str, float],
     health_score: Optional[float],
+    benchmark_close: Optional[pd.Series] = None,
 ) -> GatedNewsDecision:
-    """Production-safe prior: Strategy direction, HAR-X + News sizing only."""
+    """Production-safe prior: Strategy direction, HAR-X + News sizing only.
+
+    `benchmark_close` is a LONG benchmark close series used only to pick the
+    risk aversion (see CALM_RISK_AVERSION / STRESSED_RISK_AVERSION). Omitting
+    it reproduces the previous fixed-6.0 behaviour exactly.
+    """
     risk_map = {
         str(estimate.symbol): estimate
         for estimate in risk_estimates
@@ -763,6 +832,23 @@ def recommend_strategy_risk_control(
         dtype=float,
     )
     previous_cash = max(0.0, 1.0 - float(previous.sum()))
+    # Holdings this optimiser does not manage — the benchmark, and anything
+    # without a formal risk estimate. Their value is NOT cash: without the
+    # carve-out below the optimiser would spend it on the managed names and
+    # never propose the sale that would fund the trade.
+    locked = _locked_positions(current_weights_pct, held)
+    locked_weight = float(sum(locked.values()))
+    # Deliberately NOT history["SPY"]: that frame is two years, which yields a
+    # percentile over ~440 observations — a different, unvalidated signal. The
+    # caller supplies a long series via routers._common.load_benchmark_close().
+    stress = market_stress.assess(benchmark_close)
+    # Fail closed. An unknown state uses the conservative setting, so a missing
+    # or broken benchmark fetch can never silently triple the risk budget.
+    base_risk_aversion = (
+        CALM_RISK_AVERSION
+        if stress.state == market_stress.CALM
+        else STRESSED_RISK_AVERSION
+    )
     allocation = risk_controlled_allocation(
         held,
         expected,
@@ -771,9 +857,10 @@ def recommend_strategy_risk_control(
         previous,
         previous_cash,
         health_score=50.0 if health_score is None else float(health_score),
-        base_risk_aversion=6.0,
+        base_risk_aversion=base_risk_aversion,
         base_target_annual_volatility=0.15,
         turnover_penalty=0.0025,
+        maximum_gross=max(0.0, 1.0 - locked_weight),
     )
     changes = (allocation.weights - previous) * 100.0
     trades = []
@@ -830,9 +917,30 @@ def recommend_strategy_risk_control(
             "strategy_information_coefficient": (
                 STRATEGY_INFORMATION_COEFFICIENT
             ),
+            "risk_aversion_policy": RISK_AVERSION_POLICY,
+            "calm_risk_aversion": CALM_RISK_AVERSION,
+            "stressed_risk_aversion": STRESSED_RISK_AVERSION,
+            "base_risk_aversion": float(base_risk_aversion),
+            # effective = base * (1 + 0.75 * (1 - health/100)); surfaced so the
+            # health multiplier is verifiable from the response alone.
+            "effective_risk_aversion": float(
+                allocation.effective_risk_aversion
+            ),
+            "market_stress": market_stress.as_metadata(stress),
             "optimizer_success": allocation.success,
-            "cash_before_pct": previous_cash * 100.0,
-            "cash_after_pct": allocation.cash_weight * 100.0,
+            # TRUE cash only. `allocation.cash_weight` is everything outside the
+            # managed sleeve, which also contains the locked positions below —
+            # reporting that as cash is what made the UI claim 40% cash on a
+            # portfolio holding 20% cash and 20% benchmark.
+            "cash_before_pct": max(0.0, previous_cash - locked_weight) * 100.0,
+            "cash_after_pct": max(
+                0.0, allocation.cash_weight - locked_weight
+            ) * 100.0,
+            "locked_weight_pct": locked_weight * 100.0,
+            "locked_positions": {
+                symbol: weight * 100.0
+                for symbol, weight in sorted(locked.items())
+            },
             "target_gross_pct": allocation.target_gross * 100.0,
             "predicted_annual_volatility": (
                 allocation.predicted_annual_volatility

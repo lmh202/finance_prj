@@ -2,8 +2,9 @@
 
 /** Should I React? — Engine 4 (port of frontend/views/recommendation.py). */
 
-import { useCallback, useState } from "react";
-import { ChevronDown, Loader2, RefreshCw, Scale } from "lucide-react";
+import { Fragment, useCallback, useState } from "react";
+import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp, Loader2, RefreshCw, Scale } from "lucide-react";
 import {
   ArcGauge,
   Chip,
@@ -20,8 +21,13 @@ import {
   reactToEvent,
 } from "@/lib/api-client";
 import { useEngine } from "@/lib/use-engine";
-import { fmtNum, signClass } from "@/lib/format";
-import type { NewsEvent, ProposedTrade } from "@/lib/types";
+import { fmtNum, fmtPct, signClass } from "@/lib/format";
+import type {
+  DecisionMeta,
+  FusionResult,
+  NewsEvent,
+  ProposedTrade,
+} from "@/lib/types";
 
 const SUGGESTIONS: Record<string, { label: string; color: string; tone: ChipTone }> = {
   do_nothing: { label: "Wait — do nothing for now", color: "var(--color-loss)", tone: "loss" },
@@ -42,6 +48,293 @@ function factorColor(v: number): string {
   if (v < 1 / 3) return "var(--color-gain)";
   if (v < 2 / 3) return "var(--color-warn)";
   return "var(--color-loss)";
+}
+
+const STRESS: Record<string, { label: string; tone: ChipTone; sub: string }> = {
+  calm: {
+    label: "Calm",
+    tone: "gain",
+    sub: "further from minimum variance",
+  },
+  stressed: {
+    label: "Stressed",
+    tone: "loss",
+    sub: "falls back toward minimum variance",
+  },
+  unknown: {
+    label: "Unavailable",
+    tone: "mut",
+    sub: "defaulted to the conservative setting",
+  },
+};
+
+const RISK_TONE: Record<string, ChipTone> = {
+  Low: "gain",
+  Moderate: "accent",
+  High: "amber",
+  Extreme: "loss",
+};
+
+const CONFIDENCE_TONE: Record<string, ChipTone> = {
+  High: "gain",
+  Medium: "amber",
+  Low: "mut",
+};
+
+/** A degraded store is scored as "no news", which understates risk exactly
+ *  when the feed has failed — never let it look like a calm market. */
+const DEGRADED_FEED = new Set(["missing_store", "stale_store", "invalid_store"]);
+
+/** 1 -> 1st, 53 -> 53rd, 11 -> 11th. */
+function ordinal(value: number): string {
+  const n = Math.round(value);
+  const suffix =
+    n % 100 >= 10 && n % 100 <= 20
+      ? "th"
+      : ({ 1: "st", 2: "nd", 3: "rd" }[n % 10] ?? "th");
+  return `${n}${suffix}`;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 60) return "var(--color-gain)";
+  if (score >= 45) return "var(--color-warn)";
+  return "var(--color-loss)";
+}
+
+function degradedSymbols(meta: DecisionMeta): string[] {
+  return Object.entries(meta.symbols ?? {})
+    .filter(([, block]) => DEGRADED_FEED.has(block.risk_news_quality ?? ""))
+    .map(([symbol]) => symbol)
+    .sort();
+}
+
+/** Portfolio-level risk budget. The fallback decision paths do not produce
+ *  these numbers, so the strip hides itself rather than rendering dashes. */
+function DecisionStrip({ meta }: { meta: DecisionMeta }) {
+  if (!meta.production_mode || meta.production_mode === "legacy_signal_fallback") {
+    return null;
+  }
+  const stress = meta.market_stress;
+  const state = STRESS[stress?.state ?? "unknown"] ?? STRESS.unknown;
+  const predicted = meta.predicted_annual_volatility;
+  const target = meta.target_annual_volatility;
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric
+          label="Market state"
+          value={state.label}
+          tone={
+            state.tone === "gain"
+              ? "text-gain"
+              : state.tone === "loss"
+                ? "text-loss"
+                : "text-mut"
+          }
+          sub={
+            stress?.volatility_percentile != null
+              ? `${stress.benchmark} ${stress.volatility_window_sessions}d vol · ${ordinal(
+                  stress.volatility_percentile * 100
+                )} percentile`
+              : (stress?.unavailable_reason ?? "signal unavailable")
+          }
+        />
+        <div className="card p-4">
+          <Metric
+            label="Predicted volatility"
+            value={predicted != null ? fmtPct(predicted, 1, false) : "—"}
+            sub={target != null ? `target ${fmtPct(target, 1, false)}` : undefined}
+          />
+          {predicted != null && target != null && target > 0 && (
+            <ThinBar
+              fraction={predicted / target}
+              color={predicted > target ? "var(--color-warn)" : "var(--color-gain)"}
+              className="mt-2 w-full"
+            />
+          )}
+        </div>
+        <Metric
+          label="Managed exposure"
+          value={meta.target_gross_pct != null ? `${fmtNum(meta.target_gross_pct, 0)}%` : "—"}
+          sub={
+            meta.cash_after_pct != null
+              ? `${fmtNum(meta.cash_after_pct, 0)}% cash${
+                  meta.locked_weight_pct
+                    ? ` · ${fmtNum(meta.locked_weight_pct, 0)}% unmanaged`
+                    : ""
+                }`
+              : undefined
+          }
+        />
+        <Metric
+          label="Risk aversion"
+          value={meta.base_risk_aversion != null ? fmtNum(meta.base_risk_aversion, 1) : "—"}
+          sub={
+            meta.effective_risk_aversion != null
+              ? `${fmtNum(meta.effective_risk_aversion, 1)} after health · ${state.sub}`
+              : state.sub
+          }
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Chip tone="mut">{meta.production_mode.replace(/_/g, " ")}</Chip>
+        {meta.news_via_risk_share != null && (
+          <Chip tone="accent">
+            news via risk {fmtPct(meta.news_via_risk_share, 0, false)}
+          </Chip>
+        )}
+        {meta.strategy_information_coefficient != null && (
+          <Chip tone="mut">IC {fmtNum(meta.strategy_information_coefficient, 2)}</Chip>
+        )}
+        {meta.optimizer_success === false && (
+          <Chip tone="loss">optimiser did not converge</Chip>
+        )}
+        {meta.locked_positions &&
+          Object.keys(meta.locked_positions).length > 0 && (
+            <Chip tone="amber">
+              not managed: {Object.keys(meta.locked_positions).sort().join(", ")}
+            </Chip>
+          )}
+      </div>
+    </div>
+  );
+}
+
+function FusionTable({ results, meta }: { results: FusionResult[]; meta: DecisionMeta }) {
+  const [open, setOpen] = useState<string | null>(null);
+
+  return (
+    <div className="scroll-slim overflow-x-auto">
+      <table className="w-full min-w-[820px] border-collapse">
+        <thead>
+          <tr className="border-b border-line text-left font-mono text-[10px] uppercase tracking-[0.16em] text-mut">
+            <th className="px-3 py-2.5 font-medium">Asset</th>
+            <th className="px-3 py-2.5 text-right font-medium">AURORA score</th>
+            <th className="px-3 py-2.5 font-medium">Outlook</th>
+            <th className="px-3 py-2.5 font-medium">Risk</th>
+            <th className="px-3 py-2.5 font-medium">Action</th>
+            <th className="px-3 py-2.5 text-right font-medium">Δ weight</th>
+            <th className="px-3 py-2.5 font-medium">Confidence</th>
+            <th className="px-3 py-2.5 font-medium">News</th>
+            <th className="px-3 py-2.5" />
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((r, i) => {
+            const expanded = open === r.symbol;
+            const asOf = Object.entries(r.as_of).filter(([, v]) => v);
+            return (
+              <Fragment key={r.symbol}>
+              <motion.tr
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.03 * i }}
+                className="border-b border-overlay/[0.04] align-top transition-colors last:border-0 hover:bg-overlay/[0.025]"
+              >
+                <td className="px-3 py-3 font-mono text-sm font-semibold text-accent">
+                  {r.symbol}
+                </td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center justify-end gap-2">
+                    <ThinBar
+                      fraction={r.aurora_score / 100}
+                      color={scoreColor(r.aurora_score)}
+                      className="w-14"
+                    />
+                    <span className="w-7 text-right font-mono text-xs font-medium tabular text-ink/90">
+                      {Math.round(r.aurora_score)}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-xs text-ink/85">{r.outlook}</td>
+                <td className="px-3 py-3">
+                  <Chip tone={RISK_TONE[r.risk_level] ?? "mut"}>{r.risk_level}</Chip>
+                </td>
+                <td className="px-3 py-3 text-xs text-ink/85">{r.action}</td>
+                <td
+                  className={`px-3 py-3 text-right font-mono text-xs font-medium tabular ${signClass(
+                    r.position_change_pct
+                  )}`}
+                >
+                  {r.position_change_pct > 0 ? "+" : ""}
+                  {fmtNum(r.position_change_pct, 2)}pp
+                </td>
+                <td className="px-3 py-3">
+                  <Chip tone={CONFIDENCE_TONE[r.confidence_label] ?? "mut"}>
+                    {r.confidence_label}
+                  </Chip>
+                </td>
+                <td className="px-3 py-3 text-xs text-mut">
+                  {r.news_articles} · {r.news_confidence.toLowerCase()}
+                </td>
+                <td className="px-3 py-3 text-right">
+                  <button
+                    onClick={() => setOpen(expanded ? null : r.symbol)}
+                    aria-label={expanded ? `Hide why ${r.symbol}` : `Why ${r.symbol}?`}
+                    aria-expanded={expanded}
+                    className="text-mut transition-colors hover:text-accent"
+                  >
+                    {expanded ? (
+                      <ChevronUp className="size-3.5" />
+                    ) : (
+                      <ChevronDown className="size-3.5" />
+                    )}
+                  </button>
+                </td>
+              </motion.tr>
+              {expanded && (
+                <tr className="border-b border-overlay/[0.04]">
+                  <td colSpan={9} className="bg-overlay/[0.02] px-3 py-4">
+                    <ul className="space-y-1.5">
+                      {r.why.map((reason, index) => (
+                        <li
+                          key={index}
+                          className="flex gap-2 text-xs leading-relaxed text-mut"
+                        >
+                          <span className="mt-[7px] size-1 shrink-0 rounded-full bg-accent" />
+                          <span>{reason}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {r.news_titles.length > 0 && (
+                      <p className="mt-3 text-[11px] leading-relaxed text-mut/80">
+                        Headlines reviewed: {r.news_titles.slice(0, 3).join(" · ")}
+                      </p>
+                    )}
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      {r.stale_inputs.map((name) => (
+                        <Chip key={`stale-${name}`} tone="amber">
+                          stale: {name}
+                        </Chip>
+                      ))}
+                      {r.unavailable_inputs.map((name) => (
+                        <Chip key={`na-${name}`} tone="loss">
+                          n/a: {name}
+                        </Chip>
+                      ))}
+                      {DEGRADED_FEED.has(
+                        meta.symbols?.[r.symbol]?.risk_news_quality ?? ""
+                      ) && <Chip tone="amber">feed degraded</Chip>}
+                    </div>
+                    {asOf.length > 0 && (
+                      <p className="mt-3 font-mono text-[10px] uppercase tracking-wider text-mut/70">
+                        As of{" "}
+                        {asOf
+                          .map(([name, value]) => `${name} ${String(value).slice(0, 10)}`)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function TradesTable({ trades }: { trades: ProposedTrade[] }) {
@@ -238,6 +531,17 @@ export default function ReactPage() {
             <p className="text-sm leading-relaxed text-ink/90">
               {data.daily.recommendation.explanation}
             </p>
+            <DecisionStrip meta={data.daily.decision_meta ?? {}} />
+            {degradedSymbols(data.daily.decision_meta ?? {}).length > 0 && (
+              <div className="mt-3">
+                <Note tone="amber">
+                  News feed degraded for{" "}
+                  {degradedSymbols(data.daily.decision_meta).join(", ")} — the risk
+                  model scored these as having no news, so their risk figures are a
+                  lower bound until the feed recovers.
+                </Note>
+              </div>
+            )}
             {data.daily.recommendation.trades.length > 0 && (
               <div className="mt-4 space-y-4">
                 <TradesTable trades={data.daily.recommendation.trades} />
@@ -255,6 +559,24 @@ export default function ReactPage() {
                   </div>
                 )}
               </div>
+            )}
+          </Section>
+
+          <Section title="Per-asset decision">
+            {data.daily.fusion_results?.length > 0 ? (
+              <FusionTable
+                results={data.daily.fusion_results}
+                meta={data.daily.decision_meta ?? {}}
+              />
+            ) : (
+              <Note tone="mut">
+                No per-asset explanation was produced for this run
+                {data.daily.explanation_meta?.fusion_error
+                  ? ` (${data.daily.explanation_meta.fusion_error})`
+                  : ""}
+                . The recommendation above is still valid — explanation is
+                presentational and never blocks the decision.
+              </Note>
             )}
           </Section>
 
