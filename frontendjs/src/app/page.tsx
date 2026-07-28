@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Rss, Scale } from "lucide-react";
 import { SearchBox } from "@/components/SearchBox";
 import { Footer, Header, Hero } from "@/components/chrome";
 import { BTN_GHOST } from "@/components/EngineShell";
@@ -62,10 +62,20 @@ export default function Page() {
               <span className="font-mono text-[10px] uppercase tracking-widest text-mut/70">
                 Pick a result to add it to your portfolio — you enter the shares next
               </span>
-              <Link href="/portfolio" className={BTN_GHOST}>
-                <Briefcase className="size-3.5" />
-                Open my portfolio
-              </Link>
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
+                <Link href="/portfolio" className={BTN_GHOST}>
+                  <Briefcase className="size-3.5" />
+                  Open my portfolio
+                </Link>
+                <Link href="/news" className={BTN_GHOST}>
+                  <Rss className="size-3.5" />
+                  Get real-time news
+                </Link>
+                <Link href="/react" className={BTN_GHOST}>
+                  <Scale className="size-3.5" />
+                  Should I react?
+                </Link>
+              </div>
             </div>
           }
           error={error}
