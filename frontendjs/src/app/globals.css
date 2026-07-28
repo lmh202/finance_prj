@@ -316,3 +316,97 @@ input[type="number"] {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+
+/* ------------------------------------------------------------------ */
+/* Home quick actions — the hero's primary route trio, framed as one    */
+/* group: a lifted panel with an accent wash at its foot, holding three */
+/* identical dark chips. The chips keep the dark palette in BOTH themes  */
+/* (they are a dark surface, so their ink and accent come from the chip, */
+/* not from the page) — that is what keeps all three reading as one set. */
+/* ------------------------------------------------------------------ */
+
+.quick-actions {
+  --qa-accent: #b3f34c;
+  border: 1px solid var(--color-line);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--qa-accent) 9%, transparent)),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--overlay-base) 7%, transparent),
+      color-mix(in srgb, var(--overlay-base) 2%, transparent)
+    );
+  box-shadow:
+    inset 0 1px 0 var(--card-shadow-inset),
+    0 24px 60px -34px var(--card-shadow-outer);
+}
+
+/* Light mode: the page is already pale, so lift the panel with white
+   rather than with another overlay tint. */
+[data-theme="light"] .quick-actions {
+  background:
+    linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--color-accent) 10%, transparent)),
+    var(--panel);
+}
+
+.quick-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 50px;
+  padding: 0 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #1c2429, #12181b);
+  color: #e9f1eb;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 24px -18px rgba(0, 0, 0, 0.9);
+  transition:
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    color 0.22s ease;
+}
+
+.quick-action:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--qa-accent) 55%, transparent);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 30px -18px rgba(0, 0, 0, 0.95),
+    0 0 24px -6px color-mix(in srgb, var(--qa-accent) 34%, transparent);
+}
+
+.quick-action:active {
+  transform: translateY(0);
+}
+
+.quick-action:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--qa-accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--qa-accent) 30%, transparent);
+}
+
+.quick-action .qa-icon {
+  color: var(--qa-accent);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.quick-action:hover .qa-icon {
+  transform: scale(1.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-action,
+  .quick-action .qa-icon {
+    transition: none;
+  }
+  .quick-action:hover,
+  .quick-action:hover .qa-icon {
+    transform: none;
+  }
+}

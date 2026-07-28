@@ -271,13 +271,25 @@ export function Hero({
           className="mx-auto mt-9 max-w-xl"
         >
           {searchSlot}
-          {presetsSlot && <div className="mt-4">{presetsSlot}</div>}
           {error && (
             <div className="mt-4 rounded-xl border border-loss/30 bg-loss/10 px-4 py-3 text-sm text-loss">
               {error}
             </div>
           )}
         </motion.div>
+
+        {/* Wider than the search column on purpose — the quick-action trio
+            needs the room to stay on one row. */}
+        {presetsSlot && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto mt-5 max-w-2xl"
+          >
+            {presetsSlot}
+          </motion.div>
+        )}
 
         <div className="mx-auto mt-16 grid max-w-2xl gap-3 text-left sm:grid-cols-3">
           {STEPS.map((s, i) => (

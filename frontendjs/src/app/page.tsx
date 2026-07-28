@@ -12,14 +12,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, Rss, Scale } from "lucide-react";
+import { Briefcase, Rss, Scale, type LucideIcon } from "lucide-react";
 import { SearchBox } from "@/components/SearchBox";
 import { Footer, Header, Hero } from "@/components/chrome";
-import { BTN_GHOST } from "@/components/EngineShell";
 import { BackendDownError, fetchCash } from "@/lib/api-client";
 import type { StockInfo } from "@/lib/types";
 
 const NONE = new Set<string>();
+
+/* The hero's route trio — the three things a visitor most likely came for. */
+const QUICK_ACTIONS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/portfolio", label: "Open my portfolio", icon: Briefcase },
+  { href: "/news", label: "Get real-time news", icon: Rss },
+  { href: "/react", label: "Should I react?", icon: Scale },
+];
 
 export default function Page() {
   const router = useRouter();
@@ -58,23 +64,28 @@ export default function Page() {
             />
           }
           presetsSlot={
-            <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-col items-center gap-5">
               <span className="font-mono text-[10px] uppercase tracking-widest text-mut/70">
                 Pick a result to add it to your portfolio — you enter the shares next
               </span>
-              <div className="flex flex-wrap items-center justify-center gap-2.5">
-                <Link href="/portfolio" className={BTN_GHOST}>
-                  <Briefcase className="size-3.5" />
-                  Open my portfolio
-                </Link>
-                <Link href="/news" className={BTN_GHOST}>
-                  <Rss className="size-3.5" />
-                  Get real-time news
-                </Link>
-                <Link href="/react" className={BTN_GHOST}>
-                  <Scale className="size-3.5" />
-                  Should I react?
-                </Link>
+
+              <div className="quick-actions w-full px-4 py-4 sm:px-5 sm:py-5">
+                <div className="mb-4 flex items-center justify-center gap-2.5">
+                  <span className="h-px w-6 bg-line" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-mut/80">
+                    Quick actions
+                  </span>
+                  <span className="h-px w-6 bg-line" />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-3.5">
+                  {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
+                    <Link key={href} href={href} className="quick-action">
+                      <Icon className="qa-icon size-[18px]" />
+                      {label}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           }
