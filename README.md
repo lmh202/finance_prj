@@ -1,89 +1,68 @@
-# AURORA — AI-Powered Portfolio Intelligence Copilot
+# AURORA
 
-Group capstone project. Full design: [Architecture.md](Architecture.md).
+**Real Time Market & Global Event Intelligence for Healthier Portfolios**
 
-## Run it
+[Poster](aurora_poster/GROUP-8-POSTER(AURORA).pdf)
 
-Two processes: the FastAPI backend and the Streamlit frontend. The frontend
-talks to the backend over HTTP only (`frontend/api_client.py`); it never
-imports backend code, and nothing under `backend/` imports streamlit.
+[Video Demonstration](https://drive.google.com/drive/folders/1U5nQa_rUdQF210iREnKHaEfUrywlrZE8)
 
-```powershell
-pip install -r requirements.txt
-.\scripts\dev.ps1          # starts both (backend window + streamlit here)
-```
+## What is AURORA
 
-Or by hand, from the repo root:
+*“We don't predict the future. We illuminate what's coming next.”*
 
+The Aurora Borealis is one of nature's earliest lights, illuminating the sky before sunrise.
+
+Inspired by this phenomenon, AURORA is an AI-powered financial assistant designed to illuminate market opportunities and risks before the majority of investors react.
+
+Rather than simply tracking stock prices, AURORA **continuously** analyzes financial news, forecasts market movements, and recommends intelligent portfolio adjustments helping investors make informed decisions ahead of the market.
+
+*“Helping investors stay one step ahead”*
+
+## Why is AURORA Different?
+
+*"Information is everywhere. Insight is rare. AURORA delivers both."*
+
+Existing Investment Platforms
+
+- Display stock prices
+- Provide market news
+- Require manual analysis
+- Depend on user interpretation
+
+AURORA
+✓ Understands financial news automatically
+✓ Predicts possible market impact
+✓ Calculates portfolio-specific risk
+✓ Suggests intelligent portfolio adjustments
+✓ Keeps the investor in control by providing recommendations rather than *executing trades automatically*
+
+## Quick start
+
+Two processes: the FastAPI backend, and the Next.js frontend. The frontend talks to the backend over HTTP only (`frontend/api_client.py`); nothing under `backend/` imports streamlit.
+### Install all dependencies
 ```bash
-uvicorn main:app --app-dir backend --reload --port 8000   # terminal 1
-streamlit run frontend/app.py                             # terminal 2
+# backend + Streamlit frontend
+pip install -r requirements.txt
+# Next.js frontend
+cd frontendjs && npm install             
 ```
+### Run processes
+```bash
+# 
+# terminal 1: backend
+uvicorn main:app --app-dir backend --reload --port 8000   
+# for development only: Streamlit UI (port 8501)
+# streamlit run frontend/app.py
+# terminal 2: Next.js UI (port 3000)
+cd frontendjs && npm run dev                              
+```
+```bash
+# Standalone RSS collector (grows data/news_raw.json — run regularly)
+python backend/src/news_intelligence/collector.py
 
-Interactive API docs: http://localhost:8000/docs. The frontend reads
-`AURORA_API_URL` (default `http://localhost:8000`); the backend reads
-`AURORA_DATA_DIR` (default `<repo>/data`).
-
-Home page = portfolio builder (search ~13,000 US-listed securities, add
-holdings, live valuation via yfinance, CSV import/export). The sidebar links
-each engine's page.
-
-## Team structure — one folder per developer
-
-**Collaboration happens ONLY through
-[`backend/src/interfaces.py`](backend/src/interfaces.py)** — the frozen
-contract defining every cross-engine type and required function signature.
-Read it first. It changes only by agreement of all four developers
-(Developer 4 is its custodian).
-
-Each developer now owns **three files**: the engine
-(`backend/src/<engine>/engine.py` — pure logic, frozen signatures), the
-router (`backend/routers/<engine>.py` — thin JSON translation, no logic),
-and the view (`frontend/views/<engine>.py` — presentation, HTTP-only via
-`api_client`).
-
-| Engine folder | Owner | One-line goal | Technique | Pages |
-|---|---|---|---|---|
-| [`backend/src/portfolio_health/`](backend/src/portfolio_health/) | Developer 1 | Metrics + 0–100 Health Score, **validated empirically**, plus what-if analysis of proposed trades | Quant formulas + validation study | Portfolio Health, Performance |
-| [`backend/src/daily_strategy/`](backend/src/daily_strategy/) | Developer 2 | Regime classification + daily asset scores from a **walk-forward-validated ML model**, with news sentiment as an optional feature (ablation) | scikit-learn (predictive ML) | Daily Strategy |
-| [`backend/src/news_intelligence/`](backend/src/news_intelligence/) | Developer 3 | Live RSS → **LLM-classified** essential events (≤5/day), plus the **historical sentiment feature table** that feeds Dev 2's ML | LLM API (live) + FinBERT/VADER (batch) | Essential News |
-| [`backend/src/recommendation/`](backend/src/recommendation/) | Developer 4 | Fuse all engines into daily + event recommendations **without double-counting news** (`priced_in` reconciliation), under §9 constraints; own the product | Decision formulas + integration | Should I React?, Home |
-
-Each folder has a **README.md** with the mission, frozen contract, and a
-definition-of-done checklist. Working baselines are in place — the app runs
-end-to-end today; replace baseline logic without changing signatures.
-
-### How news meets the ML (the agreed design)
-
-News enters the system on **two timescales**:
-- **Slow (training)**: Dev 3's historical `sentiment_features` table is an
-  *optional* input channel to Dev 2's model (no news day = neutral +
-  `has_news=0`). Dev 2's ablation (price-only vs price+news) is a headline
-  result either way.
-- **Fast (decision time)**: live essential events flow to Dev 4's
-  reaction-risk formula, whose `priced_in` factor must rise when the model's
-  sentiment-tilted scores already reflect the story — the system never reacts
-  twice to the same news.
-
-### Ground rules
-
-1. **Commit only inside your own files** (one git branch each, e.g.
-   `dev2-daily-strategy`): your engine, your router, your view. Exceptions:
-   the requirements files (announce first); Developer 4 also maintains
-   `frontend/app.py`, `backend/main.py` and the shared kernel.
-2. **Never import another engine's internals** — only its contract functions
-   and the types in `backend/src/interfaces.py`.
-3. **The split is absolute**: no `streamlit` import anywhere under
-   `backend/`; no `src`/backend import anywhere under `frontend/` — views
-   talk to the API through `frontend/api_client.py` only.
-4. The shared kernel is read-only for everyone:
-   - `backend/src/data_loader.py` — ticker universe (NASDAQ symbol
-     directory), `get_latest_prices()`, `get_history()`
-   - `backend/src/portfolio.py` — holdings schema, persistence, `build_view()`
-5. `frontend/pages/*.py` are 6-line routing shims — never edit them; edit
-   your view in `frontend/views/` instead.
-6. API keys (`ANTHROPIC_API_KEY`) live in env vars or `.streamlit/secrets.toml`
-   — never in code, never committed.
+# API docs (when backend is running)
+# http://localhost:8000/docs
+```
 
 ## Layout
 
@@ -121,3 +100,30 @@ data/                        caches + user portfolio (gitignored) + sample
   API for classification/sentiment/summaries.
 - **Historical news**: FNSPID or a Kaggle financial-news corpus, scored
   locally (FinBERT/VADER) into `sentiment_features` — no look-ahead.
+
+
+## Responsible AI
+
+* AURORA is a **decision-support system, not an autonomous trading agent.** Final investment decisions remain with the user. The system provides recommendations, explanations, and risk analysis—**it never executes trades automatically**.
+
+* **Classical quantitative rules remain the primary decision maker.** Market direction is determined by transparent technical indicators and portfolio rules. AI components (e.g., FinBERT sentiment analysis and HAR-X risk forecasting) provide additional evidence rather than replacing deterministic decision logic.
+
+* **Predictions are probabilistic rather than guarantees.** Sentiment analysis, volatility forecasts, and risk estimates are subject to uncertainty and should be interpreted as decision support, not promises of future market performance.
+
+* Known limitations are disclosed rather than hidden. The current prototype has been evaluated on historical data and demonstration portfolios, **but it has not undergone live-market deployment, regulatory certification, or comprehensive fairness and robustness audits.**
+
+## References
+
+[1] T. Bollerslev, "Generalized autoregressive conditional heteroskedasticity," *Journal of Econometrics*, vol. 31, no. 3, pp. 307–327, 1986. *(Introduced the GARCH model, laying the foundation for financial volatility modelling.)*
+
+[2] T. G. Andersen, T. Bollerslev, F. X. Diebold, and P. Labys, "Modeling and forecasting realized volatility," *Econometrica*, vol. 71, no. 2, pp. 579–625, 2003. *(Established realised volatility as a more informative measure for volatility forecasting.)*
+
+[3] F. Corsi, "A Simple Approximate Long-Memory Model of Realized Volatility," *Journal of Financial Econometrics*, vol. 7, no. 2, pp. 174–196, 2009. *(__Proposed the HAR model, capturing long-memory effects in market volatility and forming the basis of HAR-X.__)*
+
+[4] X. Li, H. Xie, L. Chen, J. Wang, and X. Deng, "News Impact on Stock Price Return via Sentiment Analysis," in *Proc. 2014 Int. Conf. on Cloud Computing and Big Data*, 2014, pp. 1–8. *(Showed that incorporating news sentiment significantly improves stock prediction compared with traditional bag-of-words models.)*
+
+[5] Y. Zhou, S. Liu, and X. Hu, "Trade the Event: Corporate Events Detection for News-Based Stock Prediction," 2021. *(Demonstrated that identifying specific corporate events, such as earnings, mergers, and lawsuits, provides stronger predictive signals than sentiment alone.)*
+
+[6] D. Araci, "FinBERT: Financial Sentiment Analysis with Pre-trained Language Models," *arXiv preprint arXiv:1908.10063*, 2019. *(Adapted BERT to financial text, substantially improving financial sentiment classification accuracy.)*
+
+[7] J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding," in *Proc. NAACL-HLT*, Minneapolis, MN, USA, 2019, pp. 4171–4186. *(Introduced contextual language representations that became the foundation for FinBERT and modern NLP.)*
