@@ -30,10 +30,15 @@ Existing Investment Platforms
 - Depend on user interpretation
 
 AURORA
+
 ✓ Understands financial news automatically
+
 ✓ Predicts possible market impact
+
 ✓ Calculates portfolio-specific risk
+
 ✓ Suggests intelligent portfolio adjustments
+
 ✓ Keeps the investor in control by providing recommendations rather than *executing trades automatically*
 
 ## Quick start
