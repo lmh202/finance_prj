@@ -177,6 +177,88 @@ input[type="range"].slider::-moz-range-thumb {
   box-shadow: 0 0 10px rgba(179, 243, 76, 0.5);
 }
 
+/* dual-endpoint range slider: two native inputs stacked over one rail, so
+   keyboard/AT behaviour stays native. Only the thumbs take pointer events —
+   the transparent tracks must not swallow presses meant for the rail. */
+.range-dual {
+  position: relative;
+  height: 12px; /* = thumb diameter; keep in sync with THUMB_PX in the TSX */
+  cursor: pointer;
+}
+.range-dual .range-rail,
+.range-dual .range-sel {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 99px;
+  pointer-events: none;
+}
+.range-dual .range-rail {
+  left: 0;
+  right: 0;
+  background: color-mix(in srgb, var(--overlay-base) 10%, transparent);
+}
+.range-dual .range-sel {
+  background: var(--color-accent);
+}
+.range-dual input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  outline: none;
+  pointer-events: none;
+}
+.range-dual input[type="range"]::-webkit-slider-runnable-track {
+  height: 12px;
+  background: transparent;
+}
+.range-dual input[type="range"]::-moz-range-track {
+  height: 12px;
+  background: transparent;
+}
+.range-dual input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 0 10px rgba(179, 243, 76, 0.5);
+  cursor: grab;
+  transition: transform 0.15s ease;
+}
+.range-dual input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+}
+.range-dual input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.3);
+}
+.range-dual input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+.range-dual input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 0 10px rgba(179, 243, 76, 0.5);
+  cursor: grab;
+}
+.range-dual input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
 /* hide number spinners */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

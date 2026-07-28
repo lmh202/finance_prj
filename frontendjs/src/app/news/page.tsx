@@ -16,8 +16,14 @@ import type { NewsEvent, StockInfo } from "@/lib/types";
 // below then filter/slice it client-side with no extra backend calls —
 // mirrors frontend/views/news_intelligence.py's st.cache_data batching.
 const BATCH_SIZE = 20;
-const WINDOW_OPTIONS = [6, 12, 24, 48];
-const DEFAULT_LOOKBACK_IDX = 2; // WINDOW_OPTIONS[2] = 24h
+// The backend's essential_news() only ever considers the last 48h
+// (news_intelligence/engine.py `_LOOKBACK_HOURS`), so that is the widest
+// window worth offering here — past it the slider would filter nothing.
+const MAX_AGE_HOURS = 48;
+const DEFAULT_WINDOW: [number, number] = [0, 24];
+// Narrowest selectable window, in hours — keeps the two handles from landing
+// on the same value and collapsing the range to nothing.
+const MIN_WINDOW_HOURS = 1;
 
 function sentimentChip(sentiment: number) {
   const label = `${sentiment > 0 ? "+" : ""}${sentiment.toFixed(2)}`;
@@ -152,6 +158,128 @@ function SliderField({
   );
 }
 
+// Thumb diameter in px — mirrors the `.range-dual` thumb size in globals.css.
+// A native thumb's centre travels between THUMB_PX/2 and width − THUMB_PX/2
+// rather than 0…width, so the highlighted band has to be laid out on that
+// same inset scale or it drifts off the handles at either end of the track.
+const THUMB_PX = 12;
+
+/** `<percent>% ± <px>px` as a calc() with an explicit operator (no `- -6px`). */
+function trackPos(percent: number, px: number) {
+  return `calc(${percent.toFixed(3)}% ${px < 0 ? "-" : "+"} ${Math.abs(px).toFixed(2)}px)`;
+}
+
+/**
+ * Two-handle range slider — the low and high ends are separate native range
+ * inputs stacked over a shared rail, which keeps keyboard and screen-reader
+ * behaviour native while looking like one control.
+ */
+function DualSliderField({
+  label,
+  display,
+  lo,
+  hi,
+  min,
+  max,
+  step = 1,
+  minGap = 1,
+  loLabel,
+  hiLabel,
+  valueText,
+  ends,
+  onChange,
+}: {
+  label: string;
+  display: string;
+  lo: number;
+  hi: number;
+  min: number;
+  max: number;
+  step?: number;
+  minGap?: number;
+  loLabel: string;
+  hiLabel: string;
+  valueText: (value: number) => string;
+  ends: [string, string];
+  onChange: (lo: number, hi: number) => void;
+}) {
+  const span = max === min ? 1 : max - min;
+  const loFraction = (lo - min) / span;
+  const hiFraction = (hi - min) / span;
+
+  // Clamps, not swaps: a handle stops one step short of its neighbour so the
+  // two can never cross and `lo <= hi` holds for every reachable state.
+  const setLo = (value: number) => onChange(Math.min(value, hi - minGap), hi);
+  const setHi = (value: number) => onChange(lo, Math.max(value, lo + minGap));
+
+  // With the pair squeezed against the right end the high handle covers the
+  // low one and has nowhere left to go — lift the low handle so it stays
+  // grabbable. Anywhere else the high handle sits on top.
+  const loOnTop = hiFraction > 0.9;
+
+  function jumpToPress(e: React.PointerEvent<HTMLDivElement>) {
+    // Both inputs are pointer-events:none apart from their thumbs, so a press
+    // landing on the container is a press on the rail. Move whichever handle
+    // is nearer, the way a single native range input jumps on a track click.
+    if (e.target !== e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const travel = Math.max(1, rect.width - THUMB_PX);
+    const raw = min + ((e.clientX - rect.left - THUMB_PX / 2) / travel) * span;
+    const snapped = min + Math.round((raw - min) / step) * step;
+    const value = Math.min(max, Math.max(min, snapped));
+    if (Math.abs(value - lo) <= Math.abs(value - hi)) setLo(value);
+    else setHi(value);
+  }
+
+  return (
+    <div role="group" aria-label={label}>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-mut">{label}</span>
+        <span className="font-mono text-[11px] font-semibold tabular text-ink/85">{display}</span>
+      </div>
+
+      {/* mt-2 (not mt-3) so the 12px-tall rail box centres its track on the
+          same line as the 3px single sliders sitting beside it in the grid. */}
+      <div className="range-dual mt-2" onPointerDown={jumpToPress}>
+        <div className="range-rail" />
+        <div
+          className="range-sel"
+          style={{
+            left: trackPos(loFraction * 100, (0.5 - loFraction) * THUMB_PX),
+            right: trackPos((1 - hiFraction) * 100, (hiFraction - 0.5) * THUMB_PX),
+          }}
+        />
+        <input
+          type="range"
+          aria-label={loLabel}
+          aria-valuetext={valueText(lo)}
+          min={min}
+          max={max}
+          step={step}
+          value={lo}
+          style={loOnTop ? { zIndex: 2 } : undefined}
+          onChange={(e) => setLo(Number(e.target.value))}
+        />
+        <input
+          type="range"
+          aria-label={hiLabel}
+          aria-valuetext={valueText(hi)}
+          min={min}
+          max={max}
+          step={step}
+          value={hi}
+          onChange={(e) => setHi(Number(e.target.value))}
+        />
+      </div>
+
+      <div className="mt-2 flex items-center justify-between font-mono text-[9px] uppercase tracking-wider text-mut/50">
+        <span>{ends[0]}</span>
+        <span>{ends[1]}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function NewsPage() {
   // The tracked-ticker list defaults to the saved portfolio (resolved lazily
   // inside the fetcher below, on first load only) but is editable in the
@@ -166,10 +294,11 @@ export default function NewsPage() {
   // calling Date.now() during render.
   const [fetchedAt, setFetchedAt] = useState(0);
 
-  const [lookbackIdx, setLookbackIdx] = useState(DEFAULT_LOOKBACK_IDX);
+  // Both ends of the age window, in hours before `fetchedAt`: [newest, oldest].
+  const [ageWindow, setAgeWindow] = useState<[number, number]>(DEFAULT_WINDOW);
   const [minImportance, setMinImportance] = useState(40);
   const [limit, setLimit] = useState(5);
-  const lookbackHours = WINDOW_OPTIONS[lookbackIdx];
+  const [newestHours, oldestHours] = ageWindow;
 
   // Stable identity on purpose: refetching should only ever happen on mount,
   // on an explicit reload()/applySymbols() call, or the Refresh button —
@@ -222,13 +351,18 @@ export default function NewsPage() {
     return engine.data
       .filter((e) => {
         if (e.published) {
-          const ageHours = (fetchedAt - new Date(e.published).getTime()) / 3_600_000;
-          if (ageHours > lookbackHours) return false;
+          // Floored at 0: a feed timestamp running slightly ahead of our clock
+          // is still "just now", not something outside the window.
+          const ageHours = Math.max(
+            0,
+            (fetchedAt - new Date(e.published).getTime()) / 3_600_000,
+          );
+          if (ageHours < newestHours || ageHours > oldestHours) return false;
         }
         return e.importance >= minImportance;
       })
       .slice(0, limit);
-  }, [engine.data, fetchedAt, lookbackHours, minImportance, limit]);
+  }, [engine.data, fetchedAt, newestHours, oldestHours, minImportance, limit]);
 
   return (
     <EngineShell
@@ -284,13 +418,21 @@ export default function NewsPage() {
             </div>
 
             <div className="mt-6 grid gap-5 sm:grid-cols-3">
-              <SliderField
+              <DualSliderField
                 label="Lookback window"
-                display={`last ${lookbackHours}h`}
-                value={lookbackIdx}
+                display={
+                  newestHours === 0 ? `last ${oldestHours}h` : `${newestHours}–${oldestHours}h ago`
+                }
+                lo={newestHours}
+                hi={oldestHours}
                 min={0}
-                max={WINDOW_OPTIONS.length - 1}
-                onChange={setLookbackIdx}
+                max={MAX_AGE_HOURS}
+                minGap={MIN_WINDOW_HOURS}
+                loLabel="Lookback window — newest story age, in hours"
+                hiLabel="Lookback window — oldest story age, in hours"
+                valueText={(h) => (h === 0 ? "now" : `${h}h ago`)}
+                ends={["now", `${MAX_AGE_HOURS}h ago`]}
+                onChange={(lo, hi) => setAgeWindow([lo, hi])}
               />
               <SliderField
                 label="Minimum importance"
