@@ -983,7 +983,6 @@ AVMC,Avantis U.S. Mid Cap Equity ETF,NYSE Arca,True
 AVMU,Avantis Core Municipal Fixed Income ETF,NYSE Arca,True
 AVMV,Avantis U.S. Mid Cap Value ETF,NYSE Arca,True
 AVNM,Avantis All International Markets Equity ETF,NYSE Arca,True
-AVNS,"Avanos Medical, Inc. Common Stock",NYSE,False
 AVNT,Avient Corporation Common Stock,NYSE,False
 AVNV,Avantis All International Markets Value ETF,NYSE Arca,True
 AVNW,"Aviat Networks, Inc. - Common Stock",NASDAQ,False
@@ -1083,6 +1082,7 @@ BAER,"Bridger Aerospace Group Holdings, Inc. - Common Stock",NASDAQ,False
 BAERW,"Bridger Aerospace Group Holdings, Inc. - Warrant",NASDAQ,False
 BAFE,Brown Advisory Flexible Equity ETF,NASDAQ,True
 BAFN,BayFirst Financial Corp. - Common Stock,NASDAQ,False
+BAGX,EA Bridgeway Aggressive Investors ETF,Cboe BZX,True
 BAGY,Amplify Bitcoin Max Income Covered Call ETF,Cboe BZX,True
 BAH,Booz Allen Hamilton Holding Corporation Common Stock,NYSE,False
 BAI,iShares A.I. Innovation and Tech Active ETF,NYSE Arca,True
@@ -1340,6 +1340,7 @@ BGCG,Baillie Gifford International Concentrated Growth ETF,NASDAQ,True
 BGDE,"Big Digital Energy, Inc. - Common Stock",NASDAQ,False
 BGDV,Bahl & Gaynor Dividend ETF,NYSE Arca,True
 BGEG,Baillie Gifford Emerging Markets ETF,NASDAQ,True
+BGFI,BNY Mellon Global Fixed Income ETF,Cboe BZX,True
 BGGG,Baillie Gifford Long Term Global Growth ETF,NASDAQ,True
 BGH,Barings Global Short Duration High Yield Fund Common Shares of Beneficial Interests,NYSE,False
 BGI,Birks Group Inc. Common Stock,NYSE American,False
@@ -1566,6 +1567,7 @@ BMR,Beamr Imaging Ltd. - Ordinary Share,NASDAQ,False
 BMRA,"Biomerica, Inc. - Common Stock",NASDAQ,False
 BMRC,Bank of Marin Bancorp - Common Stock,NASDAQ,False
 BMRN,BioMarin Pharmaceutical Inc. - Common Stock,NASDAQ,False
+BMSI,BNY Mellon Muti-Sector Income ETF,Cboe BZX,True
 BMVP,Invesco Bloomberg MVP Multi-factor ETF,NYSE Arca,True
 BMY,Bristol-Myers Squibb Company Common Stock,NYSE,False
 BN,Brookfield Corporation Class A Limited Voting Shares,NYSE,False
@@ -1707,6 +1709,7 @@ BRRWW,"ProCap Financial, Inc. - Warrant.",NASDAQ,False
 BRSL,"Brightstar Lottery PLC Trading under the Legal Name to begin at the market open on July 21, 2025. Ordinary Shares",NYSE,False
 BRSM,MFS Blended Research Small-Mid Cap ETF,NYSE Arca,True
 BRSP,"BrightSpire Capital, Inc. Class A Common Stock",NYSE,False
+BRSV,EA Bridgeway Select Small-Cap Value ETF,Cboe BZX,True
 BRT,BRT Apartments Corp. (MD) Common Stock,NYSE,False
 BRTMU,B&R Technology Merger Corp. - Units,NASDAQ,False
 BRTR,iShares Total Return Active ETF,NASDAQ,True
@@ -1849,6 +1852,7 @@ BURL,"Burlington Stores, Inc. Common Stock",NYSE,False
 BUSA,Brandes U.S. Value ETF,Cboe BZX,True
 BUSE,First Busey Corporation - Common Stock,NASDAQ,False
 BUSEP,"First Busey Corporation - Depositary Shares, Each Representing a 1/40th Interest in a Share of 8.25% Fixed-Rate Series B Non-Cumulative Perpetual Preferred Stock, $0.001 par value",NASDAQ,False
+BUSM,EA Bridgeway Ultra-Small Company Market ETF,Cboe BZX,True
 BUUU,BUUU Group Limited - Class A Ordinary Share,NASDAQ,False
 BUXX,Strive Enhanced Income Short Maturity ETF,NYSE,True
 BUYB,ProShares S&P 500 Buyback Aristocrats ETF,NYSE Arca,True
@@ -2065,9 +2069,6 @@ CCIF,Carlyle Credit Income Fund Shares of Beneficial Interest,NYSE,False
 CCII,Cohen Circle Acquisition Corp. II - Class A Ordinary Shares,NASDAQ,False
 CCIIU,Cohen Circle Acquisition Corp. II - Unit,NASDAQ,False
 CCIIW,Cohen Circle Acquisition Corp. II - Warrant,NASDAQ,False
-CCIX,Churchill Capital Corp IX - Ordinary Shares,NASDAQ,False
-CCIXU,Churchill Capital Corp IX - Unit,NASDAQ,False
-CCIXW,Churchill Capital Corp IX - Warrant,NASDAQ,False
 CCJ,Cameco Corporation Common Stock,NYSE,False
 CCK,"Crown Holdings, Inc.",NYSE,False
 CCL,Carnival Corporation Ltd. Common Shares,NYSE,False
@@ -2644,7 +2645,6 @@ CRDT,Simplify Opportunistic Income ETF,NYSE Arca,True
 CRDU,Tradr 2X Long CRDO Daily ETF,Cboe BZX,True
 CRDX,2x Cardano ETF,Cboe BZX,True
 CRE,Cre8 Enterprise Limited - Class A Ordinary Shares,NASDAQ,False
-CRED,Columbia Research Enhanced Real Estate ETF,NYSE Arca,True
 CRESY,"Cresud S.A.C.I.F. y A. - American Depositary Shares, each representing ten shares of Common Stock",NASDAQ,False
 CREX,"Creative Realities, Inc. - Common Stock",NASDAQ,False
 CRF,"Cornerstone Total Return Fund, Inc. (The) Common Stock",NYSE American,False
@@ -3654,7 +3654,6 @@ EMOT,First Trust S&P 500 Economic Moat ETF,NYSE Arca,True
 EMP,"Entergy Mississippi, LLC First Mortgage Bonds, 4.90% Series Due October 1, 2066",NYSE,False
 EMPB,Efficient Market Portfolio Plus ETF,NYSE Arca,True
 EMPD,Empery Digital Inc. - Common stock,NASDAQ,False
-EMPG,Empro Group Inc. - Ordinary shares,NASDAQ,False
 EMQQ,EMQQ The Emerging Markets Internet ETF,NYSE Arca,True
 EMR,Emerson Electric Company Common Stock,NYSE,False
 EMSC,Sophus Capital Emerging Market Small Cap ETF,NASDAQ,True
@@ -4570,7 +4569,9 @@ FTNY,Franklin New York Municipal Income ETF,NYSE Arca,True
 FTOH,Franklin Ohio Municipal Income ETF,NYSE Arca,True
 FTPA,Franklin Pennsylvania Municipal Income ETF,NYSE Arca,True
 FTQI,First Trust Nasdaq BuyWrite Income ETF,NASDAQ,True
+FTRA,FutureCorp Space Acquisition 1 Class A Ordinary Shares,NYSE,False
 FTRA.U,"FutureCorp Space Acquisition 1 Units, each consisting of one Class A ordinary share and one-half of one redeemable warrant",NYSE,False
+FTRA.W,"FutureCorp Space Acquisition 1 Redeemable warrants, each whole warrant exercisable for one Class A ordinary share at an exercise price of $11.50",NYSE,False
 FTRB,Federated Hermes Total Return Bond ETF,NYSE Arca,True
 FTRE,Fortrea Holdings Inc. - Common Stock,NASDAQ,False
 FTRI,First Trust Indxx Global Natural Resources Income ETF,NASDAQ,True
@@ -5056,9 +5057,6 @@ GQQQ,Astoria US Quality Growth Kings ETF,NASDAQ,True
 GQRE,FlexShares Global Quality Real Estate Index Fund,NYSE Arca,True
 GRAB,Grab Holdings Limited - Class A Ordinary Shares,NASDAQ,False
 GRABW,Grab Holdings Limited - Warrant,NASDAQ,False
-GRAF,Graf Global Corp. Class A ordinary shares,NYSE American,False
-GRAF.U,"Graf Global Corp. Units, each consisting of one Class A ordinary share and one-half of one redeemable warrant",NYSE American,False
-GRAF.W,"Graf Global Corp. Warrants, each whole warrant exercisable for one Class A ordinary share at an exercise price of $11.50 per share",NYSE American,False
 GRAG,Leverage Shares 2X Long GRAB Daily ETF,NASDAQ,True
 GRAL,"GRAIL, Inc. - Common Stock",NASDAQ,False
 GRAN,Grande Group Limited - Class A Ordinary Shares,NASDAQ,False
@@ -6048,7 +6046,9 @@ IPO,Renaissance IPO ETF,NYSE Arca,True
 IPOS,Renaissance Capital Greenwich Fund,NYSE Arca,True
 IPSC,"Century Therapeutics, Inc. - Common Stock",NASDAQ,False
 IPST,"IP Strategy Holdings, Inc. - Common Stock",NASDAQ,False
+IPVV,"InterPrivate Investment Partners V, Inc. - Class A Ordinary Shares",NASDAQ,False
 IPVVU,"InterPrivate Investment Partners V, Inc. - Units",NASDAQ,False
+IPVVW,"InterPrivate Investment Partners V, Inc. - Warrants",NASDAQ,False
 IPW,iPower Inc. - Common Stock,NASDAQ,False
 IPWR,Ideal Power Inc. - Common Stock,NASDAQ,False
 IPX,IperionX Limited - American Depositary Share,NASDAQ,False
@@ -6873,7 +6873,7 @@ LGDS,JPMorgan Fundamental Data Science Large Growth ETF,NASDAQ,True
 LGDX,Intech S&P Large Cap Diversified Alpha ETF,NYSE Arca,True
 LGH,HCM Defender 500 Index ETF,NYSE Arca,True
 LGHL,Lion Group Holding Ltd. - American Depositary Share,NASDAQ,False
-LGHT,Langar Global HealthTech ETF,NYSE Arca,True
+LGHT,Langar Global HealthTech ETF,Cboe BZX,True
 LGI,Lazard Global Total Return and Income Fund Common Stock,NYSE,False
 LGIH,"LGI Homes, Inc. - Common Stock",NASDAQ,False
 LGL,"LGL Group, Inc. (The) Common Stock",NYSE American,False
@@ -7061,7 +7061,9 @@ LTAX,Nomura Tax-Free USA ETF,NYSE Arca,True
 LTBR,Lightbridge Corporation - Common Stock,NASDAQ,False
 LTC,"LTC Properties, Inc. Common Stock",NYSE,False
 LTCC,Canary Litecoin ETF,NASDAQ,True
+LTGR,Long Table Growth Corp. - Class A Ordinary Shares,NASDAQ,False
 LTGRU,Long Table Growth Corp. - Units,NASDAQ,False
+LTGRW,Long Table Growth Corp. - Warrants,NASDAQ,False
 LTH,"Life Time Group Holdings, Inc. Common Stock",NYSE,False
 LTL,ProShares Ultra Communication Services,NYSE Arca,True
 LTM,"LATAM Airlines Group S.A. American Depositary Shares (each representing two thousand (2,000) shares of Common Stock)",NYSE,False
@@ -7132,7 +7134,7 @@ MACI,Melar Acquisition Corp. I - Class A Ordinary Shares,NASDAQ,False
 MACIU,Melar Acquisition Corp. I - Unit,NASDAQ,False
 MACIW,Melar Acquisition Corp. I - Warrant,NASDAQ,False
 MADE,iShares U.S. Manufacturing ETF,NYSE Arca,True
-MAGA,Point Bridge America First ETF,Cboe BZX,True
+MAGA,Truth Social America First ETF,NYSE Arca,True
 MAGC,Roundhill China Magnificent Seven ETF,Cboe BZX,True
 MAGG,Madison Aggregate Bond ETF,NYSE Arca,True
 MAGH,Magnitude International Ltd - Ordinary Shares,NASDAQ,False
@@ -7649,10 +7651,12 @@ MSLE,Satellos Bioscience Inc. - Common Stock,NASDAQ,False
 MSM,"MSC Industrial Direct Company, Inc. Common Stock",NYSE,False
 MSMR,McElhenny Sheffield Managed Risk ETF,Cboe BZX,True
 MSN,Emerson Radio Corporation Common Stock,NYSE American,False
+MSOL,Morgan Stanley Solana Trust,NYSE Arca,True
 MSOS,AdvisorShares Pure US Cannabis ETF,NYSE Arca,True
 MSOX,AdvisorShares MSOS Daily Leveraged ETF,NYSE Arca,True
 MSR,GraniteShares Autocallable MSTR ETF,NASDAQ,True
 MSS,Maison Solutions Inc. - Class A Common Stock,NASDAQ,False
+MSSE,Morgan Stanley Ethereum Trust,NYSE Arca,True
 MSSM,Morgan Stanley Pathway Small-Mid Cap Equity ETF,NYSE Arca,True
 MSSS,Monarch Select Subsector Index ETF,Cboe BZX,True
 MSST,YieldMax MSTR Performance & Distribution Target 25 ETF,Cboe BZX,True
@@ -7678,6 +7682,7 @@ MTB,M&T Bank Corporation Common Stock,NYSE,False
 MTB$H,"M&T Bank Corporation Perpetual Fixed-to-Floating Rate Non-Cumulative Preferred Stock, Series H",NYSE,False
 MTB$J,"M&T Bank Corporation Depositary Shares each representing a 1/400th ownership interest in a share of Perpetual 7.500% Non-Cumulative Preferred Stock, Series J",NYSE,False
 MTB$K,"M&T Bank Corporation Depositary Shares each representing a 1/400th interest in a share of Perpetual 6.350% Non-Cumulative Preferred Stock, Series K",NYSE,False
+MTB$L,"M&T Bank Corporation Depositary Shares each representing a 1/400th ownership interest in a share of Perpetual 6.625% Non-Cumulative Preferred Stock, Series L",NYSE,False
 MTBA,Simplify MBS ETF,NYSE Arca,True
 MTC,"MMTec, Inc. - Common Shares",NASDAQ,False
 MTCH,"Match Group, Inc. - Common Stock",NASDAQ,False
@@ -7712,6 +7717,7 @@ MTYY,GraniteShares YieldBOOST MSTR ETF,NASDAQ,True
 MTZ,"MasTec, Inc. Common Stock",NYSE,False
 MU,"Micron Technology, Inc. - Common Stock",NASDAQ,False
 MUA,"Blackrock MuniAssets Fund, Inc Common Stock",NYSE,False
+MUA.V,"Blackrock MuniAssets Fund, Inc. Rights (expiring August 20, 2026) Rights when issued",NYSE,False
 MUB,iShares National Muni Bond ETF,NYSE Arca,True
 MUC,"Blackrock MuniHoldings California Quality Fund, Inc.  Common Stock",NYSE,False
 MUD,Direxion Daily MU Bear 1X ETF,NASDAQ,True
@@ -7745,7 +7751,6 @@ MVFD,Monarch Volume Factor Dividend Tree Index ETF,Cboe BZX,True
 MVFG,Monarch Volume Factor Global Unconstrained Index ETF,Cboe BZX,True
 MVIS,"MicroVision, Inc. - Common Stock",NASDAQ,False
 MVLL,GraniteShares 2x Long MRVL Daily ETF,NASDAQ,True
-MVO,MV Oil Trust Units of Beneficial Interests,NYSE,False
 MVPA,Miller Value Partners Appreciation ETF,NYSE Arca,True
 MVPL,Miller Value Partners Leverage ETF,NYSE Arca,True
 MVRL,ETRACS Monthly Pay 1.5X Leveraged Mortgage REIT ETN,NYSE Arca,True
@@ -9386,7 +9391,7 @@ QBQF,AllianzIM Growth-100 Buffer15 ETF,Cboe BZX,True
 QBQV,AllianzIM Growth-100 Buffer5 ETF,Cboe BZX,True
 QBSF,AllianzIM U.S. Equity Buffer15 ETF,Cboe BZX,True
 QBSV,AllianzIM U.S Equity Buffer5 ETF,Cboe BZX,True
-QBTS,D-Wave Quantum Inc. Common Shares,NYSE,False
+QBTS,D-Wave Quantum Inc. - Common Stock,NASDAQ,False
 QBTX,Tradr 2X Long QBTS Daily ETF,Cboe BZX,True
 QBTZ,Defiance Daily Target 2x Short QBTS ETF,NASDAQ,True
 QBUF,Innovator Nasdaq-100 10 Buffer ETF Quarterly,NASDAQ,True
@@ -9589,6 +9594,7 @@ RAL,Ralliant Corporation Common Stock,NYSE,False
 RAM,Roundhill T-REX 2X Long DRAM Daily Target ETF,Cboe BZX,True
 RAML,Leverage Shares 2X Long Memory Daily ETF,Cboe BZX,True
 RAMP,"LiveRamp Holdings, Inc. Common Stock",NYSE,False
+RAMZ,T-REX 2X Inverse DRAM Daily Target ETF,Cboe BZX,True
 RAND,Rand Capital Corporation - Closed End Fund,NASDAQ,False
 RANG,Range Capital Acquisition Corp. - Ordinary Shares,NASDAQ,False
 RANGR,Range Capital Acquisition Corp. - Rights,NASDAQ,False
@@ -9854,7 +9860,6 @@ RMCOW,Royalty Management Holding Corporation - Warrant,NASDAQ,False
 RMD,ResMed Inc. Common Stock,NYSE,False
 RMHY,Global X Adaptive Risk Managed Yield ETF,NYSE Arca,True
 RMI,"RiverNorth Opportunistic Municipal Income Fund, Inc. Common Stock",NYSE,False
-RMIF,LHA Risk-Managed Income ETF,Cboe BZX,True
 RMIX,"Suncrete, Inc. - Class A Common Stock",NASDAQ,False
 RMM,"RiverNorth Managed Duration Municipal Income Fund, Inc. Common Stock",NYSE,False
 RMME,Rareview Government Money Market ETF,Cboe BZX,True
@@ -9978,7 +9983,6 @@ RSST,Return Stacked U.S. Stocks & Managed Futures ETF,Cboe BZX,True
 RSSX,Return Stacked U.S. Stocks & Gold/Bitcoin ETF,Cboe BZX,True
 RSSY,Return Stacked U.S. Stocks & Futures Yield ETF,Cboe BZX,True
 RSVR,"Reservoir Media, Inc.. - Common Stock",NASDAQ,False
-RSVRW,"Reservoir Media, Inc.. - Warrant",NASDAQ,False
 RTAC,Renatus Tactical Acquisition Corp I - Class A Ordinary Shares,NASDAQ,False
 RTACU,Renatus Tactical Acquisition Corp I - Unit,NASDAQ,False
 RTACW,Renatus Tactical Acquisition Corp I - Warrant,NASDAQ,False
@@ -10469,7 +10473,9 @@ SK,Corgi SK hynix 2x Daily ETF,Cboe BZX,True
 SKDD,GraniteShares 2x Short SK Hynix Daily ETF,NASDAQ,True
 SKE,Skeena Resources Limited Common Shares,NYSE,False
 SKF,ProShares UltraShort Financials,NYSE Arca,True
+SKHA,Tradr 2X Long SK hynix Daily ETF,Cboe BZX,True
 SKHL,Direxion Daily SK Hynix Bull 2X ETF,NYSE Arca,True
+SKHN,Tradr 2X Short SK hynix Daily ETF,Cboe BZX,True
 SKHU,ProShares Ultra SK hynix,NYSE Arca,True
 SKHX,Leverage Shares 2X Long SK Hynix Daily ETF,Cboe BZX,True
 SKHY,SK hynix Inc. - American Depositary Shares,NASDAQ,False
@@ -10914,7 +10920,7 @@ STBA,"S&T Bancorp, Inc. - Common Stock",NASDAQ,False
 STBF,Performance Trust Short Term Bond ETF,Cboe BZX,True
 STBQ,Amplify Stablecoin Technology Leaders ETF,NYSE Arca,True
 STC,Stewart Information Services Corporation Common Stock,NYSE,False
-STCE,Schwab Crypto Thematic ETF,NYSE Arca,True
+STCE,Schwab Crypto Thematic Natural Language Processing ETF,NYSE Arca,True
 STDN,"Standard Nuclear, Inc. Class A Common Stock",NYSE,False
 STE,STERIS plc (Ireland) Ordinary Shares,NYSE,False
 STEM,"Stem, Inc. Class A Common Stock",NYSE,False
@@ -11450,6 +11456,9 @@ TOL,"Toll Brothers, Inc. Common Stock",NYSE,False
 TOLL,Tema Monopolies and Oligopolies ETF,Cboe BZX,True
 TOLZ,ProShares DJ Brookfield Global Infrastructure ETF,NYSE Arca,True
 TOMZ,"TOMI Environmental Solutions, Inc. - Common Stock",NASDAQ,False
+TONT,Graf Global Corp. Class A ordinary shares,NYSE American,False
+TONT.U,"Graf Global Corp. Units, each consisting of one Class A ordinary share and one-half of one redeemable warrant",NYSE American,False
+TONT.W,"Graf Global Corp. Warrants, each whole warrant exercisable for one Class A ordinary share at an exercise price of $11.50 per share",NYSE American,False
 TONX,TON Strategy Company - Common Stock,NASDAQ,False
 TOON,"Kartoon Studios, Inc. Common Stock",NYSE American,False
 TOP,TOP Financial Group Limited - Class A Ordinary Shares,NASDAQ,False
@@ -11519,9 +11528,7 @@ TRGSR,TRG Latin America Acquisitions Corp. - Rights,NASDAQ,False
 TRGSU,TRG Latin America Acquisitions Corp. - Units,NASDAQ,False
 TRI,Thomson Reuters Corp - Common Shares,NASDAQ,False
 TRIB,Trinity Biotech plc - American Depositary Shares,NASDAQ,False
-TRIN,Trinity Capital Inc. - Common Stock,NASDAQ,False
-TRINI,Trinity Capital Inc. - 7.875% Notes Due 2029,NASDAQ,False
-TRINZ,Trinity Capital Inc. - 7.875% Notes due 2029,NASDAQ,False
+TRIN,Trinity Capital Inc. Common Stock,NYSE,False
 TRIO,MC Trio Equity Buffered ETF,Cboe BZX,True
 TRIP,"TripAdvisor, Inc. - Common Stock",NASDAQ,False
 TRLV,Trulieve Cannabis Corp. Subordinate Voting Shares,NYSE,False
@@ -11530,9 +11537,11 @@ TRMD,TORM plc - Class A Common Stock,NASDAQ,False
 TRMK,Trustmark Corporation - Common Stock,NASDAQ,False
 TRN,"Trinity Industries, Inc. Common Stock",NYSE,False
 TRND,Pacer Trendpilot Fund of Funds ETF,NYSE Arca,True
+TRNI,Trinity Capital Inc. 7.875% Notes Due 2029,NYSE,False
 TRNO,Terreno Realty Corporation Common Stock,NYSE,False
 TRNR,Interactive Strength Inc. - Common Stock,NASDAQ,False
 TRNS,"Transcat, Inc. - Common Stock",NASDAQ,False
+TRNZ,Trinity Capital Inc. 7.875% Notes due 2029,NYSE,False
 TRON,Tron Inc. - Common Stock,NASDAQ,False
 TROO,"TROOPS, Inc.  - Ordinary Shares",NASDAQ,False
 TROT,Invesco MSCI Treasury Duration Rotation ETF,NYSE Arca,True
@@ -12170,7 +12179,6 @@ VKTX,"Viking Therapeutics, Inc. - Common Stock",NASDAQ,False
 VLGEA,"Village Super Market, Inc. - Class A Common Stock",NASDAQ,False
 VLLU,Harbor AlphaEdge Large Cap Value ETF,NYSE Arca,True
 VLN,Valens Semiconductor Ltd. Ordinary Shares,NYSE,False
-VLN.W,"Valens Semiconductor Ltd. Warrants, each warrant to purchase one-half of one Ordinary Share",NYSE,False
 VLO,Valero Energy Corporation Common Stock,NYSE,False
 VLOS,Velos Acquisition I Corp. - Class A Ordinary shares,NASDAQ,False
 VLOSU,Velos Acquisition I Corp. - Units,NASDAQ,False
@@ -12285,7 +12293,6 @@ VSNT,"Versant Media Group, Inc. - Class A Common Stock",NASDAQ,False
 VSOL,VanEck Solana ETF,NASDAQ,True
 VSS,Vanguard FTSE All-Wld ex-US SmCp Idx ETF,NYSE Arca,True
 VST,Vistra Corp. Common Stock,NYSE,False
-VSTD,Vestand Inc.  - Class A Common Stock,NASDAQ,False
 VSTL,Defiance Daily Target 2X Long VST ETF,NASDAQ,True
 VSTM,"Verastem, Inc. - Common Stock",NASDAQ,False
 VSTS,Vestis Corporation Common Stock,NYSE,False
@@ -12343,7 +12350,6 @@ VYGR,"Voyager Therapeutics, Inc. - Common Stock",NASDAQ,False
 VYLD,"Inverse VIX Short-Term Futures ETNs due March 22, 2045",NYSE Arca,True
 VYM,Vanguard High Dividend Yield ETF,NYSE Arca,True
 VYMI,Vanguard International High Dividend Yield ETF,NASDAQ,True
-VYNE,VYNE Therapeutics Inc. - Common Stock,NASDAQ,False
 VYX,NCR Voyix Corporation Common Stock,NYSE,False
 VZ,Verizon Communications Inc. Common Stock,NYSE,False
 VZLA,Vizsla Silver Corp. Common Shares,NYSE American,False
@@ -12858,6 +12864,7 @@ YAAS,Youxin Technology Ltd - Class A Ordinary shares,NASDAQ,False
 YALA,"Yalla Group Limited American Depositary Shares, each representing one Class A Ordinary Share",NYSE,False
 YALL,Truth Social God Bless America ETF,NYSE Arca,True
 YANG,Direxion Daily FTSE China Bear 3X ETF,NYSE Arca,True
+YARW,"Yarrow Bioscience, Inc. - Common Stock",NASDAQ,False
 YB,Yuanbao Inc. - American Depositary Shares,NASDAQ,False
 YBIT,YieldMax Bitcoin Option Income Strategy ETF,NYSE Arca,True
 YBMN,Defiance BMNR Option Income ETF,NASDAQ,True
