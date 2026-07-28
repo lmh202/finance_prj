@@ -2,7 +2,7 @@
 
 **Real Time Market & Global Event Intelligence for Healthier Portfolios**
 
-[📰 Newsprint Poster](aurora_poster/GROUP-8-POSTER(AURORA).pdf)
+[📰 Newsprint Poster](aurora_poster/GROUP-8-AURORA-POSTER.pdf)
 
 [🎬 Video Demonstration](https://drive.google.com/drive/folders/1U5nQa_rUdQF210iREnKHaEfUrywlrZE8)
 
