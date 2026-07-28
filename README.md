@@ -2,7 +2,9 @@
 
 **Real Time Market & Global Event Intelligence for Healthier Portfolios**
 
-[Newsprint Poster](aurora_poster/GROUP-8-POSTER(AURORA).pdf)  [Video Demonstration](https://drive.google.com/drive/folders/1U5nQa_rUdQF210iREnKHaEfUrywlrZE8)
+[📰 Newsprint Poster](aurora_poster/GROUP-8-POSTER(AURORA).pdf)
+
+[🎬 Video Demonstration](https://drive.google.com/drive/folders/1U5nQa_rUdQF210iREnKHaEfUrywlrZE8)
 
 ## What is AURORA
 
