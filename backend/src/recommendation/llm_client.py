@@ -12,7 +12,7 @@ import hashlib
 import json
 import os
 import threading
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import requests
 from pydantic import BaseModel, ConfigDict, Field, ValidationError

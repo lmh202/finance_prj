@@ -11,7 +11,7 @@ Holdings live in data/portfolio.csv; the cash balance in data/settings.json.
 
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 

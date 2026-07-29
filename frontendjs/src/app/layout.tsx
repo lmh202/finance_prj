@@ -25,10 +25,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${mono.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
+      {/* No manual <head>: the App Router owns it and injects metadata there,
+          so rendering one here made the server and client trees disagree —
+          that was the hydration failure. The theme bootstrap runs as the
+          first thing in <body> instead, which is still before any painted
+          content and still sets data-theme ahead of first paint. */}
       <body className="grain bg-bg0 font-display text-ink antialiased">
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

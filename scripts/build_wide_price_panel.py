@@ -390,7 +390,7 @@ def diagnose(panel: pd.DataFrame) -> None:
     panel = panel.copy()
     panel["date"] = pd.to_datetime(panel["date"])
     subsets = {
-        f"legacy 21 symbols": panel[panel["symbol"].isin(LEGACY_21)],
+        "legacy 21 symbols": panel[panel["symbol"].isin(LEGACY_21)],
         f"wide {panel['symbol'].nunique()} symbols": panel,
     }
     features = ["mom_12_1", "mom_60d", "sma50_vs_sma200", "beta_60d", "vol_20d"]

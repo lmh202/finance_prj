@@ -86,17 +86,26 @@ function NavLink({
 }
 
 function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
-  const toLight = theme === "dark";
+  const { toggleTheme } = useTheme();
   return (
+    // Nothing here may depend on the current theme. The server cannot know it
+    // — it lives in localStorage or the OS preference and is applied to <html>
+    // by the bootstrap script before hydration — so any theme-dependent markup
+    // is a genuine hydration mismatch. suppressHydrationWarning is not a fix
+    // either: it spans an element's own attributes but never a differing
+    // child, and it leaves the server's value stuck in the DOM (an aria-label
+    // chosen for the wrong theme stays wrong until the next state change).
+    // Hence a fixed label, and both icons always rendered with CSS choosing
+    // the visible one — see .theme-icon-* in globals.css.
     <button
       type="button"
       onClick={toggleTheme}
-      title={toLight ? "Switch to light mode" : "Switch to dark mode"}
-      aria-label={toLight ? "Switch to light mode" : "Switch to dark mode"}
+      title="Toggle light / dark theme"
+      aria-label="Toggle light / dark theme"
       className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line text-mut transition-colors hover:border-accent/40 hover:text-accent"
     >
-      {toLight ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+      <Sun className="theme-icon-to-light size-3.5" />
+      <Moon className="theme-icon-to-dark size-3.5" />
     </button>
   );
 }

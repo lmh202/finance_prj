@@ -10,7 +10,7 @@ Two responsibilities:
 
 import io
 import time
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable
 
 import pandas as pd
 import requests

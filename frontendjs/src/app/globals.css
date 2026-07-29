@@ -52,6 +52,25 @@
   --card-shadow-outer: rgba(20, 30, 20, 0.1);
 }
 
+/* Theme-toggle icons. Both are always in the DOM so the server and client
+   trees are identical — rendering one or the other conditionally is a real
+   hydration mismatch, because the server cannot know the theme. CSS picks
+   the visible one from the data-theme the bootstrap script already set.
+   The icon shows the theme you would switch TO: sun while dark, moon while
+   light. Dark is the default, so the sun shows unless data-theme=light. */
+.theme-icon-to-light {
+  display: block;
+}
+.theme-icon-to-dark {
+  display: none;
+}
+[data-theme="light"] .theme-icon-to-light {
+  display: none;
+}
+[data-theme="light"] .theme-icon-to-dark {
+  display: block;
+}
+
 @theme inline {
   --font-display: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif,
     system-ui, sans-serif;
