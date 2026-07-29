@@ -54,8 +54,8 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/health", label: "Health", icon: HeartPulse },
   { href: "/strategy", label: "Strategy", icon: TrendingUp },
   { href: "/news", label: "News", icon: Rss },
-  { href: "/risk", label: "Risk", icon: Shield },
   { href: "/react", label: "React?", icon: Scale },
+  { href: "/risk", label: "Risk", icon: Shield },
 ];
 
 function NavLink({
