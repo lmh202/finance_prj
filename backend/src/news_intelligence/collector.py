@@ -181,6 +181,41 @@ def save_store(records: Dict[str, Dict], path: Path = STORE) -> None:
     tmp.replace(path)
 
 
+def _feed_state_path(store_path: Path) -> Path:
+    return store_path.with_name(store_path.stem + "_feed_state.json")
+
+
+def load_feed_state(store_path: Path = STORE) -> Dict[str, str]:
+    """When each feed URL was last fetched, keyed by URL.
+
+    Kept beside the store rather than derived from it. A feed whose entries
+    are ALL already known writes no record, so a record-derived timestamp
+    never advances and that feed is re-fetched on every single request — the
+    throttle silently stops working for exactly the feeds that are healthy
+    and unchanged. This file records the fetch itself, not its output.
+    """
+    path = _feed_state_path(store_path)
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_feed_state(state: Dict[str, str], store_path: Path = STORE) -> None:
+    path = _feed_state_path(store_path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        # Losing the throttle costs latency, never correctness.
+        pass
+
+
 # ------------------------------------------------------------------ collection
 
 def _fetch_feed(feed: Dict) -> Tuple[Optional[List], bool]:
@@ -236,12 +271,24 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
     fetched_utc = now.isoformat()
     records = load_store(store_path)
 
+    # Seed from the records for backwards compatibility with stores written
+    # before the sidecar existed, then let the sidecar win — it is the only
+    # source that advances for a feed returning nothing new.
     last_fetch_by_feed: Dict[str, datetime] = {}
     for r in records.values():
         ts, feed_url = r.get("fetched_utc"), r.get("feed_url")
         if not ts or not feed_url:
             continue
         t = datetime.fromisoformat(ts)
+        if feed_url not in last_fetch_by_feed or t > last_fetch_by_feed[feed_url]:
+            last_fetch_by_feed[feed_url] = t
+
+    feed_state = load_feed_state(store_path)
+    for feed_url, ts in feed_state.items():
+        try:
+            t = datetime.fromisoformat(ts)
+        except (TypeError, ValueError):
+            continue
         if feed_url not in last_fetch_by_feed or t > last_fetch_by_feed[feed_url]:
             last_fetch_by_feed[feed_url] = t
 
@@ -269,6 +316,9 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
             stats["feeds_failed"] += 1
             continue
         stats["feeds_ok"] += 1
+        # Record the fetch itself. A feed returning only known articles writes
+        # no record, so without this its throttle timestamp never advances.
+        feed_state[feed["url"]] = fetched_utc
 
         for entry in entries:
             rec = _entry_to_record(entry, feed, fetched_utc)
@@ -287,6 +337,7 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
                     stats["updated_tags"] += 1
 
     save_store(records, store_path)
+    save_feed_state(feed_state, store_path)
     stats["total_in_store"] = len(records)
     return stats
 

@@ -9,6 +9,9 @@ venv/
 data/portfolio.csv
 data/settings.json
 #data/news_raw.json
+# Per-feed fetch timestamps for the collector throttle — pure runtime state,
+# rebuilt on the next collect. Committing it would fight every run.
+data/news_raw_feed_state.json
 data/models/
 
 # Secrets
