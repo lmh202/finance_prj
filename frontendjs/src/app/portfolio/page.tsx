@@ -23,6 +23,7 @@ import {
   EyeOff,
   FileUp,
   Loader2,
+  Newspaper,
   PackageOpen,
   PanelLeftClose,
   PanelLeftOpen,
@@ -57,6 +58,7 @@ import {
   addHolding,
   analyze,
   BackendDownError,
+  collectNews,
   fetchCash,
   fetchHealthReport,
   fetchLatestPrices,
@@ -236,6 +238,8 @@ function PortfolioPageInner() {
     dragging: boolean;
   } | null>(null);
   const [problems, setProblems] = useState<string[]>([]);
+  /** One-line summary of the last "Refresh news" collector run. */
+  const [newsNote, setNewsNote] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAdd | null>(null);
   const [confirmSample, setConfirmSample] = useState(false);
   const [importPrev, setImportPrev] = useState<{
@@ -320,6 +324,24 @@ function PortfolioPageInner() {
     const { view, totals } = await fetchPortfolioView();
     setView(view);
     setTotals(totals);
+  }, []);
+
+  /* Runs the RSS collector server-side (same entry point as
+     `python backend/src/news_intelligence/collector.py`) and reports what it
+     pulled. This only grows data/news_raw.json — the store /news, /risk and
+     the recommendation engine read — so nothing on THIS page changes; the
+     summary line is the only feedback there is. */
+  const refreshNews = useCallback(async () => {
+    setNewsNote(null);
+    const { symbols, stats } = await collectNews();
+    const stories = stats.new === 1 ? "story" : "stories";
+    const failed =
+      stats.feeds_failed > 0 ? `, ${stats.feeds_failed} feed(s) unreachable` : "";
+    setNewsNote(
+      `Collected for ${symbols.length} symbol${symbols.length === 1 ? "" : "s"}: ` +
+        `${stats.new} new ${stories} from ${stats.feeds_ok} feed(s)` +
+        `${failed}. ${stats.total_in_store} stories in the store.`
+    );
   }, []);
 
   // No synchronous setState before the first await — safe to call from the
@@ -893,17 +915,32 @@ function PortfolioPageInner() {
       caption="The saved AURORA portfolio — what every engine page reads"
       wide
       actions={
-        <button
-          onClick={() => void run("refresh", refreshView)}
-          disabled={busy != null}
-          className={BTN_GHOST}
-          title="Refresh prices"
-        >
-          <RefreshCw
-            className={`size-3.5 ${busy === "refresh" ? "animate-spin text-accent" : ""}`}
-          />
-          Refresh prices
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => void run("news", refreshNews)}
+            disabled={busy != null}
+            className={BTN_GHOST}
+            title="Pull the latest RSS headlines into the news store (a few seconds)"
+          >
+            {busy === "news" ? (
+              <Loader2 className="size-3.5 animate-spin text-accent" />
+            ) : (
+              <Newspaper className="size-3.5" />
+            )}
+            Refresh news
+          </button>
+          <button
+            onClick={() => void run("refresh", refreshView)}
+            disabled={busy != null}
+            className={BTN_GHOST}
+            title="Refresh prices"
+          >
+            <RefreshCw
+              className={`size-3.5 ${busy === "refresh" ? "animate-spin text-accent" : ""}`}
+            />
+            Refresh prices
+          </button>
+        </div>
       }
     >
       <motion.div
@@ -1180,6 +1217,8 @@ function PortfolioPageInner() {
 
         {/* ------------------------------ main column ---------------------------- */}
         <div className="min-w-0 space-y-4">
+          {newsNote && <Note tone="mut">{newsNote}</Note>}
+
           {problems.map((p) => (
             <Note key={p}>{p}</Note>
           ))}

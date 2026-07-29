@@ -291,7 +291,11 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
     return stats
 
 
-def _default_symbols() -> List[str]:
+def default_symbols() -> List[str]:
+    """Symbols this collector runs for when none are given: the saved
+    portfolio, falling back to the sample one while it's still empty.
+    Public because `POST /news/collect` runs the same default as the
+    command line does."""
     from src import portfolio as pf
 
     holdings = pf.load_portfolio()
@@ -301,7 +305,7 @@ def _default_symbols() -> List[str]:
 
 
 if __name__ == "__main__":
-    symbols = [s.upper() for s in sys.argv[1:]] or _default_symbols()
+    symbols = [s.upper() for s in sys.argv[1:]] or default_symbols()
     print(f"Collecting for symbols: {', '.join(symbols)}")
     result = collect(symbols)
     print(json.dumps(result, indent=2))

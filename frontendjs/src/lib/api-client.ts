@@ -300,6 +300,39 @@ export async function fetchNewsFeeds(signal?: AbortSignal): Promise<string[]> {
   return ((await get("/news/feeds", signal)) as { feeds: string[] }).feeds;
 }
 
+/** Run statistics from one collector pass (see collect_feeds() server-side). */
+export interface NewsCollectResult {
+  /** Tickers the run collected for. */
+  symbols: string[];
+  stats: {
+    feeds_ok: number;
+    feeds_failed: number;
+    feeds_skipped_fresh: number;
+    entries_seen: number;
+    new: number;
+    updated_tags: number;
+    total_in_store: number;
+  };
+}
+
+/**
+ * Pull current RSS into the backend's news store — the in-process equivalent
+ * of `python backend/src/news_intelligence/collector.py`. Omitting `symbols`
+ * collects for the saved portfolio, as running that script bare does.
+ * A full run takes a few seconds; feeds fetched in the last few minutes are
+ * skipped server-side, so repeat clicks are cheap.
+ */
+export async function collectNews(
+  symbols?: string[],
+  signal?: AbortSignal
+): Promise<NewsCollectResult> {
+  const path =
+    symbols === undefined
+      ? "/news/collect"
+      : `/news/collect?symbols=${encodeURIComponent(symbols.join(","))}`;
+  return (await send("POST", path, undefined, signal)) as NewsCollectResult;
+}
+
 /* ------------------------------------------------------------------ */
 /* Engine 4 — Reaction Risk & Recommendation                           */
 /* ------------------------------------------------------------------ */
