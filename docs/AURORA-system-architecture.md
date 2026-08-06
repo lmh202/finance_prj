@@ -1,10 +1,10 @@
 # AURORA — System Architecture (current)
 
-_Last verified against the codebase: 2026-07-26 (commit `c2233a3`, "final fusion")._
+_Last verified against the codebase: 2026-08-06 (stateless backend / client-owned portfolio)._
 
 ## Status in three statements
 
-**What is live.** One decision path, served by `GET /recommendation/daily`:
+**What is live.** One decision path, served by `POST /recommendation/daily`:
 `gated_news.recommend_strategy_risk_control()`. Daily Strategy sets direction
 and all relative stock weights; HAR-X + News risk sets per-stock size, gross
 exposure and cash; Portfolio Health sets the risk budget. News reaches the
@@ -93,14 +93,14 @@ flowchart TB
     subgraph L4[" SHARED KERNEL -- read-only from every engine "]
         direction LR
         IF["interfaces.py<br/>frozen contract types"]
-        PF["portfolio.py<br/>holdings CSV + valuation"]
+        PF["portfolio.py<br/>holdings canonicalisation + valuation<br/>(stateless)"]
         DL["data_loader.py<br/>tickers / prices / history"]
         CFG["config.py<br/>AURORA_DATA_DIR"]
     end
 
     subgraph L5[" DATA & EXTERNAL SERVICES "]
         direction LR
-        DATA[("data/<br/>portfolio.csv . news_raw.json<br/>processed/ artifacts")]
+        DATA[("data/ (shared caches only)<br/>tickers.csv . news_raw.json<br/>processed/ artifacts")]
         RSS(["RSS feeds"])
         FINB(["FinBERT<br/>(local, news sentiment)"])
         DEEPS(["DeepSeek API<br/>(fallback explanation text)"])
@@ -125,9 +125,29 @@ anywhere under `backend/`, no `src` import anywhere under `frontend/`. Layer 4
 is read-only from inside any engine folder — changes there are cross-cutting
 and must be flagged explicitly, never made silently.
 
+### 1a. The backend holds no portfolio
+
+AURORA has no accounts, so there is nothing to key server-side per-user
+storage on — a single deployed instance would have every visitor reading and
+editing one `data/portfolio.csv`. The portfolio therefore lives in **layer 1**:
+`frontendjs` keeps it in localStorage, the Streamlit app in a local file, and
+both ship `{holdings, cash}` in the body of every engine request.
+
+This is why the engine endpoints are `POST` rather than `GET` — a GET cannot
+carry a body. `PortfolioIn` in `routers/_common.py` is the single body shape;
+`require_holdings()` / `holdings_history()` raise the same 409
+`empty_portfolio` and 502 `no_history` markers the disk-backed versions did,
+so nothing downstream of the marker contract changed.
+
+What layer 5 still stores is **shared and keyed by symbol**: the ticker
+directory cache, the RSS news store, and the trained artifacts. Those must
+never be split per user — `data_loader`'s per-symbol TTL cache (6h for bars,
+15min for quotes) exists precisely so that N visitors holding overlapping
+tickers cost roughly one download, not N.
+
 ## 2. Decision fan-in — one decision path, one explanation layer
 
-`GET /recommendation/daily` is the single user-facing decision endpoint. Its
+`POST /recommendation/daily` is the single user-facing decision endpoint. Its
 defining property is that **fusion does not decide anything**. A risk-controlled
 optimiser (`gated_news.recommend_strategy_risk_control`) produces the numbers;
 `fusion.explain_allocation()` then renders exactly those numbers as one
@@ -161,7 +181,7 @@ flowchart LR
     OPT --> EXP["6 . fusion.explain_allocation<br/>renders the decision, never re-decides<br/>component_weights = strategy 1.0 / news 0 / health 0"]
     N1 -.->|"context + as_of only"| EXP
 
-    EXP --> OUT["GET /recommendation/daily<br/>recommendation + fusion_results -- what the user sees"]
+    EXP --> OUT["POST /recommendation/daily<br/>recommendation + fusion_results -- what the user sees"]
     H1 --> HEALTHOUT["Health & Performance pages<br/>what_if_health() trade preview"]
 
     OPT -.->|"promoted? (today: no)"| GATED["gated_news.recommend_portfolio<br/>direct news residual on the strategy prior"]

@@ -4,6 +4,11 @@ No module under frontend/ may import from backend/ (or `src`); everything
 goes through these wrappers over the FastAPI service. Streamlit-free on
 purpose so it can be exercised from a plain Python shell.
 
+The backend persists no portfolio: this app owns its own (see store.py) and
+ships it in the body of every engine call. That is invisible to the views —
+the function signatures below are unchanged — but it is why endpoints that
+read like queries are POSTs.
+
 Backend URL: AURORA_API_URL env var, default http://localhost:8000.
 """
 
@@ -13,6 +18,8 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 import requests
+
+import store
 
 BASE_URL = os.environ.get("AURORA_API_URL", "http://localhost:8000").rstrip("/")
 TIMEOUT = 120  # engine endpoints may fetch 2y of history on a cold cache
@@ -56,10 +63,6 @@ def _get(path: str, **params):
     return _request("GET", path, params=params or None)
 
 
-def _put(path: str, body: dict):
-    return _request("PUT", path, json=body)
-
-
 def _post(path: str, body: Optional[dict] = None):
     return _request("POST", path, json=body)
 
@@ -87,6 +90,16 @@ def _df_records(df: pd.DataFrame) -> List[dict]:
     return json.loads(df.to_json(orient="records"))
 
 
+def _body(**extra) -> dict:
+    """This client's portfolio, as the body every engine endpoint expects."""
+    payload = {
+        "holdings": _df_records(store.load_holdings()),
+        "cash": store.load_cash(),
+    }
+    payload.update(extra)
+    return payload
+
+
 # ------------------------------------------------------------------ market
 
 def get_universe() -> pd.DataFrame:
@@ -111,74 +124,84 @@ def get_history(symbols: List[str], period: str = "1y") -> pd.DataFrame:
 # --------------------------------------------------------------- portfolio
 
 def get_portfolio() -> pd.DataFrame:
-    return _records_df(_get("/portfolio")["holdings"], HOLDING_COLUMNS)
+    return store.load_holdings()
 
 
 def put_portfolio(holdings: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
-    data = _put("/portfolio", {"holdings": _df_records(holdings)})
-    return _records_df(data["holdings"], HOLDING_COLUMNS), data["problems"]
+    """Canonicalise server-side (repair rows, merge duplicates), then store."""
+    data = _post("/portfolio/normalize", {"holdings": _df_records(holdings)})
+    clean = _records_df(data["holdings"], HOLDING_COLUMNS)
+    store.save_holdings(clean)
+    return clean, data["problems"]
 
 
 def add_holding(symbol: str, name: str, shares: float, buy_price: float) -> pd.DataFrame:
-    data = _post(
-        "/portfolio/holdings",
-        {"symbol": symbol, "name": name, "shares": shares, "buy_price": buy_price},
-    )
-    return _records_df(data["holdings"], HOLDING_COLUMNS)
+    # Appending then normalizing is how a repeat buy merges into the existing
+    # lot at a weighted-average cost.
+    rows = _df_records(store.load_holdings())
+    rows.append({"symbol": symbol, "name": name, "shares": shares, "buy_price": buy_price})
+    clean, _ = put_portfolio(pd.DataFrame(rows))
+    return clean
 
 
 def parse_csv(text: str) -> Tuple[pd.DataFrame, List[str]]:
+    """Parse only — nothing is stored until put_portfolio() is called."""
     data = _post("/portfolio/parse-csv", {"csv": text})
     return _records_df(data["holdings"], HOLDING_COLUMNS), data["problems"]
 
 
 def load_sample() -> Tuple[pd.DataFrame, float]:
-    data = _post("/portfolio/load-sample")
-    return _records_df(data["holdings"], HOLDING_COLUMNS), data["cash"]
+    data = _get("/portfolio/sample")
+    holdings = _records_df(data["holdings"], HOLDING_COLUMNS)
+    store.save_holdings(holdings)
+    store.save_cash(data["cash"])
+    return holdings, data["cash"]
 
 
 def get_cash() -> float:
-    return _get("/portfolio/cash")["cash"]
+    return store.load_cash()
 
 
 def put_cash(cash: float) -> None:
-    _put("/portfolio/cash", {"cash": cash})
+    store.save_cash(cash)
 
 
 def get_view() -> Tuple[pd.DataFrame, Dict[str, float]]:
-    data = _get("/portfolio/view")
+    data = _post("/portfolio/view", _body())
     return _records_df(data["view"]), data["totals"]
 
 
 # ----------------------------------------------------------------- engines
 
 def health_report() -> dict:
-    report = _get("/health/report")
+    report = _post("/health/report", _body())
     if report.get("correlation") is not None:
         report["correlation"] = _split_df(report["correlation"])
     return report
 
 
 def regime() -> dict:
-    return _get("/strategy/regime")
+    return _post("/strategy/regime", _body())
 
 
 def signals() -> List[dict]:
-    return _get("/strategy/signals")
+    return _post("/strategy/signals", _body())
 
 
 def backtest() -> pd.DataFrame:
-    return _split_df(_get("/strategy/backtest"), datetime_index=True)
+    return _split_df(_post("/strategy/backtest", _body()), datetime_index=True)
 
 
 def strategy_recommendations(universe: Optional[List[str]] = None) -> List[dict]:
-    params = {"universe": ",".join(universe)} if universe else {}
-    return _get("/strategy/recommendations", **params)
+    query = "?universe=" + ",".join(universe) if universe else ""
+    return _post("/strategy/recommendations" + query, _body())
 
 
 def essential_news(max_events: int = 5, symbols: Optional[List[str]] = None) -> List[dict]:
+    """`symbols=None` keeps the old default of tracking the stored portfolio;
+    the backend has no portfolio to fall back to, so it is resolved here."""
     if symbols is None:
-        return _get("/news/essential", max_events=max_events)
+        symbols = sorted(set(store.load_holdings()["symbol"]))
     return _get("/news/essential", max_events=max_events, symbols=",".join(symbols))
 
 
@@ -187,20 +210,20 @@ def news_feeds() -> List[str]:
 
 
 def recommend_daily() -> dict:
-    return _get("/recommendation/daily")
+    return _post("/recommendation/daily", _body())
 
 
 def recommendation_events(max_events: int = 5) -> dict:
-    return _get("/recommendation/events", max_events=max_events)
+    return _post(f"/recommendation/events?max_events={max_events}", _body())
 
 
 def react(event: dict) -> dict:
-    return _post("/recommendation/react", {"event": event})
+    return _post("/recommendation/react", _body(event=event))
 
 
 def risk_estimates(horizon: int = 5) -> List[dict]:
-    return _get("/risk/estimates", horizon=horizon)
+    return _post(f"/risk/estimates?horizon={horizon}", _body())
 
 
 def risk_portfolio(horizon: int = 5) -> dict:
-    return _get("/risk/portfolio", horizon=horizon)
+    return _post(f"/risk/portfolio?horizon={horizon}", _body())

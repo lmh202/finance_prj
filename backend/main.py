@@ -8,6 +8,8 @@ The Streamlit frontend (frontend/) talks to this API via HTTP only — no
 streamlit anywhere under backend/, no `src` imports anywhere under frontend/.
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,9 +17,21 @@ from routers import analysis, health, market, news, portfolio, recommendation, r
 
 app = FastAPI(title="AURORA API", version="0.1.0")
 
+# The Next.js frontend calls this API directly from the browser, so its exact
+# origin has to be allow-listed. Local dev is the default; a deployment sets
+# AURORA_ALLOWED_ORIGINS to its real frontend origin(s), comma-separated.
+# Keep this a specific list, never "*" — a wildcard would let any page on the
+# internet drive a user's browser against this API.
+DEFAULT_ORIGINS = "http://localhost:3000"
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("AURORA_ALLOWED_ORIGINS", DEFAULT_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

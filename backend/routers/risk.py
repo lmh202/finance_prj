@@ -7,7 +7,7 @@ Serves the model trained offline (data/processed/risk_model.json). Markers:
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 
-from routers._common import NO_HISTORY, load_holdings, refresh_news_store
+from routers._common import NO_HISTORY, PortfolioIn, refresh_news_store, require_holdings
 from serialize import as_dict
 from src import data_loader
 from src import portfolio as pf
@@ -17,8 +17,8 @@ router = APIRouter(prefix="/risk", tags=["risk"])
 NO_MODEL = "no_model"
 
 
-def _ohlc_and_weights():
-    holdings = load_holdings()                       # 409 if empty
+def _ohlc_and_weights(body: PortfolioIn):
+    holdings = require_holdings(body)                # 409 if empty
     if not engine.model_available():
         raise HTTPException(status_code=503, detail=NO_MODEL)
     symbols = sorted(set(holdings["symbol"]))
@@ -36,18 +36,18 @@ def _ohlc_and_weights():
     return ohlc, weights
 
 
-@router.get("/estimates")
-def estimates(horizon: int = 0) -> list:
+@router.post("/estimates")
+def estimates(body: PortfolioIn, horizon: int = 0) -> list:
     """Per-stock RiskEstimate for the held symbols. horizon=5|20, or 0 for both."""
-    ohlc, _ = _ohlc_and_weights()
+    ohlc, _ = _ohlc_and_weights(body)
     hz = (horizon,) if horizon in (5, 20) else engine.HORIZONS
     return [as_dict(r) for r in engine.risk_estimates(ohlc, horizons=hz)]
 
 
-@router.get("/portfolio")
-def portfolio(horizon: int = 5) -> dict:
+@router.post("/portfolio")
+def portfolio(body: PortfolioIn, horizon: int = 5) -> dict:
     """Aggregate PortfolioRisk (EWMA-correlation VaR/ES) for the held portfolio."""
-    ohlc, weights = _ohlc_and_weights()
+    ohlc, weights = _ohlc_and_weights(body)
     h = horizon if horizon in (5, 20) else 5
     pr = engine.portfolio_risk(ohlc, weights, h)
     if pr is None:

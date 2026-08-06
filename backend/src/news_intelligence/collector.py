@@ -343,11 +343,15 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
 
 
 def _default_symbols() -> List[str]:
+    """Symbols for a bare `python collector.py` run.
+
+    There is no server-side portfolio to read any more, so the committed
+    sample fixture stands in. Pass tickers on the command line to collect
+    for a specific set instead.
+    """
     from src import portfolio as pf
 
-    holdings = pf.load_portfolio()
-    if holdings.empty:
-        holdings = pf.load_portfolio(pf.SAMPLE_PORTFOLIO_CSV)
+    holdings = pf.load_portfolio_file(pf.SAMPLE_PORTFOLIO_CSV)
     return sorted(set(holdings["symbol"]))
 
 

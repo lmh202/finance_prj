@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from src import portfolio as pf
+from src import data_loader
 from src.interfaces import NewsEvent
 from src.news_intelligence import analyzer, collector
 
@@ -39,14 +39,27 @@ _MIN_IMPORTANCE_FLOOR = 35.0
 
 def _holding_names(symbols: List[str]) -> Dict[str, str]:
     """symbol -> company name for the given symbols, used as free-text
-    aliases (news prose says "Apple", not "AAPL")."""
+    aliases (news prose says "Apple", not "AAPL").
+
+    Resolved from the NASDAQ symbol directory rather than a saved portfolio:
+    the backend no longer holds one, and the directory covers every symbol a
+    caller can ask about instead of only the ones someone happens to own.
+    """
     if not symbols:
         return {}
-    holdings = pf.load_portfolio()
-    if holdings.empty:
+    try:
+        universe = data_loader.load_ticker_universe()
+    except Exception:                                          # noqa: BLE001
         return {}
-    subset = holdings[holdings["symbol"].isin(symbols)]
-    return dict(zip(subset["symbol"], subset["name"]))
+    if universe.empty:
+        return {}
+    wanted = {s.upper() for s in symbols}
+    subset = universe[universe["symbol"].str.upper().isin(wanted)]
+    return {
+        str(sym): str(nm)
+        for sym, nm in zip(subset["symbol"], subset["name"])
+        if str(nm).strip()
+    }
 
 
 def _recent_records(lookback_hours: int, now: datetime) -> List[dict]:

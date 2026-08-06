@@ -1,4 +1,4 @@
-"""Portfolio persistence and valuation for AURORA.
+"""Portfolio shaping and valuation for AURORA.
 
 A portfolio is a DataFrame with columns:
     symbol     str   ticker as listed in the NASDAQ symbol directory
@@ -6,10 +6,14 @@ A portfolio is a DataFrame with columns:
     shares     float number of shares held
     buy_price  float average purchase price per share (cost basis)
 
-Holdings live in data/portfolio.csv; the cash balance in data/settings.json.
+The backend does NOT persist portfolios. Each client owns its own holdings
+(the Next.js app keeps them in localStorage, the Streamlit app in a local
+file) and sends them along with every request, so one backend process can
+serve many users without a database, a disk or a session. The only file this
+module still reads is the committed `sample_portfolio.csv` fixture, which is
+handed to a client to store rather than saved here.
 """
 
-import json
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -17,8 +21,6 @@ import pandas as pd
 
 from src.config import DATA_DIR
 
-PORTFOLIO_CSV = DATA_DIR / "portfolio.csv"
-SETTINGS_JSON = DATA_DIR / "settings.json"
 SAMPLE_PORTFOLIO_CSV = DATA_DIR / "sample_portfolio.csv"
 
 COLUMNS = ["symbol", "name", "shares", "buy_price"]
@@ -28,31 +30,24 @@ def empty_portfolio() -> pd.DataFrame:
     return pd.DataFrame(columns=COLUMNS)
 
 
-def load_portfolio(path: Optional[Path] = None) -> pd.DataFrame:
-    path = path or PORTFOLIO_CSV
+def load_portfolio_file(path: Path) -> pd.DataFrame:
+    """Read a holdings CSV off disk — the sample fixture, or a test file."""
     if not path.exists():
         return empty_portfolio()
-    df = pd.read_csv(path)
-    return _normalize(df)[0]
+    return _normalize(pd.read_csv(path))[0]
 
 
-def save_portfolio(df: pd.DataFrame) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    df[COLUMNS].to_csv(PORTFOLIO_CSV, index=False)
+def holdings_from_records(rows: Optional[List[Dict]]) -> Tuple[pd.DataFrame, List[str]]:
+    """Canonicalise client-supplied holdings (the request-body entry point).
 
-
-def load_cash() -> float:
-    if SETTINGS_JSON.exists():
-        try:
-            return float(json.loads(SETTINGS_JSON.read_text()).get("cash", 0.0))
-        except (ValueError, json.JSONDecodeError):
-            pass
-    return 0.0
-
-
-def save_cash(cash: float) -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    SETTINGS_JSON.write_text(json.dumps({"cash": float(cash)}))
+    Every engine endpoint receives untrusted rows from a browser, so this
+    runs the same repair/merge pass that a CSV import does: bad rows are
+    dropped and reported, duplicate symbols merge into one weighted-average
+    lot.
+    """
+    if not rows:
+        return empty_portfolio(), []
+    return _normalize(pd.DataFrame(rows))
 
 
 def _normalize(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
@@ -93,11 +88,6 @@ def _normalize(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
     return df[COLUMNS].reset_index(drop=True), problems
 
 
-def normalize_holdings(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
-    """Public wrapper: coerce an edited/holdings frame to the canonical schema."""
-    return _normalize(df)
-
-
 def parse_uploaded_csv(file) -> Tuple[pd.DataFrame, List[str]]:
     """Parse a user-uploaded portfolio CSV (symbol, shares[, buy_price, name])."""
     try:
@@ -105,17 +95,6 @@ def parse_uploaded_csv(file) -> Tuple[pd.DataFrame, List[str]]:
     except Exception as exc:
         return empty_portfolio(), [f"Could not read CSV: {exc}"]
     return _normalize(raw)
-
-
-def add_holding(
-    df: pd.DataFrame, symbol: str, name: str, shares: float, buy_price: float
-) -> pd.DataFrame:
-    """Add a lot; if the symbol is already held, merge with weighted-average cost."""
-    new_row = pd.DataFrame(
-        [{"symbol": symbol, "name": name, "shares": shares, "buy_price": buy_price}]
-    )
-    merged, _ = _normalize(pd.concat([df, new_row], ignore_index=True))
-    return merged
 
 
 def build_view(

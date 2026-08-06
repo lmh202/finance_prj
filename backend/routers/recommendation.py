@@ -11,9 +11,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from routers._common import (
+    PortfolioIn,
+    holdings_history,
     load_benchmark_close,
-    load_holdings,
-    load_holdings_history,
+    require_holdings,
 )
 from serialize import as_dict
 from src import data_loader
@@ -49,13 +50,15 @@ DEMO_EVENT = NewsEvent(
 )
 
 
-class EventIn(BaseModel):
+class EventIn(PortfolioIn):
+    """React to one event against the caller's own portfolio."""
+
     event: Dict
 
 
-def _weights_and_regime(holdings, history):
+def _weights_and_regime(holdings, history, cash: float = 0.0):
     prices = data_loader.get_latest_prices(list(holdings["symbol"]))
-    view, _ = pf.build_view(holdings, prices, pf.load_cash())
+    view, _ = pf.build_view(holdings, prices, cash)
     weights = dict(zip(view["symbol"], view["weight_pct"]))
     return weights, strategy.classify_regime(history)
 
@@ -78,10 +81,10 @@ def _event_from_dict(raw: Dict) -> NewsEvent:
     )
 
 
-@router.get("/daily")
-def daily() -> dict:
-    holdings, history = load_holdings_history()
-    weights, regime = _weights_and_regime(holdings, history)
+@router.post("/daily")
+def daily(body: PortfolioIn) -> dict:
+    holdings, history = holdings_history(body)
+    weights, regime = _weights_and_regime(holdings, history, body.cash)
     fusion_results = []
     decision_meta = {
         "production_mode": "legacy_signal_fallback",
@@ -221,9 +224,9 @@ def daily() -> dict:
     return result
 
 
-@router.get("/events")
-def events(max_events: int = 5) -> dict:
-    holdings = load_holdings()
+@router.post("/events")
+def events(body: PortfolioIn, max_events: int = 5) -> dict:
+    holdings = require_holdings(body)
     found = news.essential_news(list(holdings["symbol"]), max_events=max_events)
     demo = not found
     if demo:
@@ -234,8 +237,8 @@ def events(max_events: int = 5) -> dict:
 @router.post("/react")
 def react(body: EventIn) -> dict:
     event = _event_from_dict(body.event)
-    holdings, history = load_holdings_history()
-    weights, regime = _weights_and_regime(holdings, history)
+    holdings, history = holdings_history(body)
+    weights, regime = _weights_and_regime(holdings, history, body.cash)
     risk = engine.reaction_risk(event, weights, regime)
     rec = engine.recommend_event(event, risk)
     return {"risk": as_dict(risk), "recommendation": as_dict(rec)}

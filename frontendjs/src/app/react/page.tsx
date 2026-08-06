@@ -20,6 +20,7 @@ import {
   fetchRecommendationEvents,
   reactToEvent,
 } from "@/lib/api-client";
+import { usePortfolio } from "@/lib/portfolio-store";
 import { useEngine } from "@/lib/use-engine";
 import { fmtNum, fmtPct, signClass } from "@/lib/format";
 import type {
@@ -378,11 +379,12 @@ function EventReaction({ events, demo }: { events: NewsEvent[]; demo: boolean })
   const [picked, setPicked] = useState(0);
   const event = events[Math.min(picked, events.length - 1)];
 
+  const { portfolio, ready } = usePortfolio();
   const fetcher = useCallback(
-    (signal: AbortSignal) => reactToEvent(event, signal),
-    [event]
+    (signal: AbortSignal) => reactToEvent(event, portfolio, signal),
+    [event, portfolio]
   );
-  const reaction = useEngine(fetcher);
+  const reaction = useEngine(fetcher, ready);
   const data = reaction.data;
   const suggestion = data ? SUGGESTIONS[data.risk.suggestion] : null;
 
@@ -507,14 +509,18 @@ function EventReaction({ events, demo }: { events: NewsEvent[]; demo: boolean })
 }
 
 export default function ReactPage() {
-  const fetcher = useCallback(async (signal: AbortSignal) => {
-    const [daily, events] = await Promise.all([
-      fetchDailyRecommendation(signal),
-      fetchRecommendationEvents(5, signal),
-    ]);
-    return { daily, events };
-  }, []);
-  const engine = useEngine(fetcher);
+  const { portfolio, ready } = usePortfolio();
+  const fetcher = useCallback(
+    async (signal: AbortSignal) => {
+      const [daily, events] = await Promise.all([
+        fetchDailyRecommendation(portfolio, signal),
+        fetchRecommendationEvents(portfolio, 5, signal),
+      ]);
+      return { daily, events };
+    },
+    [portfolio]
+  );
+  const engine = useEngine(fetcher, ready);
   const data = engine.data;
 
   return (

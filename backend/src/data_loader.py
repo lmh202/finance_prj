@@ -9,8 +9,9 @@ Two responsibilities:
 """
 
 import io
+import threading
 import time
-from typing import Dict, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Tuple
 
 import pandas as pd
 import requests
@@ -19,6 +20,81 @@ from src.config import DATA_DIR
 
 TICKER_CACHE = DATA_DIR / "tickers.csv"
 CACHE_MAX_AGE_DAYS = 7
+
+# ---------------------------------------------------------------------------
+# Per-symbol market-data cache
+#
+# Every client now sends its own portfolio, so N visitors used to mean N
+# yfinance downloads of largely the same tickers — the fastest way to get
+# rate-limited in production. Caching per SYMBOL rather than per request means
+# overlapping portfolios share bars: the second visitor holding AAPL pays
+# nothing for it.
+#
+# A daily bar changes once per session, so hours of staleness is correct for
+# history; the latest close moves intraday, so it gets a much shorter life.
+# FastAPI runs these sync endpoints in a threadpool, so concurrent requests
+# are real and the store is mutated under a lock.
+# ---------------------------------------------------------------------------
+HISTORY_TTL_SECONDS = 6 * 3600
+PRICE_TTL_SECONDS = 15 * 60
+
+_CACHE: Dict[Tuple[str, ...], Tuple[float, Any]] = {}
+_CACHE_LOCK = threading.Lock()
+
+
+def _cache_get(keys: List[Tuple[str, ...]], ttl: float) -> Dict[Tuple[str, ...], Any]:
+    """Return the still-fresh entries among `keys`, dropping expired ones."""
+    now = time.monotonic()
+    fresh: Dict[Tuple[str, ...], Any] = {}
+    with _CACHE_LOCK:
+        for key in keys:
+            hit = _CACHE.get(key)
+            if hit is None:
+                continue
+            if now - hit[0] < ttl:
+                fresh[key] = hit[1]
+            else:
+                _CACHE.pop(key, None)
+    return fresh
+
+
+def _cache_put(entries: Dict[Tuple[str, ...], Any]) -> None:
+    now = time.monotonic()
+    with _CACHE_LOCK:
+        for key, value in entries.items():
+            _CACHE[key] = (now, value)
+
+
+def clear_market_cache() -> None:
+    """Drop every cached bar — for tests and for a manual refresh."""
+    with _CACHE_LOCK:
+        _CACHE.clear()
+
+
+def _cached_by_symbol(
+    symbols: List[str],
+    namespace: str,
+    period: str,
+    ttl: float,
+    fetch: Callable[[List[str]], Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Serve `symbols` from cache, downloading only the ones that are missing.
+
+    A symbol the fetch could not resolve is cached as None so a delisted or
+    typo'd ticker doesn't re-hit the network on every single request; callers
+    already tolerate absent symbols, so those are filtered back out here.
+    """
+    keys = {s: (namespace, period, s) for s in symbols}
+    fresh = _cache_get(list(keys.values()), ttl)
+
+    missing = [s for s in symbols if keys[s] not in fresh]
+    if missing:
+        fetched = fetch(missing)
+        _cache_put({keys[s]: fetched.get(s) for s in missing})
+        for s in missing:
+            fresh[keys[s]] = fetched.get(s)
+
+    return {s: fresh[keys[s]] for s in symbols if fresh.get(keys[s]) is not None}
 
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt"
 OTHER_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt"
@@ -139,13 +215,19 @@ def get_latest_prices(symbols: Iterable[str]) -> Dict[str, float]:
     """Fetch the most recent closing price for each symbol via yfinance.
 
     Returns a dict keyed by the ORIGINAL symbol. Symbols that could not be
-    priced are simply absent — callers must handle missing keys.
+    priced are simply absent — callers must handle missing keys. Served from
+    the per-symbol cache for PRICE_TTL_SECONDS.
     """
-    import yfinance as yf
-
-    symbols = [s for s in dict.fromkeys(symbols) if s]
-    if not symbols:
+    wanted = [s for s in dict.fromkeys(symbols) if s]
+    if not wanted:
         return {}
+    return _cached_by_symbol(
+        wanted, "price", "latest", PRICE_TTL_SECONDS, _download_latest_prices
+    )
+
+
+def _download_latest_prices(symbols: List[str]) -> Dict[str, float]:
+    import yfinance as yf
 
     yahoo_map = {to_yahoo_symbol(s): s for s in symbols}
     prices: Dict[str, float] = {}
@@ -179,13 +261,30 @@ def get_history(symbols: Iterable[str], period: str = "2y") -> pd.DataFrame:
 
     Returns a DataFrame indexed by date with one column per ORIGINAL symbol.
     Symbols that could not be fetched are simply absent — callers must
-    tolerate missing columns. Empty DataFrame on total failure.
+    tolerate missing columns. Empty DataFrame on total failure. Served from
+    the per-symbol cache for HISTORY_TTL_SECONDS.
     """
-    import yfinance as yf
-
-    symbols = [s for s in dict.fromkeys(symbols) if s]
-    if not symbols:
+    wanted = [s for s in dict.fromkeys(symbols) if s]
+    if not wanted:
         return pd.DataFrame()
+
+    series = _cached_by_symbol(
+        wanted,
+        "close",
+        period,
+        HISTORY_TTL_SECONDS,
+        lambda missing: _download_history(missing, period),
+    )
+    if not series:
+        return pd.DataFrame()
+    # Symbols cached at different moments can carry different trailing bars;
+    # concat unions the calendars and leaves NaN where one lags, which is the
+    # same shape a single multi-symbol download produces.
+    return pd.concat(series, axis=1).dropna(how="all")
+
+
+def _download_history(symbols: List[str], period: str) -> Dict[str, pd.Series]:
+    import yfinance as yf
 
     yahoo_map = {to_yahoo_symbol(s): s for s in symbols}
     try:
@@ -197,14 +296,21 @@ def get_history(symbols: Iterable[str], period: str = "2y") -> pd.DataFrame:
             group_by="column",
         )
     except Exception:
-        return pd.DataFrame()
+        return {}
     if data is None or data.empty:
-        return pd.DataFrame()
+        return {}
 
     close = data["Close"] if "Close" in data.columns.get_level_values(0) else data
     if isinstance(close, pd.Series):
         close = close.to_frame(name=list(yahoo_map.keys())[0])
-    return close.rename(columns=yahoo_map).dropna(how="all")
+
+    out: Dict[str, pd.Series] = {}
+    for ysym, original in yahoo_map.items():
+        if ysym in close.columns:
+            col = close[ysym].dropna()
+            if not col.empty:
+                out[original] = col.rename(original)
+    return out
 
 
 def get_ohlc_history(symbols: Iterable[str], period: str = "2y") -> Dict[str, pd.DataFrame]:
@@ -214,12 +320,22 @@ def get_ohlc_history(symbols: Iterable[str], period: str = "2y") -> Dict[str, pd
 
     Returns {original_symbol: DataFrame[close, high, low]} indexed by date. Symbols
     that could not be fetched are simply absent — callers must tolerate that.
+    Served from the per-symbol cache for HISTORY_TTL_SECONDS.
     """
-    import yfinance as yf
-
-    symbols = [s for s in dict.fromkeys(symbols) if s]
-    if not symbols:
+    wanted = [s for s in dict.fromkeys(symbols) if s]
+    if not wanted:
         return {}
+    return _cached_by_symbol(
+        wanted,
+        "ohlc",
+        period,
+        HISTORY_TTL_SECONDS,
+        lambda missing: _download_ohlc_history(missing, period),
+    )
+
+
+def _download_ohlc_history(symbols: List[str], period: str) -> Dict[str, pd.DataFrame]:
+    import yfinance as yf
 
     yahoo_map = {to_yahoo_symbol(s): s for s in symbols}
     try:

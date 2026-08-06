@@ -6,7 +6,12 @@
  * The engine pages (/health, /strategy, /news, /react, /performance, /risk)
  * consume the backend routers; the home page consumes /market/search
  * and /portfolio consumes /analysis/explore for its analytics.
+ *
+ * The backend holds NO portfolio — see lib/portfolio-store.ts. Every engine
+ * call therefore takes the caller's `StoredPortfolio` and POSTs it, which is
+ * why endpoints that read like queries are POSTs: a GET cannot carry a body.
  */
+import type { StoredPortfolio } from "./portfolio-store";
 import type {
   AnalyzeResponse,
   BackendHolding,
@@ -103,6 +108,24 @@ function isoDay(iso: string): string {
   return iso.slice(0, 10);
 }
 
+/**
+ * POST an engine request carrying the caller's portfolio.
+ *
+ * An empty portfolio is answered locally rather than round-tripping for a
+ * 409: the client already knows it has no holdings, and EngineShell renders
+ * the same onboarding card either way.
+ */
+function engine(
+  path: string,
+  portfolio: StoredPortfolio,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  if (portfolio.holdings.length === 0) {
+    return Promise.reject(new ApiMarkerError(EMPTY_PORTFOLIO));
+  }
+  return send("POST", path, portfolio, signal);
+}
+
 /* ------------------------------------------------------------------ */
 /* Stock search                                                        */
 /* ------------------------------------------------------------------ */
@@ -172,35 +195,27 @@ export async function analyze(
 }
 
 /* ------------------------------------------------------------------ */
-/* Saved portfolio (backend data/portfolio.csv — used by the engines)  */
+/* Portfolio helpers (stateless — the browser owns the portfolio)      */
 /* ------------------------------------------------------------------ */
 
-export async function fetchPortfolio(
-  signal?: AbortSignal
-): Promise<BackendHolding[]> {
-  const json = (await get("/portfolio", signal)) as { holdings: BackendHolding[] };
-  return json.holdings;
-}
-
-export async function savePortfolio(
+/**
+ * Canonicalise edited rows server-side: repair/drop bad rows and merge
+ * duplicate symbols into one weighted-average-cost lot.
+ *
+ * The client could not do this itself without reimplementing the backend's
+ * rules and drifting from them — that logic stays in one place
+ * (backend/src/portfolio.py::_normalize).
+ */
+export async function normalizeHoldings(
   holdings: BackendHolding[]
 ): Promise<{ holdings: BackendHolding[]; problems: string[] }> {
-  return (await send("PUT", "/portfolio", { holdings })) as {
+  return (await send("POST", "/portfolio/normalize", { holdings })) as {
     holdings: BackendHolding[];
     problems: string[];
   };
 }
 
-export async function addHolding(
-  holding: BackendHolding
-): Promise<BackendHolding[]> {
-  const json = (await send("POST", "/portfolio/holdings", holding)) as {
-    holdings: BackendHolding[];
-  };
-  return json.holdings;
-}
-
-/** Parse only — nothing is saved until the result is PUT back. */
+/** Parse only — the caller stores the result itself. */
 export async function parsePortfolioCsv(
   csv: string
 ): Promise<{ holdings: BackendHolding[]; problems: string[] }> {
@@ -210,28 +225,23 @@ export async function parsePortfolioCsv(
   };
 }
 
-export async function loadSamplePortfolio(): Promise<{
+/** The committed demo portfolio. Saves nothing — the caller stores it. */
+export async function fetchSamplePortfolio(): Promise<{
   holdings: BackendHolding[];
   cash: number;
 }> {
-  return (await send("POST", "/portfolio/load-sample")) as {
+  return (await get("/portfolio/sample")) as {
     holdings: BackendHolding[];
     cash: number;
   };
 }
 
-export async function fetchCash(signal?: AbortSignal): Promise<number> {
-  return ((await get("/portfolio/cash", signal)) as { cash: number }).cash;
-}
-
-export async function saveCash(cash: number): Promise<void> {
-  await send("PUT", "/portfolio/cash", { cash });
-}
-
+/** Holdings joined with live prices: values, P/L, weights, totals. */
 export async function fetchPortfolioView(
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<{ view: PortfolioViewRow[]; totals: PortfolioTotals }> {
-  return (await get("/portfolio/view", signal)) as {
+  return (await send("POST", "/portfolio/view", portfolio, signal)) as {
     view: PortfolioViewRow[];
     totals: PortfolioTotals;
   };
@@ -242,9 +252,10 @@ export async function fetchPortfolioView(
 /* ------------------------------------------------------------------ */
 
 export async function fetchHealthReport(
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<HealthReport> {
-  return (await get("/health/report", signal)) as HealthReport;
+  return (await engine("/health/report", portfolio, signal)) as HealthReport;
 }
 
 /* ------------------------------------------------------------------ */
@@ -253,9 +264,14 @@ export async function fetchHealthReport(
 
 /** Per-stock confluence (EMA/MACD/RSI) action, cross-referenced with holdings. */
 export async function fetchStrategyRecommendations(
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<StrategyRecommendation[]> {
-  return (await get("/strategy/recommendations", signal)) as StrategyRecommendation[];
+  return (await engine(
+    "/strategy/recommendations",
+    portfolio,
+    signal
+  )) as StrategyRecommendation[];
 }
 
 /** Walk-forward backtest curves — growth of $1 per strategy column. */
@@ -266,9 +282,10 @@ export interface BacktestCurves {
 }
 
 export async function fetchBacktest(
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<BacktestCurves> {
-  const split = (await get("/strategy/backtest", signal)) as SplitFrame;
+  const split = (await engine("/strategy/backtest", portfolio, signal)) as SplitFrame;
   return {
     dates: (split.index ?? []).map(isoDay),
     columns: split.columns ?? [],
@@ -281,18 +298,19 @@ export async function fetchBacktest(
 /* ------------------------------------------------------------------ */
 
 /**
- * `symbols`, if given, OVERRIDES the saved portfolio as the tracked-ticker
- * list — including `[]`, which means "no tickers selected" (general market
- * news only), not "fall back to the portfolio". Omit it to keep the old
- * default of deriving tickers from the saved portfolio server-side.
+ * `symbols` scopes the search to those tickers. `[]` means "no tickers
+ * selected" and yields general market news only — the backend has no
+ * portfolio to fall back to, so the caller always decides.
  */
 export async function fetchEssentialNews(
   maxEvents = 5,
-  symbols?: string[],
+  symbols: string[] = [],
   signal?: AbortSignal
 ): Promise<NewsEvent[]> {
-  const params = new URLSearchParams({ max_events: String(maxEvents) });
-  if (symbols !== undefined) params.set("symbols", symbols.join(","));
+  const params = new URLSearchParams({
+    max_events: String(maxEvents),
+    symbols: symbols.join(","),
+  });
   return (await get(`/news/essential?${params.toString()}`, signal)) as NewsEvent[];
 }
 
@@ -305,26 +323,35 @@ export async function fetchNewsFeeds(signal?: AbortSignal): Promise<string[]> {
 /* ------------------------------------------------------------------ */
 
 export async function fetchDailyRecommendation(
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<DailyRecommendation> {
-  return (await get("/recommendation/daily", signal)) as DailyRecommendation;
+  return (await engine("/recommendation/daily", portfolio, signal)) as DailyRecommendation;
 }
 
 export async function fetchRecommendationEvents(
+  portfolio: StoredPortfolio,
   maxEvents = 5,
   signal?: AbortSignal
 ): Promise<EventsPayload> {
-  return (await get(
+  return (await engine(
     `/recommendation/events?max_events=${maxEvents}`,
+    portfolio,
     signal
   )) as EventsPayload;
 }
 
 export async function reactToEvent(
   event: NewsEvent,
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<ReactResponse> {
-  return (await send("POST", "/recommendation/react", { event }, signal)) as ReactResponse;
+  return (await send(
+    "POST",
+    "/recommendation/react",
+    { ...portfolio, event },
+    signal
+  )) as ReactResponse;
 }
 
 /* ------------------------------------------------------------------ */
@@ -335,15 +362,25 @@ export async function reactToEvent(
 /** Per-held-symbol downside risk at one horizon (5 or 20 trading days). */
 export async function fetchRiskEstimates(
   horizon: 5 | 20,
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<RiskEstimate[]> {
-  return (await get(`/risk/estimates?horizon=${horizon}`, signal)) as RiskEstimate[];
+  return (await engine(
+    `/risk/estimates?horizon=${horizon}`,
+    portfolio,
+    signal
+  )) as RiskEstimate[];
 }
 
 /** Aggregate portfolio downside risk (EWMA-correlation VaR/ES) at one horizon. */
 export async function fetchPortfolioRisk(
   horizon: 5 | 20,
+  portfolio: StoredPortfolio,
   signal?: AbortSignal
 ): Promise<PortfolioRisk> {
-  return (await get(`/risk/portfolio?horizon=${horizon}`, signal)) as PortfolioRisk;
+  return (await engine(
+    `/risk/portfolio?horizon=${horizon}`,
+    portfolio,
+    signal
+  )) as PortfolioRisk;
 }

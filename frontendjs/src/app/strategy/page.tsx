@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Check, TrendingUp } from "lucide-react";
 import { Chip, EngineShell, Note, Section, ThinBar, type ChipTone } from "@/components/EngineShell";
 import { fetchStrategyRecommendations } from "@/lib/api-client";
+import { usePortfolio } from "@/lib/portfolio-store";
 import { useEngine } from "@/lib/use-engine";
 import { fmtNum, fmtPrice, signClass } from "@/lib/format";
 import type { StrategyRecommendation } from "@/lib/types";
@@ -101,8 +102,12 @@ function RecommendationsTable({ recs }: { recs: StrategyRecommendation[] }) {
 }
 
 export default function StrategyPage() {
-  const fetcher = useCallback((signal: AbortSignal) => fetchStrategyRecommendations(signal), []);
-  const engine = useEngine(fetcher);
+  const { portfolio, ready } = usePortfolio();
+  const fetcher = useCallback(
+    (signal: AbortSignal) => fetchStrategyRecommendations(portfolio, signal),
+    [portfolio]
+  );
+  const engine = useEngine(fetcher, ready);
   const recs = engine.data;
 
   return (

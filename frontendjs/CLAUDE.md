@@ -32,9 +32,10 @@ with two kinds of pages:
   old localStorage analyzer that used to live here is gone — its analytics
   were merged into `/portfolio`.
 - **Engine pages** — Next.js ports of the Streamlit pages in the repo-root
-  `frontend/`, all reading the **backend-persisted** AURORA portfolio
-  (`data/portfolio.csv` + cash):
-  - `/portfolio` — builder for the saved portfolio (add/edit/delete
+  `frontend/`, all reading the portfolio stored in **this browser**
+  (`src/lib/portfolio-store.ts`, localStorage key `aurora_portfolio`) and
+  POSTing it with every request — the backend persists nothing:
+  - `/portfolio` — builder for the stored portfolio (add/edit/delete
     holdings, cash, CSV import/export, sample load with replace-confirm)
     plus the analytics absorbed from the old analyzer: constant-mix
     performance chart vs SPY/QQQ with 6M–5Y ranges, stat cards, allocation
@@ -82,22 +83,41 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
   - `POST /analysis/explore` — /portfolio's full analytics engine
     (calendar alignment, constant-mix construction, risk stats), backed by
     `backend/src/analysis/engine.py`; called in `"shares"` mode with the
-    saved holdings
-  - `/portfolio*` — saved-portfolio CRUD, cash, CSV parse, sample, view
-  - `/health/report`, `/strategy/{regime,signals,backtest}`,
-    `/news/{essential,feeds}`, `/recommendation/{daily,events,react}` —
-    the four engine routers consumed by the engine pages
-  - `/risk/{estimates,portfolio}` — the risk engine (HAR volatility +
-    Filtered Historical Simulation), consumed by `/risk`
+    stored holdings
+  - `POST /portfolio/{normalize,parse-csv,view}` + `GET /portfolio/sample` —
+    stateless helpers. `normalize` is the single server-side definition of
+    row repair, duplicate merging and weighted-average cost; don't
+    reimplement it here. `sample` returns the demo portfolio for the client
+    to store.
+  - `POST /health/report`, `POST /strategy/{regime,signals,backtest,recommendations}`,
+    `POST /recommendation/{daily,events,react}`,
+    `POST /risk/{estimates,portfolio}` — the engine routers. **POST, not
+    GET**: each carries `{holdings, cash}`, which a GET cannot do. The
+    `engine()` helper in api-client wraps them and short-circuits an empty
+    portfolio into `ApiMarkerError(EMPTY_PORTFOLIO)` with no round trip.
+  - `GET /news/{essential,feeds}` — news is scoped by an explicit `symbols`
+    query param (empty = general market news); it needs no portfolio.
   Expected conditions arrive as marker details (`empty_portfolio` 409,
   `no_history` 502, `no_model` 503) and are thrown as `ApiMarkerError`; an
   unreachable backend throws `BackendDownError`.
-  Backend CORS (`backend/main.py`) allow-lists `http://localhost:3000`
-  specifically so this app can call it directly from the browser.
-- **No auth. One portfolio store** — every page reads/writes the backend's
-  saved portfolio (`data/portfolio.csv`), shared with the Streamlit
-  frontend. The analyzer's old localStorage portfolio (`aurora_portfolio`
-  key) no longer exists. There is no per-client UUID.
+  Backend CORS (`backend/main.py`) allow-lists `http://localhost:3000` by
+  default so this app can call it directly from the browser; a deployment
+  sets `AURORA_ALLOWED_ORIGINS` to the real frontend origin.
+- **No auth, no server-side portfolio** — every page reads/writes
+  localStorage (`aurora_portfolio`) via `src/lib/portfolio-store.ts`, and
+  every engine call POSTs `{holdings, cash}` in its body. There is no
+  per-client UUID and nothing to key server storage on; that is exactly why
+  the portfolio lives here. It is **not** shared with the Streamlit frontend
+  any more — that app keeps its own copy in a file.
+  - `usePortfolio()` returns `{portfolio, ready, save, setHoldings, setCash}`.
+    `ready` is false until the first client-side read lands; pass it as
+    `useEngine(fetcher, ready)` or a visitor with holdings flashes the
+    "empty portfolio" card on every navigation.
+  - `readPortfolio()` / `writePortfolio()` are the non-hook equivalents, safe
+    during SSR and in private mode (both degrade to empty rather than throw).
+  - The trade-off is deliberate and must stay visible in the UI: clearing
+    site data or switching device loses the portfolio. CSV export on
+    `/portfolio` is the backup path.
 - **Constant-mix portfolio** — the analysis engine builds a daily-rebalanced
   portfolio (assumes positions are reset to target weights each day). No
   transaction-cost modeling.
@@ -116,9 +136,10 @@ Next.js 16 (React 19) · TypeScript 5.9 strict · Tailwind CSS 4 · Framer Motio
    on the Python backend.
 2. On `/`, picking a result routes to `/portfolio?add=SYMBOL&name=…`; the
    builder opens its pending-add panel asking for shares (buy price
-   optional — falls back to the latest close) and POSTs
-   `/portfolio/holdings`.
-3. Whenever the saved holdings change, /portfolio calls `analyze()` →
+   optional — falls back to the latest close), appends the row to the stored
+   holdings, POSTs `/portfolio/normalize` to merge/repair, and writes the
+   result back to localStorage.
+3. Whenever the stored holdings change, /portfolio calls `analyze()` →
    `POST /analysis/explore` with `{holdings: [{symbol, value: shares}],
    mode: "shares"}` → the backend fetches 5y of prices for all symbols +
    SPY/QQQ, aligns calendars, builds the constant-mix index, computes
@@ -156,7 +177,9 @@ src/
     ├── types.ts                # Shared types incl. engine API types + RANGES
     ├── format.ts                # Client formatting (fmtPct, fmtPrice, fmtDate, etc.)
     ├── api-client.ts            # Typed fetch client over the FastAPI backend (all endpoints)
-    ├── use-engine.ts           # Fetch hook: abort, reload, marker/error classification
+    ├── portfolio-store.ts       # THE portfolio: localStorage read/write + usePortfolio()
+    ├── use-engine.ts           # Fetch hook: abort, reload, marker/error classification,
+    │                            #   `enabled` gate for "portfolio not read yet"
     ├── metrics.ts              # Legacy quant toolkit; superseded by backend/src/analysis/engine.py
     └── view.ts                  # Client-side range slicing & metric recomputation
 ```

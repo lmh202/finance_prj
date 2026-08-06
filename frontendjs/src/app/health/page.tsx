@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { Check, HeartPulse, TriangleAlert } from "lucide-react";
 import { ArcGauge, EngineShell, Metric, Section } from "@/components/EngineShell";
 import { fetchHealthReport } from "@/lib/api-client";
+import { usePortfolio } from "@/lib/portfolio-store";
 import { useEngine } from "@/lib/use-engine";
 import { fmtNum, fmtPct } from "@/lib/format";
 import type { SplitFrame } from "@/lib/types";
@@ -92,8 +93,12 @@ function CorrelationTable({ corr }: { corr: SplitFrame }) {
 }
 
 export default function HealthPage() {
-  const fetcher = useCallback((signal: AbortSignal) => fetchHealthReport(signal), []);
-  const engine = useEngine(fetcher);
+  const { portfolio, ready } = usePortfolio();
+  const fetcher = useCallback(
+    (signal: AbortSignal) => fetchHealthReport(portfolio, signal),
+    [portfolio]
+  );
+  const engine = useEngine(fetcher, ready);
   const report = engine.data;
 
   const hasMetrics = report != null && Object.keys(report.metrics).length > 0;

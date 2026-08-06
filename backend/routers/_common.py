@@ -4,13 +4,18 @@ Every engine used to do the same dance inside its Streamlit page:
 load holdings -> bail if empty -> fetch history incl. benchmark -> bail if
 empty. That dance now lives here, server-side; the frontend translates the
 two marker details back into its st.info / st.error messages.
+
+The holdings themselves arrive in the request body rather than off disk —
+the backend keeps no portfolio state, so a single process serves every
+client. `PortfolioIn` is the one body shape all engine endpoints accept.
 """
 
 import time
-from typing import Iterable, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import pandas as pd
 from fastapi import HTTPException
+from pydantic import BaseModel
 
 from src import data_loader
 from src import portfolio as pf
@@ -21,7 +26,7 @@ NO_HISTORY = "no_history"
 
 # The market-stress signal needs a 60-session rolling volatility PLUS 252-504
 # observations of that volatility to rank it — roughly 312 sessions minimum and
-# 564 for a full reference window. `load_holdings_history()` deliberately stays
+# 564 for a full reference window. `holdings_history()` deliberately stays
 # at two years because four engines consume that frame and widening it would
 # silently change all of them, so the benchmark is fetched separately.
 BENCHMARK_HISTORY_PERIOD = "5y"
@@ -52,15 +57,39 @@ def refresh_news_store(symbols: Iterable[str]) -> dict:
         return {"error": type(exc).__name__}
 
 
-def load_holdings() -> pd.DataFrame:
-    holdings = pf.load_portfolio()
+class HoldingIn(BaseModel):
+    """One client-supplied position. `name` and `buy_price` are display/cost
+    fields — the engines only need symbol + shares, so both stay optional."""
+
+    symbol: str
+    name: str = ""
+    shares: float
+    buy_price: float = 0.0
+
+
+class PortfolioIn(BaseModel):
+    """The request body every engine endpoint takes.
+
+    The client owns its portfolio and ships it with each call. An empty
+    holdings list is a legitimate state (a brand-new visitor) and surfaces
+    as the 409 `empty_portfolio` marker, exactly as the disk-backed version
+    did when portfolio.csv was missing.
+    """
+
+    holdings: List[Dict] = []
+    cash: float = 0.0
+
+
+def require_holdings(body: PortfolioIn) -> pd.DataFrame:
+    """Canonicalise the body's holdings, or raise the empty-portfolio marker."""
+    holdings, _ = pf.holdings_from_records(body.holdings)
     if holdings.empty:
         raise HTTPException(status_code=409, detail=EMPTY_PORTFOLIO)
     return holdings
 
 
-def load_holdings_history() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    holdings = load_holdings()
+def holdings_history(body: PortfolioIn) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    holdings = require_holdings(body)
     symbols = sorted(set(holdings["symbol"])) + [BENCHMARK]
     history = data_loader.get_history(symbols)
     if history.empty:
@@ -71,7 +100,7 @@ def load_holdings_history() -> Tuple[pd.DataFrame, pd.DataFrame]:
 def load_benchmark_close() -> Optional[pd.Series]:
     """Long benchmark close series for the causal market-stress signal.
 
-    Deliberately separate from `load_holdings_history()`: that frame is two
+    Deliberately separate from `holdings_history()`: that frame is two
     years and is consumed by score_assets, compute_health, classify_regime
     (whose volatility median spans the whole frame) and the decision layer's
     runtime features. Widening it to satisfy one signal would silently move

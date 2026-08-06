@@ -16,7 +16,7 @@ import { Briefcase } from "lucide-react";
 import { SearchBox } from "@/components/SearchBox";
 import { Footer, Header, Hero } from "@/components/chrome";
 import { BTN_GHOST } from "@/components/EngineShell";
-import { BackendDownError, fetchCash } from "@/lib/api-client";
+import { BackendDownError, fetchNewsFeeds } from "@/lib/api-client";
 import type { StockInfo } from "@/lib/types";
 
 const NONE = new Set<string>();
@@ -25,10 +25,12 @@ export default function Page() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
-  /* Probe the backend once so a silently dead search box isn't a mystery. */
+  /* Probe the backend once so a silently dead search box isn't a mystery.
+     Any cheap, portfolio-free GET does — the backend holds no state to ask
+     it about. */
   useEffect(() => {
     const ctrl = new AbortController();
-    fetchCash(ctrl.signal).catch((err: unknown) => {
+    fetchNewsFeeds(ctrl.signal).catch((err: unknown) => {
       if (!ctrl.signal.aborted && err instanceof BackendDownError) {
         setError(
           "Backend not reachable — start it with scripts\\dev.ps1 (or uvicorn main:app --app-dir backend --port 8000) and reload."

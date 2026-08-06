@@ -109,7 +109,9 @@ def _groups(symbol: str, training: set[str], portfolio: set[str]) -> str:
 def build_universe() -> pd.DataFrame:
     training_df = pd.read_parquet(TRAINING_DATA, columns=["symbol"])
     training = set(training_df["symbol"].dropna().astype(str).str.upper())
-    holdings = portfolio_store.load_portfolio()
+    # The backend keeps no portfolio (clients own theirs), so the committed
+    # sample fixture defines the "current portfolio" group for this study.
+    holdings = portfolio_store.load_portfolio_file(portfolio_store.SAMPLE_PORTFOLIO_CSV)
     portfolio = set(holdings["symbol"].dropna().astype(str).str.upper())
     symbols = sorted(training | portfolio | set(BROAD_ETFS))
     return pd.DataFrame(

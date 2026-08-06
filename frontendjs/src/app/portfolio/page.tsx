@@ -4,11 +4,16 @@
  * Portfolio builder + analytics — mirrors the Streamlit Home page
  * (frontend/app.py) and absorbs the retired "/" analyzer.
  *
- * This page edits the SAVED portfolio on the backend (data/portfolio.csv +
- * cash) — the portfolio every engine page reads — and analyzes it via
- * POST /analysis/explore in "shares" mode (constant-mix curve, stats,
- * allocation donut, monthly heatmap, per-position Sharpe/contribution).
- * The home page hands off searched symbols through the ?add= query param.
+ * This page edits the portfolio stored in THIS BROWSER (lib/portfolio-store,
+ * localStorage) — the portfolio every engine page sends with its requests —
+ * and analyzes it via POST /analysis/explore in "shares" mode (constant-mix
+ * curve, stats, allocation donut, monthly heatmap, per-position
+ * Sharpe/contribution). The home page hands off searched symbols through the
+ * ?add= query param.
+ *
+ * The backend stores nothing, so "save" here means "write to localStorage".
+ * Rows still round-trip through POST /portfolio/normalize first so the merge
+ * and repair rules stay defined in exactly one place.
  */
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -54,19 +59,16 @@ import { SearchBox } from "@/components/SearchBox";
 import { Sparkline } from "@/components/Sparkline";
 import { StatsRow } from "@/components/StatsRow";
 import {
-  addHolding,
   analyze,
   BackendDownError,
-  fetchCash,
   fetchHealthReport,
   fetchLatestPrices,
-  fetchPortfolio,
   fetchPortfolioView,
-  loadSamplePortfolio,
+  fetchSamplePortfolio,
+  normalizeHoldings,
   parsePortfolioCsv,
-  saveCash,
-  savePortfolio,
 } from "@/lib/api-client";
+import { readPortfolio, writePortfolio } from "@/lib/portfolio-store";
 import { fmtDate, fmtNum, fmtPct, signClass } from "@/lib/format";
 import {
   RANGES,
@@ -305,24 +307,35 @@ function PortfolioPageInner() {
     setRows(h.map(toEdit));
   }, []);
 
+  /** Persist to localStorage and mirror into this page's state. */
+  const commit = useCallback(
+    (holdings: BackendHolding[], nextCash: number) => {
+      const stored = writePortfolio({ holdings, cash: nextCash });
+      applySaved(stored.holdings);
+      setCash(stored.cash);
+      setCashText(String(stored.cash));
+      return stored;
+    },
+    [applySaved]
+  );
+
   const refreshView = useCallback(async () => {
-    const { view, totals } = await fetchPortfolioView();
+    const { view, totals } = await fetchPortfolioView(readPortfolio());
     setView(view);
     setTotals(totals);
   }, []);
 
-  // No synchronous setState before the first await — safe to call from the
-  // mount effect; retry() flips boot back to "loading" from its own handler.
+  // Called from a deferred timer (never synchronously in an effect body), so
+  // the setState calls below are safe; retry() flips boot back to "loading"
+  // from its own handler. Holdings come straight out of localStorage — only
+  // the valuation needs live prices — so a backend outage still lets you edit.
   const bootstrap = useCallback(async () => {
+    const stored = readPortfolio();
+    applySaved(stored.holdings);
+    setCash(stored.cash);
+    setCashText(String(stored.cash));
     try {
-      const [holdings, cashValue, viewData] = await Promise.all([
-        fetchPortfolio(),
-        fetchCash(),
-        fetchPortfolioView(),
-      ]);
-      applySaved(holdings);
-      setCash(cashValue);
-      setCashText(String(cashValue));
+      const viewData = await fetchPortfolioView(stored);
       setView(viewData.view);
       setTotals(viewData.totals);
       setBoot("ready");
@@ -400,7 +413,7 @@ function PortfolioPageInner() {
           return;
         }
         try {
-          const report = await fetchHealthReport(ctrl.signal);
+          const report = await fetchHealthReport({ holdings: positions, cash }, ctrl.signal);
           if (ctrl.signal.aborted) return;
           const v = report.metrics.sharpe;
           setHealthSharpe(typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -414,7 +427,7 @@ function PortfolioPageInner() {
       ctrl.abort();
       clearTimeout(t);
     };
-  }, [boot, saved, analysisAttempt]);
+  }, [boot, saved, cash, analysisAttempt]);
 
   async function run(name: string, fn: () => Promise<void>) {
     setBusy(name);
@@ -569,13 +582,18 @@ function PortfolioPageInner() {
         }
         price = live;
       }
-      const holdings = await addHolding({
-        symbol: pending.info.symbol,
-        name: pending.info.name,
-        shares,
-        buy_price: price,
-      });
-      applySaved(holdings);
+      // Appending then normalizing is how a repeat buy merges into the
+      // existing lot at a weighted-average cost, server-side.
+      const { holdings } = await normalizeHoldings([
+        ...readPortfolio().holdings,
+        {
+          symbol: pending.info.symbol,
+          name: pending.info.name,
+          shares,
+          buy_price: price,
+        },
+      ]);
+      commit(holdings, cash);
       setPending(null);
       await refreshView();
     });
@@ -631,8 +649,8 @@ function PortfolioPageInner() {
 
   async function saveRows() {
     await run("save", async () => {
-      const { holdings, problems } = await savePortfolio(rows.map(toHolding));
-      applySaved(holdings);
+      const { holdings, problems } = await normalizeHoldings(rows.map(toHolding));
+      commit(holdings, cash);
       setProblems(problems);
       await refreshView();
     });
@@ -642,19 +660,15 @@ function PortfolioPageInner() {
     const value = Number.parseFloat(cashText) || 0;
     if (value === cash) return;
     await run("cash", async () => {
-      await saveCash(value);
-      setCash(value);
-      setCashText(String(value));
+      commit(readPortfolio().holdings, value);
       await refreshView();
     });
   }
 
   async function loadSample() {
     await run("sample", async () => {
-      const { holdings, cash: sampleCash } = await loadSamplePortfolio();
-      applySaved(holdings);
-      setCash(sampleCash);
-      setCashText(String(sampleCash));
+      const { holdings, cash: sampleCash } = await fetchSamplePortfolio();
+      commit(holdings, sampleCash);
       await refreshView();
     });
   }
@@ -681,9 +695,9 @@ function PortfolioPageInner() {
   async function confirmImport() {
     if (!importPrev) return;
     await run("import", async () => {
-      const { holdings, problems } = await savePortfolio(importPrev.holdings);
-      applySaved(holdings);
-      setProblems(problems);
+      // Already normalized by /portfolio/parse-csv — store it as-is.
+      commit(importPrev.holdings, cash);
+      setProblems(importPrev.problems);
       setImportPrev(null);
       await refreshView();
     });

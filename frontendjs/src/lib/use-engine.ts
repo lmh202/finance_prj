@@ -8,6 +8,11 @@
  * no price history (502) — into a discriminated status the EngineShell
  * renders. Pass a stable fetcher (wrap it in useCallback); reload() refires
  * it while keeping the previous data on screen.
+ *
+ * Pass `enabled: false` while a prerequisite is still resolving — engine
+ * pages use it to hold off until the portfolio has been read out of
+ * localStorage, which would otherwise report "no holdings yet" for a frame
+ * on every navigation.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -28,7 +33,8 @@ export interface Engine<T> {
 }
 
 export function useEngine<T>(
-  fetcher: (signal: AbortSignal) => Promise<T>
+  fetcher: (signal: AbortSignal) => Promise<T>,
+  enabled = true
 ): Engine<T> {
   const [data, setData] = useState<T | null>(null);
   const [status, setStatus] = useState<EngineStatus>({ phase: "loading" });
@@ -36,6 +42,7 @@ export function useEngine<T>(
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
+    if (!enabled) return;
     const ctrl = new AbortController();
     // Deferred kick-off keeps setState out of the synchronous effect body
     // (react-hooks/set-state-in-effect) and skips strict-mode double fires.
@@ -68,7 +75,7 @@ export function useEngine<T>(
       clearTimeout(timer);
       ctrl.abort();
     };
-  }, [fetcher, nonce]);
+  }, [fetcher, nonce, enabled]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 

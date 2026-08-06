@@ -8,6 +8,7 @@ import { Flag } from "lucide-react";
 import { EngineShell, Note } from "@/components/EngineShell";
 import { PerformanceChart, type ChartSeries } from "@/components/PerformanceChart";
 import { fetchBacktest, type BacktestCurves } from "@/lib/api-client";
+import { usePortfolio } from "@/lib/portfolio-store";
 import { useEngine } from "@/lib/use-engine";
 import { fmtDate, fmtNum, fmtPct, signClass } from "@/lib/format";
 
@@ -40,8 +41,12 @@ function chartValues(curves: BacktestCurves, col: number): number[] {
 }
 
 export default function PerformancePage() {
-  const fetcher = useCallback((signal: AbortSignal) => fetchBacktest(signal), []);
-  const engine = useEngine(fetcher);
+  const { portfolio, ready } = usePortfolio();
+  const fetcher = useCallback(
+    (signal: AbortSignal) => fetchBacktest(portfolio, signal),
+    [portfolio]
+  );
+  const engine = useEngine(fetcher, ready);
   const curves = engine.data;
 
   const series: ChartSeries[] = useMemo(() => {

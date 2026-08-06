@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { Loader2, Shield } from "lucide-react";
 import { Chip, EngineShell, Metric, Note, Section, ThinBar } from "@/components/EngineShell";
 import { fetchPortfolioRisk, fetchRiskEstimates } from "@/lib/api-client";
+import { usePortfolio } from "@/lib/portfolio-store";
 import { useEngine } from "@/lib/use-engine";
 import { fmtPct, signClass } from "@/lib/format";
 import type { RiskEstimate } from "@/lib/types";
@@ -114,17 +115,20 @@ function RiskTable({ estimates }: { estimates: RiskEstimate[] }) {
 export default function RiskPage() {
   const [horizon, setHorizon] = useState<5 | 20>(5);
 
+  // `saved` is this browser's holdings; `portfolio` below is the engine's
+  // aggregate PortfolioRisk result — different things, hence the rename.
+  const { portfolio: saved, ready } = usePortfolio();
   const fetcher = useCallback(
     async (signal: AbortSignal) => {
       const [estimates, portfolio] = await Promise.all([
-        fetchRiskEstimates(horizon, signal),
-        fetchPortfolioRisk(horizon, signal),
+        fetchRiskEstimates(horizon, saved, signal),
+        fetchPortfolioRisk(horizon, saved, signal),
       ]);
       return { estimates, portfolio };
     },
-    [horizon]
+    [horizon, saved]
   );
-  const engine = useEngine(fetcher);
+  const engine = useEngine(fetcher, ready);
   const data = engine.data;
   const rows = (data?.estimates ?? [])
     .filter((e) => e.has_history)

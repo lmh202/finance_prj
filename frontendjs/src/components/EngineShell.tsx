@@ -22,7 +22,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Footer, Header } from "@/components/chrome";
-import { EMPTY_PORTFOLIO, NO_MODEL, loadSamplePortfolio } from "@/lib/api-client";
+import { EMPTY_PORTFOLIO, NO_MODEL, fetchSamplePortfolio } from "@/lib/api-client";
+import { writePortfolio } from "@/lib/portfolio-store";
 import type { EngineStatus } from "@/lib/use-engine";
 import { clamp } from "@/lib/format";
 
@@ -288,7 +289,8 @@ function EmptyPortfolioState({ onReload }: { onReload: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      await loadSamplePortfolio();
+      const { holdings, cash } = await fetchSamplePortfolio();
+      writePortfolio({ holdings, cash });
       onReload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load the sample portfolio.");
@@ -304,7 +306,7 @@ function EmptyPortfolioState({ onReload }: { onReload: () => void }) {
       title="Your AURORA portfolio is empty"
       body={
         <>
-          The engine pages read the saved portfolio on the backend. Build yours on
+          The engine pages read the portfolio saved in this browser. Build yours on
           the Portfolio page — or load the sample portfolio to explore right away.
           {error && <span className="mt-2 block text-loss">{error}</span>}
         </>

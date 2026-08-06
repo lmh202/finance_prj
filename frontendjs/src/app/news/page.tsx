@@ -7,7 +7,8 @@ import { motion } from "framer-motion";
 import { ExternalLink, Loader2, Newspaper, RotateCcw, X } from "lucide-react";
 import { Chip, EngineShell, Note, Section, ThinBar } from "@/components/EngineShell";
 import { SearchBox } from "@/components/SearchBox";
-import { fetchEssentialNews, fetchPortfolio } from "@/lib/api-client";
+import { fetchEssentialNews } from "@/lib/api-client";
+import { readPortfolio } from "@/lib/portfolio-store";
 import { useEngine } from "@/lib/use-engine";
 import { fmtDate } from "@/lib/format";
 import type { NewsEvent, StockInfo } from "@/lib/types";
@@ -152,10 +153,15 @@ function SliderField({
   );
 }
 
+/** This browser's held symbols, deduped and sorted. */
+function portfolioSymbols(): string[] {
+  return Array.from(new Set(readPortfolio().holdings.map((h) => h.symbol))).sort();
+}
+
 export default function NewsPage() {
-  // The tracked-ticker list defaults to the saved portfolio (resolved lazily
-  // inside the fetcher below, on first load only) but is editable in the
-  // page body — remove a holding you don't care about, or add any symbol
+  // The tracked-ticker list defaults to this browser's portfolio (resolved
+  // lazily inside the fetcher below, on first load only) but is editable in
+  // the page body — remove a holding you don't care about, or add any symbol
   // you don't hold just to watch its news.
   const symbolsRef = useRef<string[] | null>(null);
   const [symbols, setSymbols] = useState<string[] | null>(null);
@@ -177,8 +183,8 @@ export default function NewsPage() {
   // does a live RSS fetch per feed and isn't cheap to double up.
   const fetcher = useCallback(async (signal: AbortSignal) => {
     if (symbolsRef.current === null) {
-      const holdings = await fetchPortfolio(signal);
-      const derived = Array.from(new Set(holdings.map((h) => h.symbol))).sort();
+      // The portfolio is local, so seeding the ticker list costs no request.
+      const derived = portfolioSymbols();
       symbolsRef.current = derived;
       setSymbols(derived);
     }
@@ -205,13 +211,10 @@ export default function NewsPage() {
     applySymbols((symbolsRef.current ?? []).filter((s) => s !== sym));
   }
 
-  async function resetToPortfolio() {
+  function resetToPortfolio() {
     setResetting(true);
     try {
-      const holdings = await fetchPortfolio();
-      applySymbols(Array.from(new Set(holdings.map((h) => h.symbol))).sort());
-    } catch {
-      // backend unreachable — keep whatever is currently tracked
+      applySymbols(portfolioSymbols());
     } finally {
       setResetting(false);
     }

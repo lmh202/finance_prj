@@ -11,8 +11,10 @@ RULES
 
 SHARED INPUTS (produced by the shared kernel, read-only for everyone)
 =====================================================================
-holdings : pd.DataFrame                          src.portfolio.load_portfolio()
+holdings : pd.DataFrame                          src.portfolio.holdings_from_records()
     columns: symbol (str), name (str), shares (float), buy_price (float)
+    supplied by the CLIENT in the request body — the backend persists no
+    portfolio; the dataclasses and signatures below are unchanged
 prices   : Dict[str, float]                      src.data_loader.get_latest_prices()
     latest close per symbol; a symbol may be MISSING — always handle that
 history  : pd.DataFrame                          src.data_loader.get_history()

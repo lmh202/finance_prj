@@ -79,9 +79,10 @@ user's live `data/portfolio.csv`:
 $env:AURORA_DATA_DIR = "$pwd\tests\sandbox_data"
 ```
 
-The backend reads all runtime state from that directory — portfolio,
-settings, ticker cache, news cache. The Streamlit frontend honors
-`AURORA_API_URL` (default `http://localhost:8000`).
+The backend reads its shared caches from that directory — ticker cache, news
+store, trained artifacts — and the Streamlit frontend keeps its own portfolio
+there too (`frontend/store.py` honours the same variable). The Streamlit
+frontend also honors `AURORA_API_URL` (default `http://localhost:8000`).
 
 ## Environment variables
 
@@ -89,6 +90,7 @@ settings, ticker cache, news cache. The Streamlit frontend honors
 |---|---|---|
 | `AURORA_DATA_DIR` | you (optional) | Override `data/` root (default: `<repo>/data`). Use a sandbox dir for mutation tests so live state isn't touched. |
 | `AURORA_API_URL` | `scripts/dev.ps1` | Backend URL the Streamlit frontend calls (default: `http://localhost:8000`). |
+| `AURORA_ALLOWED_ORIGINS` | you (deployment) | Comma-separated browser origins the API accepts (default: `http://localhost:3000`). Set this to the deployed frontend's origin or every request is blocked by CORS. Never `*`. |
 | `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | you (optional) | Explanation-only LLM text in `recommendation/llm_client.py`, used on the fallback decision path. Missing key → deterministic template. See `.env.example`. |
 | `NEXT_PUBLIC_BACKEND_URL` | `.env.local` (tracked) | Backend URL the Next.js frontend calls (default: `http://localhost:8000`). |
 
@@ -103,6 +105,34 @@ The repo is split into processes that talk **only over HTTP**. No
 `streamlit` import anywhere under `backend/`; no `src` import anywhere under
 `frontend/`.
 
+### The backend is stateless — the client owns the portfolio
+
+There are no accounts, so there is nothing to key server-side storage on:
+one deployed instance would otherwise have every visitor reading and editing
+the same `data/portfolio.csv`. Instead **each client owns its portfolio and
+sends it in the body of every request** — `frontendjs` in localStorage
+(`src/lib/portfolio-store.ts`), the Streamlit app in a local file
+(`frontend/store.py`, still `data/portfolio.csv` since it is a single-user
+dev tool). The backend persists nothing per user: no disk, no session, no
+database.
+
+Consequences worth knowing before you edit a router:
+
+- **Engine endpoints are POST, not GET** — a GET cannot carry a body.
+  `PortfolioIn` (`routers/_common.py`) is the one body shape they all take:
+  `{holdings: [{symbol, name, shares, buy_price}], cash}`.
+- **`require_holdings(body)` / `holdings_history(body)`** replace the old
+  `load_holdings()` / `load_holdings_history()`. They still raise the same
+  409 `empty_portfolio` / 502 `no_history` markers, so the frontends'
+  non-ready states are unchanged.
+- **Normalisation stays server-side.** `POST /portfolio/normalize` is the
+  single definition of row repair, duplicate-symbol merging and
+  weighted-average cost. Clients call it rather than reimplementing it —
+  don't let that logic drift into a frontend.
+- **`data/` still holds shared caches** (`news_raw.json`, `tickers.csv`,
+  `processed/` artifacts). Those are global and keyed by symbol; never split
+  them per user.
+
 | Process | Port | Tech |
 |---|---|---|
 | Backend API | 8000 | FastAPI (uvicorn) |
@@ -116,13 +146,16 @@ backend/                     FastAPI service
   routers/                   8 routers: one per contract engine (health, strategy, news,
                               recommendation, risk), plus shared-kernel routers
                               (market, portfolio) and analysis (see below)
-    _common.py               shared request plumbing: load holdings → bail markers (409/502);
+    _common.py               shared request plumbing: PortfolioIn body model,
+                              require_holdings/holdings_history → bail markers (409/502);
                               also refresh_news_store() — see "daily decision path" below
   src/
     interfaces.py            THE FROZEN CONTRACT
     config.py                DATA_DIR resolution (AURORA_DATA_DIR override)
-    data_loader.py           shared kernel: NASDAQ symbol universe + prices + history
-    portfolio.py             shared kernel: holdings CSV persistence + valuation
+    data_loader.py           shared kernel: NASDAQ symbol universe + prices + history,
+                              with a per-symbol TTL cache (6h bars / 15min quotes)
+    portfolio.py             shared kernel: holdings canonicalisation + valuation
+                              (stateless — persists nothing)
     portfolio_health/        compute_health, what_if_health  (+ backs the Performance page)
     daily_strategy/          classify_regime, score_assets, backtest (walk-forward ML)
     news_intelligence/       fetch_headlines, essential_news, sentiment_features
@@ -138,6 +171,8 @@ backend/                     FastAPI service
 frontend/                    Streamlit UI
   app.py                     Home — portfolio builder
   api_client.py              typed HTTP wrappers over the backend API (the ONLY data-access path)
+  store.py                   this client's own portfolio file (holdings + cash); api_client
+                              ships it in every engine request — see "stateless" above
   views/                     one view per engine page
   pages/                     6-line routing shims (1–6) — NEVER edit these (edit views/ instead)
 
@@ -172,7 +207,7 @@ mission/contract/DoD content is current, the per-person framing is not.
 
 ### The daily decision path (the thing that spans the most files)
 
-`GET /recommendation/daily` in `routers/recommendation.py` is the single
+`POST /recommendation/daily` in `routers/recommendation.py` is the single
 user-facing decision. Each input controls exactly one dimension:
 
 | Input | Controls | Never does |
@@ -287,8 +322,9 @@ instead of resembling a calm market.
 
 ### Shared kernel data shapes (used by every engine)
 
-- `holdings` — `pd.DataFrame` from `backend.src.portfolio.load_portfolio()`:
-  columns `symbol, name, shares, buy_price`.
+- `holdings` — `pd.DataFrame` from
+  `backend.src.portfolio.holdings_from_records()`, built from the client's
+  request body: columns `symbol, name, shares, buy_price`.
 - `prices` — `Dict[str, float]` from `backend.src.data_loader.get_latest_prices()`:
   latest close per symbol; a symbol may be **missing** — always handle that.
 - `history` — `pd.DataFrame` from `backend.src.data_loader.get_history()`:
@@ -305,12 +341,16 @@ symbols (`BRK.B`) to yfinance symbols (`BRK-B`).
 
 ### Data directory
 
-`data/` holds gitignored runtime state (`portfolio.csv`, `settings.json`,
-`tickers.csv`, `news_raw.json` cache) alongside committed fixtures
-(`sample_portfolio.csv`, `tickers.csv` seed). `data/processed/` holds trained
-artifacts and candidates; the historical sentiment feature table is cached
-there too (built once, read many times — don't rebuild it from raw corpora on
-every run).
+`data/` holds gitignored runtime state (`tickers.csv`, `news_raw.json` cache)
+alongside committed fixtures (`sample_portfolio.csv`, `tickers.csv` seed).
+`data/processed/` holds trained artifacts and candidates; the historical
+sentiment feature table is cached there too (built once, read many times —
+don't rebuild it from raw corpora on every run).
+
+`portfolio.csv` / `settings.json` are still written here, but **only by the
+Streamlit frontend** (`frontend/store.py`) as its own client-side storage.
+Nothing under `backend/` reads them — a deployed backend has no `data/`
+portfolio at all.
 
 ## Separate projects in this repo
 
@@ -324,8 +364,8 @@ was ripped out — it now has **no database and no server-side API routes of
 its own**. Every data operation goes through `frontendjs/src/lib/api-client.ts`,
 a typed fetch client that calls this repo's FastAPI backend directly at
 `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8000`).
-`backend/main.py` sets CORS to allow `http://localhost:3000` specifically
-for this.
+`backend/main.py` allow-lists `http://localhost:3000` for this by default;
+a deployment overrides it with `AURORA_ALLOWED_ORIGINS`.
 
 The app has two kinds of pages:
 - `/` — a clean home/search entry point; picking a symbol routes to
@@ -333,8 +373,10 @@ The app has two kinds of pages:
 - Engine pages ported from `frontend/`'s Streamlit views: `/portfolio`
   (builder + analytics via `/portfolio*` plus `/analysis/explore` in shares
   mode), `/health`, `/strategy`, `/news`, `/react`, `/performance` and
-  `/risk`. These read the same `data/portfolio.csv` the Streamlit frontend
-  edits — the `empty_portfolio` / `no_history` markers are surfaced through
+  `/risk`. These read the portfolio stored in the **browser**
+  (`src/lib/portfolio-store.ts`) and POST it with each request — it is a
+  separate portfolio from the Streamlit app's, not a shared file any more.
+  The `empty_portfolio` / `no_history` markers are surfaced through
   `ApiMarkerError` in the api-client.
 
 Known gap: `/react` calls `/recommendation/daily` but its `DailyRecommendation`
