@@ -1,0 +1,31 @@
+# Railway deployment for the AURORA backend.
+#
+# One service, built from the repo-root Dockerfile. No volume is declared on
+# purpose: the backend is stateless (clients own their portfolios), and
+# everything it writes under /app/data — the refreshed ticker directory and
+# the RSS news store — is a regenerable cache.
+#
+# Set in the Railway dashboard (Variables), NOT here:
+#   AURORA_ALLOWED_ORIGINS   your Vercel origin, e.g. https://aurora.vercel.app
+#                            Comma-separated for several. No trailing slash.
+#                            Without it the API defaults to localhost:3000 and
+#                            the browser blocks every deployed request on CORS.
+#   DEEPSEEK_API_KEY         optional — nicer text on the fallback decision
+#                            path only. Missing key = deterministic template.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Railway injects $PORT; the Dockerfile CMD already binds it.
+healthcheckPath = "/ping"
+healthcheckTimeout = 120
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# Keep this at 1. data_loader's market-data cache lives in-process, so a
+# second replica does not share it — it doubles yfinance traffic and moves
+# you toward rate limiting rather than away from it. Scale out only after
+# that cache moves to something shared (Redis).
+numReplicas = 1

@@ -1,0 +1,50 @@
+# AURORA backend — DEPLOYMENT requirements (what the Docker image installs).
+#
+# This is backend/requirements.txt minus everything the live request path
+# never imports. Keep the two in sync when you add a runtime dependency.
+#
+# Dropped on purpose, and why it is safe:
+#
+#   torch + transformers   ~4.4 GB installed. They exist for FinBERT live
+#                          sentiment scoring, which is LAZY and already has a
+#                          documented fallback: finbert_sentiment._load()
+#                          raises ModelUnavailable on ImportError and
+#                          analyzer.py:181 catches it and uses the keyword
+#                          scorer. Deployed sentiment is therefore keyword-
+#                          rule based. The risk engine is unaffected — its
+#                          promoted artifact (risk_model.json) uses a
+#                          linear_gamma_variance_ratio news overlay, no torch.
+#                          Add them back here if you want live FinBERT, and
+#                          size the container for ~2 GB RAM.
+#
+#   vaderSentiment         Only used by offline scripts/ (batch scoring of the
+#                          FNSPID corpus). Nothing under backend/ imports it.
+#
+#   anthropic              Declared for a planned LLM classification pass that
+#                          no code imports. There is no ANTHROPIC_API_KEY path.
+#
+# Kept even though it looks optional:
+#
+#   scikit-learn/xgboost   Imported at MODULE level on the request path
+#                          (daily_strategy/learned.py, recommendation/
+#                          gated_news.py, recommendation/decision.py). The app
+#                          will not start without them, even though the
+#                          artifacts they'd load are experimental_only.
+#
+# NOTE on xgboost-cpu: the plain `xgboost` Linux wheel depends on the NVIDIA
+# CUDA runtime — 400 MB of `nvidia/*` plus a 333 MB GPU-enabled libxgboost,
+# all dead weight in a CPU container (measured: it was over half the image).
+# `xgboost-cpu` is the XGBoost project's own CPU-only build and imports as the
+# same `xgboost` module, so no code changes. It publishes Linux wheels only —
+# that is fine here because this file is used solely by the Docker image. For
+# local development keep using backend/requirements.txt, which pins plain
+# `xgboost`.
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pandas>=2.0
+yfinance>=0.2.50       # market data (shared kernel)
+requests>=2.31         # NASDAQ symbol directory download
+scikit-learn>=1.3      # imported by the decision layer at module level
+xgboost-cpu>=2.1,<3    # imported by daily_strategy.learned at module level
+feedparser>=6.0        # RSS collector

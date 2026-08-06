@@ -1,0 +1,53 @@
+# Keep the build context small — data/ alone is ~600 MB on a dev machine and
+# the Dockerfile only needs three files out of it.
+
+# Everything under data/ except the three files the Dockerfile COPYs.
+data/*
+!data/sample_portfolio.csv
+!data/tickers.csv
+data/processed/*
+!data/processed/risk_model.json
+
+# Frontends — the Next.js app deploys to Vercel, Streamlit is a local dev tool.
+frontendjs/
+frontend/
+ui_design/
+
+# Offline research: none of it runs in the live app (see the promotion gate).
+scripts/
+reports/
+experiments/
+plans/
+tests/
+FNSPID/
+aurora_poster/
+hdbrain_poster/
+backend/t1/
+
+# VCS, caches, local state
+.git/
+.gitignore
+.github/
+.claude/
+.workbuddy/
+.streamlit/
+**/__pycache__/
+**/*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Docs and loose top-level files
+*.md
+!backend/**/*.md
+docs/
+*.pdf
+.env
+.env.*
+!.env.example
+.DS_Store
+**/.DS_Store
+Thumbs.db
+Dockerfile
+.dockerignore
