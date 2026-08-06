@@ -174,10 +174,19 @@ def daily(body: PortfolioIn) -> dict:
             fusion_results = []
             explanation_meta = dict(explanation_meta)
             explanation_meta["fusion_error"] = type(explain_exc).__name__
-    except (RuntimeError, ValueError, KeyError) as exc:
+    except (RuntimeError, ValueError, KeyError, OSError) as exc:
         # Preserve the already-validated numeric decision path as the first
         # fallback. The legacy signal recommendation remains the final
         # always-available path.
+        #
+        # OSError covers the environment failing under us — a locked store
+        # file, an unreadable artifact, a network error (requests' exceptions
+        # subclass it). Those deserve the ladder exactly as a RuntimeError
+        # does; a PermissionError from the news collector used to escape it
+        # and 500 the page. Deliberately NOT widened to Exception: an
+        # AttributeError/TypeError is a bug in this code, and swallowing it
+        # would render a plausible legacy answer while the real decision
+        # engine stayed dead and unnoticed.
         try:
             if not decision.model_available() or not risk_engine.model_available():
                 raise RuntimeError("decision_or_risk_model_unavailable")
@@ -205,7 +214,7 @@ def daily(body: PortfolioIn) -> dict:
                 [explanation["summary"], *explanation["reasons"]]
             )
             explanation_meta = explanation["_meta"]
-        except (RuntimeError, ValueError, KeyError):
+        except (RuntimeError, ValueError, KeyError, OSError):
             signals = strategy.score_assets(history, holdings)
             rec = engine.recommend_daily(regime, signals, weights)
             decision_meta["fallback_reason"] = type(exc).__name__
