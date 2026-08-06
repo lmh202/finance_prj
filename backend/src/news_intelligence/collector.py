@@ -29,8 +29,11 @@ training code can load it with:  pd.read_json("data/news_raw.json")
 
 import hashlib
 import json
+import os
 import re
 import sys
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from time import mktime
@@ -103,6 +106,28 @@ FEED_USER_AGENT = (
 # Yahoo, hit by every symbol) that it reads as abuse.
 FEED_FETCH_WORKERS = 8
 
+# One process, many request threads. The /react page asks for the daily
+# recommendation and the event list at the same time and FastAPI runs both
+# sync endpoints on its threadpool, so two collect() runs used to interleave
+# their load -> merge -> save on the same store. Two ways that broke: on
+# Windows the second os.replace() raised WinError 32 (the other thread still
+# held the temp file) and 500'd the page; on every OS the later writer merged
+# into a snapshot taken before the earlier one saved, silently dropping its
+# new records. Serialise the whole read-modify-write.
+_STORE_LOCK = threading.Lock()
+
+# A run that can't take the lock in time skips collection instead of blocking
+# the request: the holder is fetching the same feeds anyway, so the caller
+# reads a store at most one run behind rather than waiting out a full fetch.
+COLLECT_LOCK_TIMEOUT_SECONDS = 30
+
+# The lock is per-process and the standalone `python collector.py` run is a
+# second one, so the replace itself still has to tolerate contention — as it
+# does with antivirus and search indexers, which open the target briefly on
+# Windows. The window is milliseconds; retrying turns a 500 into a pause.
+STORE_REPLACE_ATTEMPTS = 5
+STORE_REPLACE_BACKOFF_SECONDS = 0.1
+
 
 def build_feeds(symbols: List[str]) -> List[Dict]:
     """General feeds + one feed per (portfolio symbol x per-ticker template),
@@ -165,20 +190,58 @@ def _entry_to_record(entry, feed: Dict, fetched_utc: str) -> Optional[Dict]:
 # ------------------------------------------------------------------ store
 
 def load_store(path: Path = STORE) -> Dict[str, Dict]:
+    """Read the store, or {} if it can't be read.
+
+    An unreadable store is a degraded state, not a crash: the caller is a live
+    request, and serving it no news beats 500-ing the page. The next
+    successful collect rewrites the file wholesale.
+    """
     if not path.exists():
         return {}
-    with path.open(encoding="utf-8") as f:
-        return {r["id"]: r for r in json.load(f)}
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, list):
+        return {}
+    return {r["id"]: r for r in data if isinstance(r, dict) and r.get("id")}
+
+
+def _tmp_path(path: Path) -> Path:
+    """A scratch name private to this writer.
+
+    One fixed `.tmp` per store is itself shared mutable state: concurrent
+    writers overwrote each other's half-written bytes, and one then replaced
+    the target out from under the other's open handle.
+    """
+    return path.with_name(f"{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+
+
+def _replace_with_retry(tmp: Path, path: Path) -> None:
+    for attempt in range(STORE_REPLACE_ATTEMPTS):
+        try:
+            tmp.replace(path)
+            return
+        except PermissionError:
+            if attempt == STORE_REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(STORE_REPLACE_BACKOFF_SECONDS * (attempt + 1))
 
 
 def save_store(records: Dict[str, Dict], path: Path = STORE) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     ordered = sorted(records.values(), key=lambda r: r["published_utc"] or "")
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(
-        json.dumps(ordered, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    tmp.replace(path)
+    tmp = _tmp_path(path)
+    try:
+        tmp.write_text(
+            json.dumps(ordered, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        _replace_with_retry(tmp, path)
+    except OSError:
+        # Never leave scratch files behind for the next run to trip over.
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def _feed_state_path(store_path: Path) -> Path:
@@ -208,9 +271,9 @@ def save_feed_state(state: Dict[str, str], store_path: Path = STORE) -> None:
     path = _feed_state_path(store_path)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".json.tmp")
+        tmp = _tmp_path(path)
         tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
-        tmp.replace(path)
+        _replace_with_retry(tmp, path)
     except OSError:
         # Losing the throttle costs latency, never correctness.
         pass
@@ -252,10 +315,37 @@ def collect_urls(urls: List[str], store_path: Path = STORE) -> Dict[str, int]:
     return collect_feeds(feeds, store_path)
 
 
+def _empty_stats() -> Dict[str, int]:
+    """Stable stats shape — every key is present on every path, so a caller
+    reading e.g. stats["new"] never has to guess which branch ran."""
+    return {"feeds_ok": 0, "feeds_failed": 0, "feeds_skipped_fresh": 0,
+            "feeds_skipped_locked": 0, "entries_seen": 0, "new": 0,
+            "updated_tags": 0, "store_write_failed": 0, "total_in_store": 0}
+
+
 def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]:
     """Fetch a specific list of {name, url, symbols} feed dicts, merge into
     the JSONL store, return run statistics. `collect()`/`collect_urls()` are
     thin wrappers over this that build the feed list differently.
+
+    Serialised process-wide (see _STORE_LOCK): concurrent requests must not
+    interleave the read-modify-write below. Waiting is also usually free
+    rather than merely safe — the holder refreshes the same feeds, so the
+    waiter's own run finds them fresh and skips every fetch.
+    """
+    if not _STORE_LOCK.acquire(timeout=COLLECT_LOCK_TIMEOUT_SECONDS):
+        stats = _empty_stats()
+        stats["feeds_skipped_locked"] = len(feeds)
+        stats["total_in_store"] = len(load_store(store_path))
+        return stats
+    try:
+        return _collect_feeds_locked(feeds, store_path)
+    finally:
+        _STORE_LOCK.release()
+
+
+def _collect_feeds_locked(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]:
+    """The body of collect_feeds(), with _STORE_LOCK already held.
 
     A feed fetched within the last FEED_STALE_MINUTES is skipped rather than
     re-parsed — the check is a lookup against records already loaded from
@@ -292,8 +382,7 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
         if feed_url not in last_fetch_by_feed or t > last_fetch_by_feed[feed_url]:
             last_fetch_by_feed[feed_url] = t
 
-    stats = {"feeds_ok": 0, "feeds_failed": 0, "feeds_skipped_fresh": 0,
-             "entries_seen": 0, "new": 0, "updated_tags": 0, "total_in_store": 0}
+    stats = _empty_stats()
 
     to_fetch = []
     for feed in feeds:
@@ -336,7 +425,17 @@ def collect_feeds(feeds: List[Dict], store_path: Path = STORE) -> Dict[str, int]
                     existing["symbols"] = merged
                     stats["updated_tags"] += 1
 
-    save_store(records, store_path)
+    try:
+        save_store(records, store_path)
+    except OSError:
+        # The fetched articles are lost, but the store on disk is intact and
+        # the caller's request survives on slightly staler news. Deliberately
+        # skip save_feed_state: marking these feeds fresh would throttle away
+        # the very retry that recovers the dropped articles.
+        stats["store_write_failed"] = 1
+        stats["total_in_store"] = len(records)
+        return stats
+
     save_feed_state(feed_state, store_path)
     stats["total_in_store"] = len(records)
     return stats

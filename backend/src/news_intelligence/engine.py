@@ -62,6 +62,21 @@ def _holding_names(symbols: List[str]) -> Dict[str, str]:
     }
 
 
+def _refresh_store(collect) -> None:
+    """Run a collector pass, tolerating failure.
+
+    Collection is a *refresh*, not the data source: both public functions
+    below read the store from disk afterwards either way. So a failed
+    fetch — network, feed parse, a locked store file — has to cost freshness,
+    not the request. Same policy as routers/_common.refresh_news_store(),
+    which is why /risk survived what /recommendation/daily did not.
+    """
+    try:
+        collect()
+    except Exception:                                          # noqa: BLE001
+        pass
+
+
 def _recent_records(lookback_hours: int, now: datetime) -> List[dict]:
     since = now - timedelta(hours=lookback_hours)
     records = []
@@ -83,7 +98,7 @@ def fetch_headlines(feeds: Optional[List[str]] = None, limit: int = 50) -> List[
     default general feeds with an explicit list of feed URLs.
     """
     urls = feeds or DEFAULT_FEEDS
-    collector.collect_urls(urls)
+    _refresh_store(lambda: collector.collect_urls(urls))
     now = datetime.now(timezone.utc)
     records = _recent_records(_LOOKBACK_HOURS, now)
     clusters = [c for c in analyzer.cluster(records) if analyzer.is_relevant(c, [])]
@@ -99,7 +114,7 @@ def essential_news(holding_symbols: List[str], max_events: int = 5) -> List[News
     keeping only the best few above a coarse importance floor.
     """
     symbols = sorted({s.strip().upper() for s in holding_symbols if s and s.strip()})
-    collector.collect(symbols)
+    _refresh_store(lambda: collector.collect(symbols))
     now = datetime.now(timezone.utc)
     records = _recent_records(_LOOKBACK_HOURS, now)
     holding_names = _holding_names(symbols)
