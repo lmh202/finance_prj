@@ -30,18 +30,30 @@ RUN pip install --no-cache-dir -r backend/requirements-deploy.txt
 
 COPY backend/ ./backend/
 
-# Only what the request path actually reads:
-#   risk_model.json     the one PROMOTED artifact; risk_engine has no
-#                       deterministic fallback, so without it /risk/* answers
-#                       503 no_model and the daily recommendation degrades.
-#   sample_portfolio.csv  served by GET /portfolio/sample for new visitors.
-#   tickers.csv         seed for the symbol universe. Without it the first
-#                       request downloads the NASDAQ directory instead — this
-#                       just makes a cold container useful immediately.
-# Everything else under data/ (training sets, experimental candidates, the
-# 400 MB FinBERT weights) is offline-only and stays out of the image.
-COPY data/sample_portfolio.csv ./data/sample_portfolio.csv
-COPY data/tickers.csv ./data/tickers.csv
+# Only what the request path actually reads. Everything else under data/
+# (training sets, experimental candidates, the 400 MB FinBERT weights) is
+# offline-only and stays out of the image.
+#
+#   sample_portfolio.csv  REQUIRED — served by GET /portfolio/sample so a new
+#                         visitor can load a demo portfolio.
+#   tickers.cs[v]         OPTIONAL — only a warm start for the symbol
+#                         universe; load_ticker_universe() downloads the
+#                         NASDAQ directory when it's absent and falls back to
+#                         FALLBACK_UNIVERSE if that fails too. The bracket is
+#                         a glob: Docker does not fail a COPY when a globbed
+#                         source matches nothing, so an uncommitted or removed
+#                         tickers.csv costs a slower first request instead of
+#                         breaking the build. It shares this COPY with
+#                         sample_portfolio.csv deliberately — a COPY whose
+#                         sources ALL fail to match errors with "no source
+#                         files were specified", so the line needs one
+#                         guaranteed source to lean on.
+COPY data/sample_portfolio.csv data/tickers.cs[v] ./data/
+
+#   risk_model.json     REQUIRED — the one PROMOTED artifact. risk_engine has
+#                       no deterministic fallback, so without it /risk/*
+#                       answers 503 no_model and the daily recommendation
+#                       degrades to its legacy path.
 COPY data/processed/risk_model.json ./data/processed/risk_model.json
 
 # The app writes caches here (refreshed ticker directory, RSS news store).

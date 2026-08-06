@@ -111,22 +111,32 @@ rate limiting. Scale out only after that cache moves somewhere shared.
 4. Deploy, then go back and confirm `AURORA_ALLOWED_ORIGINS` on Railway matches
    the Vercel origin exactly.
 
-### One build-time coupling to be aware of
+### What the image needs out of `data/`
 
-Railway builds from the GitHub repo, so the three files the Dockerfile `COPY`s
-out of `data/` must be **committed**, not merely present on your machine:
+Railway builds from the GitHub repo, so files the Dockerfile `COPY`s must be
+**committed**, not merely present on your machine.
 
-```
-data/sample_portfolio.csv     GET /portfolio/sample
-data/tickers.csv              symbol-universe seed
-data/processed/risk_model.json  the one promoted artifact
-```
+| File | Status | If missing |
+|---|---|---|
+| `data/processed/risk_model.json` | **required** | build fails at COPY |
+| `data/sample_portfolio.csv` | **required** | build fails at COPY |
+| `data/tickers.csv` | optional | build succeeds; slower first request |
 
-All three are tracked today. `.gitignore` lists `data/tickers.csv`, which stops
-*future edits* from being staged but does not untrack the committed copy — so
-the build works. It would break if anyone ran `git rm --cached` on one of them;
-the symptom is a build failure at the COPY step, not a runtime error. Verify
-with `git archive HEAD | tar -t | grep data/`.
+`tickers.csv` is copied as the glob `data/tickers.cs[v]`, because Docker does
+not fail a COPY when a globbed source matches nothing. It is only a warm start
+— `load_ticker_universe()` downloads the NASDAQ directory when the file is
+absent, and falls back to `FALLBACK_UNIVERSE` if that download also fails.
+Verified by building with the file excluded from the context: build exits 0,
+the container comes up healthy, `/market/search?q=AAPL` returns real results,
+and the cache is rebuilt inside the container on first use.
+
+That glob shares its COPY line with `sample_portfolio.csv` on purpose: a COPY
+whose sources *all* fail to match errors with "no source files were
+specified", so the line needs one guaranteed source to lean on. Don't split
+them into separate COPY lines.
+
+The two required files are tracked today. Check with
+`git archive HEAD | tar -t | grep data/` before a first deploy.
 
 ## The three failure modes you will actually hit
 
